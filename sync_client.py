@@ -1,4 +1,3 @@
-import os
 import queue
 import socket
 import threading
@@ -72,7 +71,9 @@ class ChangeHandler(FileSystemEventHandler):
         self._enqueue_upload(event)
 
     def on_deleted(self, event):
-        if not event.is_directory and not self.is_ignored(self._relative(event.src_path)):
+        if not event.is_directory and not self.is_ignored(
+            self._relative(event.src_path)
+        ):
             self.changes.put(("delete", self._relative(event.src_path)))
 
     def on_moved(self, event):
@@ -82,7 +83,9 @@ class ChangeHandler(FileSystemEventHandler):
         self.changes.put(("upload", self._relative(event.dest_path)))
 
     def _enqueue_upload(self, event):
-        if not event.is_directory and not self.is_ignored(self._relative(event.src_path)):
+        if not event.is_directory and not self.is_ignored(
+            self._relative(event.src_path)
+        ):
             self.changes.put(("upload", self._relative(event.src_path)))
 
     def _relative(self, path):
@@ -97,7 +100,9 @@ class SyncWorker:
         self.ignored = {}
         self.ignored_lock = threading.Lock()
         self.stop_event = threading.Event()
-        self.worker = threading.Thread(target=self._run, name="sync-worker", daemon=True)
+        self.worker = threading.Thread(
+            target=self._run, name="sync-worker", daemon=True
+        )
         self.observer = Observer()
         self.handler = ChangeHandler(self.root, self.changes, self._is_ignored)
 
