@@ -2,9 +2,11 @@
 
 import socket, sys, os
 import szasar
+from sync_client import SyncError, SyncWorker
 
 SERVER = 'localhost'
 PORT = 6012
+LOCAL_PATH = "client_files"
 ER_MSG = (
 	"Correcto.",
 	"Comando desconocido o inesperado.",
@@ -61,14 +63,16 @@ def int2bytes( n ):
 
 
 if __name__ == "__main__":
-	if len( sys.argv ) > 3:
-		print( "Uso: {} [<servidor> [<puerto>]]".format( sys.argv[0] ) )
+	if len( sys.argv ) > 4:
+		print( "Uso: {} [<servidor> [<puerto> [<carpeta-local>]]]".format( sys.argv[0] ) )
 		exit( 2 )
 
 	if len( sys.argv ) >= 2:
 		SERVER = sys.argv[1]
 	if len( sys.argv ) == 3:
 		PORT = int( sys.argv[2])
+	if len( sys.argv ) == 4:
+		LOCAL_PATH = sys.argv[3]
 
 	s = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
 	s.connect( (SERVER, PORT) )
@@ -87,6 +91,13 @@ if __name__ == "__main__":
 		message = szasar.recvline( s ).decode( "ascii" )
 		if not iserror( message ):
 			break
+
+	sync_worker = SyncWorker( LOCAL_PATH, SERVER, PORT, user, password )
+	try:
+		sync_worker.start()
+	except (OSError, EOFError, socket.timeout, SyncError) as error:
+		print( "No se ha podido iniciar la sincronización automática: {}".format( error ) )
+		sync_worker = None
 
 
 	while True:
@@ -130,8 +141,10 @@ if __name__ == "__main__":
 			if iserror( message ):
 				continue
 			filedata = szasar.recvall( s, filesize )
+			if sync_worker is not None:
+				sync_worker.ignore( filename )
 			try:
-				with open( filename, "wb" ) as f:
+				with open( os.path.join( LOCAL_PATH, filename ), "wb" ) as f:
 					f.write( filedata )
 			except:
 				print( "No se ha podido guardar el fichero en disco." )
@@ -141,8 +154,8 @@ if __name__ == "__main__":
 		elif option == Menu.Upload:
 			filename = input( "Indica el fichero que quieres subir: " )
 			try:
-				filesize = os.path.getsize( filename )
-				with open( filename, "rb" ) as f:
+				filesize = os.path.getsize( os.path.join( LOCAL_PATH, filename ) )
+				with open( os.path.join( LOCAL_PATH, filename ), "rb" ) as f:
 					filedata = f.read()
 			except:
 				print( "No se ha podido acceder al fichero {}.".format( filename ) )
@@ -167,11 +180,17 @@ if __name__ == "__main__":
 			s.sendall( message.encode( "ascii" ) )
 			message = szasar.recvline( s ).decode( "ascii" )
 			if not iserror( message ):
+				try:
+					os.remove( os.path.join( LOCAL_PATH, filename ) )
+				except FileNotFoundError:
+					pass
 				print( "El fichero {} se ha borrado correctamente.".format( filename ) )
 
 		elif option == Menu.Exit:
 			message = "{}\r\n".format( szasar.Command.Exit )
 			s.sendall( message.encode( "ascii" ) )
 			message = szasar.recvline( s ).decode( "ascii" )
+			if sync_worker is not None:
+				sync_worker.stop()
 			break
 	s.close()

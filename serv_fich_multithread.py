@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import socket, sys, os, signal, threading
+import socket, sys, os, signal, threading, tempfile
 import szasar
 
 PORT = 6012
@@ -19,11 +19,23 @@ def sendOK( s, params="" ):
 def sendER( s, code=1 ):
 	s.sendall( ("ER{}\r\n".format( code )).encode( "ascii" ) )
 
+def safe_path( root, filename ):
+	if not filename or os.path.isabs( filename ):
+		raise ValueError( "Ruta no válida" )
+	root = os.path.abspath( root )
+	target = os.path.abspath( os.path.join( root, filename ) )
+	if os.path.commonpath( ( root, target ) ) != root:
+		raise ValueError( "Ruta no válida" )
+	return target
+
 def session( s ):
 	state = State.Identification
 
 	while True:
-		message = szasar.recvline( s ).decode( "ascii" )
+		try:
+			message = szasar.recvline( s ).decode( "ascii" )
+		except EOFError:
+			return
 #		print( "---SERVER: Leido msg {} {}\r\n.".format( message[0:4], message[4:] ) )
 		if not message:
 			return
@@ -47,6 +59,7 @@ def session( s ):
 			if( user == 0 or PASSWORDS[user] == message[4:] ):
 				sendOK( s )
 				filespath = os.path.join( FILES_PATH, USERS[user] )
+				os.makedirs( filespath, exist_ok=True )
 				state = State.Main
 			else:
 				sendER( s, 3 )
@@ -71,7 +84,11 @@ def session( s ):
 			if state != State.Main:
 				sendER( s )
 				continue
-			filename = os.path.join( filespath, message[4:] )
+			try:
+				filename = safe_path( filespath, message[4:] )
+			except ValueError:
+				sendER( s, 5 )
+				continue
 			try:
 				filesize = os.path.getsize( filename )
 			except:
@@ -102,8 +119,13 @@ def session( s ):
 			if user == 0:
 				sendER( s, 7 )
 				continue
-			filename, filesize = message[4:].split('?')
-			filesize = int(filesize)
+			try:
+				filename, filesize = message[4:].split('?')
+				filesize = int(filesize)
+				target = safe_path( filespath, filename )
+			except (ValueError, TypeError):
+				sendER( s, 10 )
+				continue
 			if filesize > MAX_FILE_SIZE:
 				sendER( s, 8 )
 				continue
@@ -119,11 +141,19 @@ def session( s ):
 				sendER( s )
 				continue
 			state = State.Main
+			tempname = None
 			try:
-				with open( os.path.join( filespath, filename), "wb" ) as f:
-					filedata = szasar.recvall( s, filesize )
+				filedata = szasar.recvall( s, filesize )
+				fd, tempname = tempfile.mkstemp( prefix=".upload-", dir=filespath )
+				with os.fdopen( fd, "wb" ) as f:
 					f.write( filedata )
+				os.replace( tempname, target )
 			except:
+				if tempname is not None:
+					try:
+						os.unlink( tempname )
+					except OSError:
+						pass
 				sendER( s, 10 )
 			else:
 				sendOK( s )
@@ -136,8 +166,10 @@ def session( s ):
 				sendER( s, 7 )
 				continue
 			try:
-				os.remove( os.path.join( filespath, message[4:] ) )
-			except:
+				os.remove( safe_path( filespath, message[4:] ) )
+			except FileNotFoundError:
+				sendOK( s )
+			except (OSError, ValueError):
 				sendER( s, 11 )
 			else:
 				sendOK( s )
