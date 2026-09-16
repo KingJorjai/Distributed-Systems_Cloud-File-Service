@@ -27,6 +27,8 @@ ER_MSG = (
 
 
 class Menu:
+    """Display and validate the interactive client menu."""
+
     List, Download, Upload, Delete, Exit = range(1, 6)
     Options = (
         "Lista de ficheros",
@@ -37,6 +39,7 @@ class Menu:
     )
 
     def menu():
+        """Read and return a valid menu option number."""
         print("+{}+".format("-" * 30))
         for i, option in enumerate(Menu.Options, 1):
             print("| {}.- {:<25}|".format(i, option))
@@ -55,6 +58,7 @@ class Menu:
 
 
 def iserror(message):
+    """Print the protocol error message and return whether a response failed."""
     if message.startswith("ER"):
         code = int(message[2:])
         print(ER_MSG[code])
@@ -64,6 +68,7 @@ def iserror(message):
 
 
 def int2bytes(n):
+    """Format a byte count using a human-readable binary unit."""
     if n < 1 << 10:
         return str(n) + " B  "
     elif n < 1 << 20:

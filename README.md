@@ -1,6 +1,12 @@
 # Cloud File Service
 
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Ruff](https://img.shields.io/badge/code%20style-Ruff-D7FF64?logo=ruff&logoColor=111111)](https://docs.astral.sh/ruff/)
+[![watchdog](https://img.shields.io/pypi/v/watchdog?logo=pypi&logoColor=white)](https://pypi.org/project/watchdog/)
+
 Automatic one-way file synchronization from a local client folder to a multithreaded server.
+
+Watch the repository locally with `watchdog`, then send file changes to the server over TCP.
 
 ## Quick start
 

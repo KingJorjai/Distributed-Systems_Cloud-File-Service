@@ -16,18 +16,23 @@ PASSWORDS = ("", "sar", "sza")
 
 
 class State:
+    """States used by one client session in the multithreaded server."""
+
     Identification, Authentication, Main, Downloading, Uploading = range(5)
 
 
 def sendOK(s, params=""):
+    """Send a successful protocol response with optional parameters."""
     s.sendall(("OK{}\r\n".format(params)).encode("ascii"))
 
 
 def sendER(s, code=1):
+    """Send a protocol error response with an error code."""
     s.sendall(("ER{}\r\n".format(code)).encode("ascii"))
 
 
 def safe_path(root, filename):
+    """Resolve a filename while preventing access outside the user's root."""
     if not filename or os.path.isabs(filename):
         raise ValueError("Ruta no válida")
     root = os.path.abspath(root)
@@ -38,6 +43,7 @@ def safe_path(root, filename):
 
 
 def session(s):
+    """Serve one authenticated client session until it disconnects."""
     state = State.Identification
 
     while True:

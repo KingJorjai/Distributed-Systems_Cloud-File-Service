@@ -1,4 +1,6 @@
 class Command:
+    """Commands supported by the line-based file service protocol."""
+
     User, Password, List, Download, Download2, Upload, Upload2, Delete, Exit = (
         "USER",
         "PASS",
@@ -13,6 +15,18 @@ class Command:
 
 
 def recvline(s, removeEOL=True):
+    """Read one CRLF-terminated line from a socket.
+
+    Args:
+        s: Socket from which to read.
+        removeEOL: Whether to omit the trailing CRLF from the result.
+
+    Returns:
+        The received line as bytes.
+
+    Raises:
+        EOFError: If the peer closes the connection before sending CRLF.
+    """
     line = b""
     CRreceived = False
     while True:
@@ -32,6 +46,18 @@ def recvline(s, removeEOL=True):
 
 
 def recvall(s, size):
+    """Read exactly ``size`` bytes from a socket.
+
+    Args:
+        s: Socket from which to read.
+        size: Number of bytes required.
+
+    Returns:
+        The received bytes.
+
+    Raises:
+        EOFError: If the peer closes the connection before enough data arrives.
+    """
     message = b""
     while len(message) < size:
         chunk = s.recv(size - len(message))

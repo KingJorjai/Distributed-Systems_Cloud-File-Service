@@ -15,18 +15,23 @@ PASSWORDS = ("", "sar", "sza")
 
 
 class State:
+    """States used by one client session in the process-based server."""
+
     Identification, Authentication, Main, Downloading, Uploading = range(5)
 
 
 def sendOK(s, params=""):
+    """Send a successful protocol response with optional parameters."""
     s.sendall(("OK{}\r\n".format(params)).encode("ascii"))
 
 
 def sendER(s, code=1):
+    """Send a protocol error response with an error code."""
     s.sendall(("ER{}\r\n".format(code)).encode("ascii"))
 
 
 def session(s):
+    """Serve one client session until it exits or disconnects."""
     state = State.Identification
 
     while True:
