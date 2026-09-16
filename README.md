@@ -8,6 +8,8 @@ Automatic one-way file synchronization from a local client folder to a multithre
 
 Watch the repository locally with `watchdog`, then send file changes to the server over TCP.
 
+Read the full documentation at [kingjorjai.github.io/Distributed-Systems_Cloud-File-Service](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/).
+
 ## Quick start
 
 From the project directory, create the virtual environment and install the dependency:
