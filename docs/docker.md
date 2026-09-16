@@ -33,6 +33,27 @@ docker compose build
 
 The server image contains `serv_fich_multithread.py`. The client image contains the interactive client and `watchdog`.
 
+## Use published images
+
+The `main` branch publishes both images to GitHub Container Registry:
+
+```text
+ghcr.io/kingjorjai/distributed-systems-cloud-file-service-server:latest
+ghcr.io/kingjorjai/distributed-systems-cloud-file-service-client:latest
+```
+
+To use a published version instead of building locally, use the registry override and set the image prefix and tag:
+
+```sh
+export IMAGE_PREFIX=ghcr.io/kingjorjai/distributed-systems-cloud-file-service
+export IMAGE_TAG=latest
+docker compose -f compose.yaml -f compose.registry.yaml pull
+docker compose -f compose.yaml -f compose.registry.yaml up -d server
+docker compose -f compose.yaml -f compose.registry.yaml run --rm client
+```
+
+Version tags such as `v1.0.0` are also published when pushed to GitHub.
+
 ## Start the server
 
 ```sh

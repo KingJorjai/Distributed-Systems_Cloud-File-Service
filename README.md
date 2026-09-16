@@ -12,6 +12,8 @@ Read the full documentation at [kingjorjai.github.io/Distributed-Systems_Cloud-F
 
 Docker deployment is documented in the [Docker guide](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/docker/).
 
+Docker images are published to [GitHub Container Registry](https://github.com/KingJorjai?tab=packages) from `main`.
+
 ## Quick start
 
 From the project directory, create the virtual environment and install the dependency:

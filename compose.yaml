@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: docker/server.Dockerfile
-    image: cloud-file-service-server
+    image: "${IMAGE_PREFIX:-ghcr.io/kingjorjai/distributed-systems-cloud-file-service}-server:${IMAGE_TAG:-latest}"
     user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
     ports:
       - "${SERVER_PUBLISHED_PORT:-6012}:6012"
@@ -15,7 +15,7 @@ services:
     build:
       context: .
       dockerfile: docker/client.Dockerfile
-    image: cloud-file-service-client
+    image: "${IMAGE_PREFIX:-ghcr.io/kingjorjai/distributed-systems-cloud-file-service}-client:${IMAGE_TAG:-latest}"
     user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
     command: ["server", "6012", "/data"]
     depends_on:
