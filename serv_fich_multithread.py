@@ -17,6 +17,8 @@ PASSWORDS = ("", "sar", "sza")
 # TODO Generales
 # 1. Eliminar el comando de listar, ya no es necesario ✔️
 # 2. Cambios a upload (Estan comentados mas abajo)
+# 3. Mensaje Update para que el servidor informe a clientes de cambios en su cuenta  
+
 class State:
     """States used by one client session in the multithreaded server."""
 

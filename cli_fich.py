@@ -9,8 +9,9 @@ from sync_client import SyncError, SyncWorker
 # TODO Generales
 # 1. Eliminar el comando de listar, ya no es necesario ✔️
 # 2. Cambios a upload (Estan comentados mas abajo)
-# 3. Eliminar el menu, ya no es necesario. Solo dejar logearse
-# 
+# 3. Eliminar el menu, ya no es necesario. Solo dejar logearse ✔️
+# 4. Mensaje Update para que el servidor informe al cliente de cambios en el servidor
+#   4.1 El Cliente mira los cambios y elimina ficheros o descarga ficheros (nuevos o modificados)
 SERVER = "localhost"
 PORT = 6012
 LOCAL_PATH = "client_files"
@@ -30,34 +31,6 @@ ER_MSG = (
 )
 
 
-class Menu:
-    """Display and validate the interactive client menu."""
-
-    Download, Upload, Delete, Exit = range(1, 5)
-    Options = (
-        "Bajar fichero",
-        "Subir fichero",
-        "Borrar fichero",
-        "Salir",
-    )
-
-    def menu():
-        """Read and return a valid menu option number."""
-        print("+{}+".format("-" * 30))
-        for i, option in enumerate(Menu.Options, 1):
-            print("| {}.- {:<25}|".format(i, option))
-        print("+{}+".format("-" * 30))
-
-        while True:
-            try:
-                selected = int(input("Selecciona una opción: "))
-            except ValueError:
-                print("Opción no válida.")
-                continue
-            if 0 < selected <= len(Menu.Options):
-                return selected
-            else:
-                print("Opción no válida.")
 
 
 def iserror(message):
@@ -120,8 +93,8 @@ if __name__ == "__main__":
         sync_worker = None
 
     while True:
-        option = Menu.menu()
-        if option == Menu.Download:
+        option = -1
+        if option == 1:
             filename = input("Indica el fichero que quieres bajar: ")
             message = "{}{}\r\n".format(szasar.Command.Download, filename)
             s.sendall(message.encode("ascii"))
@@ -145,7 +118,7 @@ if __name__ == "__main__":
             else:
                 print("El fichero {} se ha descargado correctamente.".format(filename))
 
-        elif option == Menu.Upload:
+        elif option == 1:
             filename = input("Indica el fichero que quieres subir: ")
             try:
                 filesize = os.path.getsize(os.path.join(LOCAL_PATH, filename))
@@ -168,7 +141,7 @@ if __name__ == "__main__":
             if not iserror(message):
                 print("El fichero {} se ha enviado correctamente.".format(filename))
 
-        elif option == Menu.Delete:
+        elif option == 1:
             filename = input("Indica el fichero que quieres borrar: ")
             message = "{}{}\r\n".format(szasar.Command.Delete, filename)
             s.sendall(message.encode("ascii"))
@@ -180,7 +153,7 @@ if __name__ == "__main__":
                     pass
                 print("El fichero {} se ha borrado correctamente.".format(filename))
 
-        elif option == Menu.Exit:
+        elif option == 1:
             message = "{}\r\n".format(szasar.Command.Exit)
             s.sendall(message.encode("ascii"))
             message = szasar.recvline(s).decode("ascii")
