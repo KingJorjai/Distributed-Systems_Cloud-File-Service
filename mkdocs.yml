@@ -65,6 +65,7 @@ nav:
   - Getting Started:
       - Quick Start: quick-start.md
       - Configuration: configuration.md
+      - Docker: docker.md
   - Concepts:
       - Architecture: architecture.md
       - Protocol: protocol.md

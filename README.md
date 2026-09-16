@@ -10,6 +10,8 @@ Watch the repository locally with `watchdog`, then send file changes to the serv
 
 Read the full documentation at [kingjorjai.github.io/Distributed-Systems_Cloud-File-Service](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/).
 
+Docker deployment is documented in the [Docker guide](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/docker/).
+
 ## Quick start
 
 From the project directory, create the virtual environment and install the dependency:
