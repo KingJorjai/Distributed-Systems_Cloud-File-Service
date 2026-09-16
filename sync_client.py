@@ -16,7 +16,8 @@ class SyncError(Exception):
     pass
 
 # TODO Generales
-# 1. Cambios a upload (Estan comentados mas abajo)
+# 1. Implementar DB del cliente (fichero | rev | hash)
+# 2. Cambios a upload (Estan comentados mas abajo)
 class SyncConnection:
     """Manage the TCP connection used by the automatic synchronizer."""
 
