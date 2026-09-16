@@ -16,10 +16,7 @@ class SyncError(Exception):
     pass
 
 # TODO Generales
-# 1. Eliminar el comando de listar, ya no es necesario
-# 2. Cambios a upload (Estan comentados mas abajo)
-# 3. Eliminar el menu, ya no es necesario. Solo dejar logearse
-# 
+# 1. Cambios a upload (Estan comentados mas abajo)
 class SyncConnection:
     """Manage the TCP connection used by the automatic synchronizer."""
 

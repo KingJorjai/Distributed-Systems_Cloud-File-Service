@@ -15,7 +15,7 @@ USERS = ("anonimous", "sar", "sza")
 PASSWORDS = ("", "sar", "sza")
 
 # TODO Generales
-# 1. Eliminar el comando de listar, ya no es necesario
+# 1. Eliminar el comando de listar, ya no es necesario ✔️
 # 2. Cambios a upload (Estan comentados mas abajo)
 class State:
     """States used by one client session in the multithreaded server."""
@@ -81,21 +81,6 @@ def session(s):
             else:
                 sendER(s, 3)
                 state = State.Identification
-
-        elif message.startswith(szasar.Command.List):
-            if state != State.Main:
-                sendER(s)
-                continue
-            try:
-                message = "OK\r\n"
-                for filename in os.listdir(filespath):
-                    filesize = os.path.getsize(os.path.join(filespath, filename))
-                    message += "{}?{}\r\n".format(filename, filesize)
-                message += "\r\n"
-            except OSError:
-                sendER(s, 4)
-            else:
-                s.sendall(message.encode("ascii"))
 
         elif message.startswith(szasar.Command.Download):
             if state != State.Main:

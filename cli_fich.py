@@ -6,7 +6,11 @@ import sys
 
 import szasar
 from sync_client import SyncError, SyncWorker
-
+# TODO Generales
+# 1. Eliminar el comando de listar, ya no es necesario ✔️
+# 2. Cambios a upload (Estan comentados mas abajo)
+# 3. Eliminar el menu, ya no es necesario. Solo dejar logearse
+# 
 SERVER = "localhost"
 PORT = 6012
 LOCAL_PATH = "client_files"
@@ -29,9 +33,8 @@ ER_MSG = (
 class Menu:
     """Display and validate the interactive client menu."""
 
-    List, Download, Upload, Delete, Exit = range(1, 6)
+    Download, Upload, Delete, Exit = range(1, 5)
     Options = (
-        "Lista de ficheros",
         "Bajar fichero",
         "Subir fichero",
         "Borrar fichero",
@@ -118,34 +121,7 @@ if __name__ == "__main__":
 
     while True:
         option = Menu.menu()
-
-        if option == Menu.List:
-            message = "{}\r\n".format(szasar.Command.List)
-            s.sendall(message.encode("ascii"))
-            message = szasar.recvline(s).decode("ascii")
-            if iserror(message):
-                continue
-            filecount = 0
-            print("Listado de ficheros disponibles")
-            print("-------------------------------")
-            while True:
-                line = szasar.recvline(s).decode("ascii")
-                if line:
-                    filecount += 1
-                    fileinfo = line.split("?")
-                    print(
-                        "{:<20} {:>8}".format(fileinfo[0], int2bytes(int(fileinfo[1])))
-                    )
-                else:
-                    break
-            print("-------------------------------")
-            if filecount == 0:
-                print("No hay ficheros disponibles.")
-            else:
-                plural = "s" if filecount > 1 else ""
-                print("{0} fichero{1} disponible{1}.".format(filecount, plural))
-
-        elif option == Menu.Download:
+        if option == Menu.Download:
             filename = input("Indica el fichero que quieres bajar: ")
             message = "{}{}\r\n".format(szasar.Command.Download, filename)
             s.sendall(message.encode("ascii"))

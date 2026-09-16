@@ -1,10 +1,9 @@
 class Command:
     """Commands supported by the line-based file service protocol."""
 
-    User, Password, List, Download, Download2, Upload, Upload2, Delete, Exit = (
+    User, Password, Download, Download2, Upload, Upload2, Delete, Exit = (
         "USER",
         "PASS",
-        "LIST",
         "DOWN",
         "DOW2",
         "UPLO",
