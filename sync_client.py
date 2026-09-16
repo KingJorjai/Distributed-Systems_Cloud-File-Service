@@ -15,7 +15,11 @@ class SyncError(Exception):
 
     pass
 
-
+# TODO Generales
+# 1. Eliminar el comando de listar, ya no es necesario
+# 2. Cambios a upload (Estan comentados mas abajo)
+# 3. Eliminar el menu, ya no es necesario. Solo dejar logearse
+# 
 class SyncConnection:
     """Manage the TCP connection used by the automatic synchronizer."""
 
@@ -49,7 +53,15 @@ class SyncConnection:
                 pass
             self.socket.close()
             self.socket = None
-
+    # Modificaciones TODO a upload
+    # 1. Enviar el rev del fichero al servidor
+    # 2. Esperar respuesta
+    # 3. En caso de conflicto
+    #   3.1 Almacenar el nombre del fichero en conflicto y, al final descargarlo
+    # 4. Mandar hash del fichero
+    # 5. Esperar respuesta
+    # 6. Si da permiso el servidor subir archivo
+    # 7. Si ha habido conflicto descargar fichero en conflicto
     def upload(self, filename, data):
         """Upload file data to the authenticated user's server directory."""
         self._command("{}{}?{}".format(szasar.Command.Upload, filename, len(data)))

@@ -14,7 +14,9 @@ SPACE_MARGIN = 50 * 1 << 20  # 50 MiB
 USERS = ("anonimous", "sar", "sza")
 PASSWORDS = ("", "sar", "sza")
 
-
+# TODO Generales
+# 1. Eliminar el comando de listar, ya no es necesario
+# 2. Cambios a upload (Estan comentados mas abajo)
 class State:
     """States used by one client session in the multithreaded server."""
 
@@ -129,7 +131,10 @@ def session(s):
         # Modificaciones TODO a upload
         # 1. Cada vez que el cliente quiere subir un archivo, el servidor manda el rev del archivo
         # 2. Si la rev es distinta, hay un conflicto (alguien ha modificado el archivo en el servidor)
-        # 3. TODO: Decidir que hacer con el conflicto 
+        # 3. En caso de conflicto estrategia update
+        #   3.1 Cambiar el nombre del fichero en el servidor a fichero(copia en conflicto XX).extension, siendo XX el numero de copia
+        #   3.2 La copia nueva pasa a ser la oficial
+        #   3.3 Sincronizar la copia en conflicto con el cliente (enviar nombre del fichero en conflicto). El usuario decidira que hacer con eso
         # 4. Si la rev es igual el cliente manda el hash del fichero y el servidor lo compara con el hash en la base de datos
         # 5. Si son iguales rechaza (positivo) la subida
         elif message.startswith(szasar.Command.Upload):
