@@ -45,7 +45,7 @@ def safe_path(root, filename):
 def session(s):
     """Serve one authenticated client session until it disconnects."""
     state = State.Identification
-
+    
     while True:
         try:
             message = szasar.recvline(s).decode("ascii")
@@ -126,7 +126,12 @@ def session(s):
             else:
                 sendOK(s)
                 s.sendall(filedata)
-
+        # Modificaciones TODO a upload
+        # 1. Cada vez que el cliente quiere subir un archivo, el servidor manda el rev del archivo
+        # 2. Si la rev es distinta, hay un conflicto (alguien ha modificado el archivo en el servidor)
+        # 3. TODO: Decidir que hacer con el conflicto 
+        # 4. Si la rev es igual el cliente manda el hash del fichero y el servidor lo compara con el hash en la base de datos
+        # 5. Si son iguales rechaza (positivo) la subida
         elif message.startswith(szasar.Command.Upload):
             if state != State.Main:
                 sendER(s)
@@ -196,7 +201,6 @@ def session(s):
 
         else:
             sendER(s)
-
 
 if __name__ == "__main__":
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
