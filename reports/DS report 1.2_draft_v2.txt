@@ -1,0 +1,180 @@
+ACTIVITY 1.2. A NETWORK FILE SYSTEM
+
+Analysis of the SAR/SZA Cloud File Service
+
+Authors: [add authors]
+
+
+INDEX
+
+1. Introduction
+2. What is a distributed system?
+3. SAR/SZA file server
+4. Is SAR/SZA file server a distributed system?
+5. Conclusion
+
+
+1. INTRODUCTION
+
+This report analyses the SAR/SZA file service developed for the SAR course. The application is a TCP client-server file service that allows users to list, download, upload and delete files. The current version also includes a multithreaded server, per-user storage, automatic one-way synchronization and Docker deployment.
+
+The aim of this report is to identify the distributed-system properties present in the application and compare it with cloud file services such as Dropbox and OneDrive.
+
+
+2. WHAT IS A DISTRIBUTED SYSTEM?
+
+2.1 Definition
+
+A distributed system is a group of independent computers or processes that communicate through a network to provide a common service. They do not share memory, so they coordinate by exchanging messages.
+
+SAR/SZA satisfies this basic definition. The client and server are separate processes that communicate through TCP. The client requests operations on files stored by the server. They can run on different machines or in separate Docker containers.
+
+2.2 Properties
+
+Transparency
+
+Transparency of identification
+
+The client uses file names without needing to know how the server stores the data. This transparency is only partial because the user must still specify the server, port and local folder.
+
+Transparency of physical location
+
+The user does not know the physical disk location of a file, but does know the server address and port. Files are stored under files/<user>/, so location transparency is limited.
+
+Transparency of replication
+
+There is no replication. Each file has one copy on one server, so a server or disk failure makes the file unavailable.
+
+Transparency of parallelism
+
+The multithreaded server can attend several clients at the same time. However, there is no locking, conflict resolution or version history.
+
+Transparency of sharing
+
+Several clients can use the server, but sharing is basic. There are no sharing links, groups, configurable folder permissions or collaborative editing features.
+
+Scalability
+
+The server supports concurrent clients through threads, but the system still depends on one server and one storage location. It has no load balancing, partitioning, replication or horizontal scaling.
+
+Namespaces
+
+Each file is identified by its name inside the authenticated user's directory. The protocol does not provide a complete hierarchy with subdirectories, metadata or search.
+
+Complexity and performance
+
+The protocol is simple: control messages are ASCII lines ending in CRLF, while file contents are transferred as raw bytes. The synchronization worker groups repeated events and waits for files to become stable before uploading them. Uploads are written to a temporary file and then replaced atomically.
+
+Performance is limited because complete files are read into memory and all traffic passes through one server. There is no compression or distributed caching.
+
+Reliability and fault tolerance
+
+Availability
+
+Availability depends on the server and its disk. If the server fails, clients cannot access the stored files. There is no failover server or replicated storage.
+
+Fault tolerance
+
+The synchronization worker retries operations after temporary network failures by reconnecting and requeueing them. Its queue is only in memory, so pending changes may be lost if the client stops unexpectedly.
+
+Consistency
+
+The system provides limited eventual consistency for changes made in the client folder. Changes are eventually sent to the server, but synchronization is not bidirectional. There is no conflict resolution, locking or versioning, so a later upload can overwrite an earlier one.
+
+Other properties
+
+Performance
+
+The manual client and synchronization worker use separate TCP connections. This prevents automatic synchronization from blocking the interactive menu. Server threads also allow multiple sessions to progress concurrently.
+
+Security and privacy
+
+The application authenticates users, restricts anonymous users to read operations, separates users into directories and validates paths to prevent directory traversal. However, credentials are fixed in the source code and communication uses unencrypted TCP without TLS.
+
+Ease of use
+
+The menu supports common file operations, and automatic synchronization avoids manual uploads for every local change. Nevertheless, the interface is terminal-based, synchronization is one-way and the watcher is not recursive.
+
+
+3. SAR/SZA FILE SERVER
+
+3.1 Origin and purpose
+
+The application is based on the SAR course protocol. It provides a simple TCP service for remote file operations. The current repository keeps the original protocol and adds automatic synchronization, multithreaded execution and Docker deployment.
+
+3.2 Client-server architecture
+
+The main server is serv_fich_multithread.py. It listens on port 6012 and creates one thread for each client session. Each session uses states for identification, authentication, normal operations, downloading and uploading.
+
+The interactive client is cli_fich.py. It supports listing, downloading, uploading, deleting and closing a session. The SyncWorker in sync_client.py uses a second connection and watchdog to detect local file changes.
+
+3.3 Authentication and permissions
+
+The service defines three users: anonimous, sar and sza. The anonymous user can list and download files but cannot upload or delete them. The other users can perform all file operations. Each authenticated user has a separate directory on the server.
+
+3.4 Protocol and file operations
+
+Commands and responses are ASCII strings terminated by CRLF. File data is transferred as binary data.
+
+Downloads use two steps:
+
+1. DOWN requests a file and returns its size.
+2. DOW2 confirms the request and the server sends the file.
+
+Uploads also use two steps:
+
+1. UPLO sends the file name and size.
+2. UPL2 is followed by the file contents.
+
+The other commands are USER, PASS, LIST, DELE and EXIT.
+
+3.5 Restrictions and improvements
+
+- The maximum upload size is 10 MiB.
+- The server requires a 50 MiB free-space margin.
+- The watcher only monitors files directly inside the local folder.
+- User paths are validated to prevent directory traversal.
+- Uploads use temporary files and atomic replacement.
+- Temporary network failures are retried, but the queue is not persistent.
+
+The repository also contains serv_fich.py, an older process-based server using fork() and a shared directory. Docker uses the newer multithreaded implementation.
+
+
+4. IS SAR/SZA FILE SERVER A DISTRIBUTED SYSTEM?
+
+Yes, in the basic sense. The client and server are independent networked processes that cooperate through message passing. The server provides remote file access and can serve several clients concurrently.
+
+However, SAR/SZA is not a complete cloud file service. It lacks replication, horizontal scalability, high availability, bidirectional synchronization, conflict resolution, versioning and encrypted communication.
+
+Comparison with Dropbox and OneDrive
+
++----------------------------+------------------------------+------------------------------+------------------------------+
+| Property                   | SAR/SZA                      | Dropbox                     | OneDrive                    |
++----------------------------+------------------------------+------------------------------+------------------------------+
+| Storage                    | One server and local disk.   | Distributed and redundant.  | Distributed and redundant.  |
+| Namespace                  | Per-user files; limited     | Hierarchical folders,      | Hierarchical folders,      |
+|                            | hierarchy.                  | metadata and search.       | metadata and search.       |
+| Concurrent access          | Multiple threads, but no    | Synchronization, versioning| Synchronization, versioning|
+|                            | conflict control.           | and conflict management.   | and conflict management.   |
+| Location transparency      | Limited; server address is  | Physical location is       | Physical location is       |
+|                            | known by the client.        | hidden.                    | hidden.                    |
+| Replication                | Not implemented.            | Multiple copies.           | Multiple copies.           |
+| Scalability                | Mainly one-server scaling.  | Horizontal cloud scaling.  | Horizontal cloud scaling.  |
+| Availability               | Depends on one server.      | High availability design.  | High availability design.  |
+| Synchronization            | One-way client to server.   | Bidirectional, multi-device.| Bidirectional, multi-device.|
+| Security                   | Fixed users; plain TCP.     | Encryption and identity    | Encryption and identity    |
+|                            | without TLS.                | management.                | management.                |
+| Versioning and recovery    | Not available.              | File history and recovery. | File history and recovery. |
+| Collaboration              | Not available.              | Sharing and collaboration. | Sharing and collaboration. |
++----------------------------+------------------------------+------------------------------+------------------------------+
+
+SAR/SZA is therefore a small distributed file-transfer and synchronization system. Dropbox and OneDrive are larger cloud platforms designed for redundancy, scale, availability and collaboration.
+
+
+5. CONCLUSION
+
+SAR/SZA demonstrates the main foundations of a distributed file service: independent networked components, TCP communication, remote file access, authentication and concurrent client sessions. The current implementation also provides automatic one-way synchronization, separate user directories, path validation, retry handling, atomic uploads and Docker deployment.
+
+Its limitations are equally clear. There is one main server, no replication, no horizontal scaling, no conflict resolution, no version history and no encrypted transport. The synchronization queue is also not durable.
+
+In conclusion, SAR/SZA is a distributed client-server file service, but not a production-grade cloud storage platform. It is useful for demonstrating the basic concepts that more advanced systems such as Dropbox and OneDrive extend with replication, scalability, reliability, security and collaboration features.
