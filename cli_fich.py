@@ -101,7 +101,7 @@ if __name__ == "__main__":
         sync_worker = None
 
     signal.signal(signal.SIGINT, handler)
-    print("\Logged in")
+    print("\nLogged in")
     while running:
         time.sleep(1)
     s.close()
