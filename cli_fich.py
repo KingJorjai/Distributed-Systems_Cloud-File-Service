@@ -3,10 +3,17 @@
 import os
 import socket
 import sys
+import signal
+import time
 
 import szasar
 from sync_client import SyncError, SyncWorker
-
+# TODO Generales
+# 1. Eliminar el comando de listar, ya no es necesario ✔️
+# 2. Cambios a upload (Estan comentados mas abajo)
+# 3. Eliminar el menu, ya no es necesario. Solo dejar logearse ✔️
+# 4. Mensaje Update para que el servidor informe al cliente de cambios en el servidor
+#   4.1 El Cliente mira los cambios y elimina ficheros o descarga ficheros (nuevos o modificados)
 SERVER = "localhost"
 PORT = 6012
 LOCAL_PATH = "client_files"
@@ -24,37 +31,14 @@ ER_MSG = (
     "Error al subir el fichero.",
     "Error al borrar el fichero.",
 )
+running = True
+def handler(signum, frame):
+    global running
+    print("\nCtrl+C received — shutting down gracefully")
+    running = False
 
 
-class Menu:
-    """Display and validate the interactive client menu."""
 
-    List, Download, Upload, Delete, Exit = range(1, 6)
-    Options = (
-        "Lista de ficheros",
-        "Bajar fichero",
-        "Subir fichero",
-        "Borrar fichero",
-        "Salir",
-    )
-
-    def menu():
-        """Read and return a valid menu option number."""
-        print("+{}+".format("-" * 30))
-        for i, option in enumerate(Menu.Options, 1):
-            print("| {}.- {:<25}|".format(i, option))
-        print("+{}+".format("-" * 30))
-
-        while True:
-            try:
-                selected = int(input("Selecciona una opción: "))
-            except ValueError:
-                print("Opción no válida.")
-                continue
-            if 0 < selected <= len(Menu.Options):
-                return selected
-            else:
-                print("Opción no válida.")
 
 
 def iserror(message):
@@ -116,99 +100,8 @@ if __name__ == "__main__":
         print("No se ha podido iniciar la sincronización automática: {}".format(error))
         sync_worker = None
 
-    while True:
-        option = Menu.menu()
-
-        if option == Menu.List:
-            message = "{}\r\n".format(szasar.Command.List)
-            s.sendall(message.encode("ascii"))
-            message = szasar.recvline(s).decode("ascii")
-            if iserror(message):
-                continue
-            filecount = 0
-            print("Listado de ficheros disponibles")
-            print("-------------------------------")
-            while True:
-                line = szasar.recvline(s).decode("ascii")
-                if line:
-                    filecount += 1
-                    fileinfo = line.split("?")
-                    print(
-                        "{:<20} {:>8}".format(fileinfo[0], int2bytes(int(fileinfo[1])))
-                    )
-                else:
-                    break
-            print("-------------------------------")
-            if filecount == 0:
-                print("No hay ficheros disponibles.")
-            else:
-                plural = "s" if filecount > 1 else ""
-                print("{0} fichero{1} disponible{1}.".format(filecount, plural))
-
-        elif option == Menu.Download:
-            filename = input("Indica el fichero que quieres bajar: ")
-            message = "{}{}\r\n".format(szasar.Command.Download, filename)
-            s.sendall(message.encode("ascii"))
-            message = szasar.recvline(s).decode("ascii")
-            if iserror(message):
-                continue
-            filesize = int(message[2:])
-            message = "{}\r\n".format(szasar.Command.Download2)
-            s.sendall(message.encode("ascii"))
-            message = szasar.recvline(s).decode("ascii")
-            if iserror(message):
-                continue
-            filedata = szasar.recvall(s, filesize)
-            if sync_worker is not None:
-                sync_worker.ignore(filename)
-            try:
-                with open(os.path.join(LOCAL_PATH, filename), "wb") as f:
-                    f.write(filedata)
-            except OSError:
-                print("No se ha podido guardar el fichero en disco.")
-            else:
-                print("El fichero {} se ha descargado correctamente.".format(filename))
-
-        elif option == Menu.Upload:
-            filename = input("Indica el fichero que quieres subir: ")
-            try:
-                filesize = os.path.getsize(os.path.join(LOCAL_PATH, filename))
-                with open(os.path.join(LOCAL_PATH, filename), "rb") as f:
-                    filedata = f.read()
-            except OSError:
-                print("No se ha podido acceder al fichero {}.".format(filename))
-                continue
-
-            message = "{}{}?{}\r\n".format(szasar.Command.Upload, filename, filesize)
-            s.sendall(message.encode("ascii"))
-            message = szasar.recvline(s).decode("ascii")
-            if iserror(message):
-                continue
-
-            message = "{}\r\n".format(szasar.Command.Upload2)
-            s.sendall(message.encode("ascii"))
-            s.sendall(filedata)
-            message = szasar.recvline(s).decode("ascii")
-            if not iserror(message):
-                print("El fichero {} se ha enviado correctamente.".format(filename))
-
-        elif option == Menu.Delete:
-            filename = input("Indica el fichero que quieres borrar: ")
-            message = "{}{}\r\n".format(szasar.Command.Delete, filename)
-            s.sendall(message.encode("ascii"))
-            message = szasar.recvline(s).decode("ascii")
-            if not iserror(message):
-                try:
-                    os.remove(os.path.join(LOCAL_PATH, filename))
-                except FileNotFoundError:
-                    pass
-                print("El fichero {} se ha borrado correctamente.".format(filename))
-
-        elif option == Menu.Exit:
-            message = "{}\r\n".format(szasar.Command.Exit)
-            s.sendall(message.encode("ascii"))
-            message = szasar.recvline(s).decode("ascii")
-            if sync_worker is not None:
-                sync_worker.stop()
-            break
+    signal.signal(signal.SIGINT, handler)
+    print("\Logged in")
+    while running:
+        time.sleep(1)
     s.close()

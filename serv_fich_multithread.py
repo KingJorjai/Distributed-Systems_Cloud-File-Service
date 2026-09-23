@@ -14,6 +14,12 @@ SPACE_MARGIN = 50 * 1 << 20  # 50 MiB
 USERS = ("anonimous", "sar", "sza")
 PASSWORDS = ("", "sar", "sza")
 
+# TODO Generales
+# 1. Eliminar el comando de listar, ya no es necesario ✔️
+# 2. Implementar DB del cliente en el servidor (fichero | rev | hash)
+# 3. Cambios a upload (Estan comentados mas abajo)
+# 4. Mensaje Update para que el servidor informe a clientes de cambios en su cuenta 
+ 
 
 class State:
     """States used by one client session in the multithreaded server."""
@@ -45,7 +51,7 @@ def safe_path(root, filename):
 def session(s):
     """Serve one authenticated client session until it disconnects."""
     state = State.Identification
-
+    
     while True:
         try:
             message = szasar.recvline(s).decode("ascii")
@@ -80,21 +86,6 @@ def session(s):
                 sendER(s, 3)
                 state = State.Identification
 
-        elif message.startswith(szasar.Command.List):
-            if state != State.Main:
-                sendER(s)
-                continue
-            try:
-                message = "OK\r\n"
-                for filename in os.listdir(filespath):
-                    filesize = os.path.getsize(os.path.join(filespath, filename))
-                    message += "{}?{}\r\n".format(filename, filesize)
-                message += "\r\n"
-            except OSError:
-                sendER(s, 4)
-            else:
-                s.sendall(message.encode("ascii"))
-
         elif message.startswith(szasar.Command.Download):
             if state != State.Main:
                 sendER(s)
@@ -126,7 +117,15 @@ def session(s):
             else:
                 sendOK(s)
                 s.sendall(filedata)
-
+        # Modificaciones TODO a upload
+        # 1. Cada vez que el cliente quiere subir un archivo, el servidor manda el rev del archivo
+        # 2. Si la rev es distinta, hay un conflicto (alguien ha modificado el archivo en el servidor)
+        # 3. En caso de conflicto estrategia update
+        #   3.1 Cambiar el nombre del fichero en el servidor a fichero(copia en conflicto XX).extension, siendo XX el numero de copia
+        #   3.2 La copia nueva pasa a ser la oficial
+        #   3.3 Sincronizar la copia en conflicto con el cliente (enviar nombre del fichero en conflicto). El usuario decidira que hacer con eso
+        # 4. Si la rev es igual el cliente manda el hash del fichero y el servidor lo compara con el hash en la base de datos
+        # 5. Si son iguales rechaza (positivo) la subida
         elif message.startswith(szasar.Command.Upload):
             if state != State.Main:
                 sendER(s)
@@ -196,7 +195,6 @@ def session(s):
 
         else:
             sendER(s)
-
 
 if __name__ == "__main__":
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
