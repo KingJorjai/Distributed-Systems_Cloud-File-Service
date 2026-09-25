@@ -247,6 +247,39 @@ identical to the NTP estimate because Cristian's calculation uses a server
 timestamp and assumes that the timestamp is associated with the middle of the
 round trip, while NTP uses all four timestamps.
 
+6.1.1 Answers to the questions from the board
+
+Using the notation from the board, let C be the client (A) and S be the server
+(B). The deviation of C with respect to S is defined as client time minus
+server time. Therefore:
+
+  theta(C,S) = (T1 + D/2) - t(mt)
+         = 1000.085 - 1000.140
+         = -0.055 ms
+
+C is estimated to be 0.055 ms behind S. Equivalently, S is estimated to be
+0.055 ms ahead of C. The sign is important: a negative deviation means that
+the first clock in theta(C,S), namely C, is behind the second clock, S.
+
+The deviation is not exact because the message delays are unknown. Cristian's
+accuracy is:
+
+  accuracy = D/2 - min
+
+With no measured lower bound for the one-way transmission time, we use
+min = 0 ms:
+
+  accuracy = 0.170/2 - 0 = 0.085 ms
+
+Thus the estimated deviation of C with respect to S is -0.055 ms with a
+maximum error of 0.085 ms. The corresponding possible interval for the true
+deviation is:
+
+  [-0.055 - 0.085, -0.055 + 0.085] = [-0.140, 0.030] ms
+
+If a reliable positive value of min were measured, the accuracy interval would
+be narrower by that amount.
+
 The minimum one-way transmission time cannot be determined from a single
 exchange. If we conservatively assume min = 0, Cristian's accuracy bound is:
 
