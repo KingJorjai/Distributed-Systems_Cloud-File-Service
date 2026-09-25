@@ -1,13 +1,15 @@
 class Command:
     """Commands supported by the line-based file service protocol."""
 
-    User, Password, Download, Download2, Upload, Upload2, Delete, Exit = (
+    User, Password, Download, Download2, Upload, Upload2, MakeDir, RemoveDir, Delete, Exit = (
         "USER",
         "PASS",
         "DOWN",
         "DOW2",
         "UPLO",
         "UPL2",
+        "MKDR",
+        "RMDR",
         "DELE",
         "EXIT",
     )

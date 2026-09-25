@@ -13,6 +13,8 @@ The service uses a simple line-based TCP protocol. Every command ends with `CRLF
 | `DOW2` | Request the prepared file bytes. |
 | `UPLOfilename?size` | Prepare an upload. |
 | `UPL2` | Send the upload bytes after the server accepts them. |
+| `MKDRdirname` | Create a directory. |
+| `RMDRdirname` | Delete a directory and its contents. |
 | `DELEfilename` | Delete a file. |
 | `EXIT` | Close the session. |
 

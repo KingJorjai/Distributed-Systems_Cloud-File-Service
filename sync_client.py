@@ -71,6 +71,14 @@ class SyncConnection:
         """Delete a file from the authenticated user's server directory."""
         self._command(szasar.Command.Delete + filename)
 
+    def mkdir(self, dirname):
+        """Create a directory in the authenticated user's server directory."""
+        self._command(szasar.Command.MakeDir + dirname)
+
+    def rmdir(self, dirname):
+        """Delete a directory and its contents from the server directory."""
+        self._command(szasar.Command.RemoveDir + dirname)
+
     def _command(self, command):
         """Send a line-based protocol command and validate its response."""
         self.socket.sendall((command + "\r\n").encode("ascii"))
@@ -96,7 +104,10 @@ class ChangeHandler(FileSystemEventHandler):
         self.is_ignored = is_ignored
 
     def on_created(self, event):
-        """Queue a newly created file for upload."""
+        """Queue a newly created file or directory for synchronization."""
+        if event.is_directory:
+            self.changes.put(("mkdir", self._relative(event.src_path)))
+            return
         self._enqueue_upload(event)
 
     def on_modified(self, event):
@@ -104,15 +115,25 @@ class ChangeHandler(FileSystemEventHandler):
         self._enqueue_upload(event)
 
     def on_deleted(self, event):
-        """Queue deletion of a removed file."""
-        if not event.is_directory and not self.is_ignored(
-            self._relative(event.src_path)
-        ):
-            self.changes.put(("delete", self._relative(event.src_path)))
+        """Queue deletion of a removed file or directory."""
+        filename = self._relative(event.src_path)
+        if event.is_directory:
+            self.changes.put(("rmdir", filename))
+        elif not self.is_ignored(filename):
+            self.changes.put(("delete", filename))
 
     def on_moved(self, event):
-        """Queue the source deletion and destination upload of a rename."""
+        """Queue synchronization of a renamed file or directory."""
         if event.is_directory:
+            self.changes.put(("rmdir", self._relative(event.src_path)))
+            destination = Path(event.dest_path)
+            self.changes.put(("mkdir", self._relative(event.dest_path)))
+            for path in sorted(destination.rglob("*")):
+                relative = self._relative(path)
+                if path.is_dir():
+                    self.changes.put(("mkdir", relative))
+                elif path.is_file():
+                    self.changes.put(("upload", relative))
             return
         self.changes.put(("delete", self._relative(event.src_path)))
         self.changes.put(("upload", self._relative(event.dest_path)))
@@ -150,11 +171,15 @@ class SyncWorker:
         """Start watching the folder and queue existing files for upload."""
         self.root.mkdir(parents=True, exist_ok=True)
         self.connection.connect()
-        self.observer.schedule(self.handler, str(self.root), recursive=False)
+        self.observer.schedule(self.handler, str(self.root), recursive=True)
         self.observer.start()
-        for path in self.root.iterdir():
+        paths = sorted(self.root.rglob("*"))
+        for path in paths:
+            if path.is_dir():
+                self.changes.put(("mkdir", path.relative_to(self.root).as_posix()))
+        for path in paths:
             if path.is_file():
-                self.changes.put(("upload", path.name))
+                self.changes.put(("upload", path.relative_to(self.root).as_posix()))
         self.worker.start()
 
     def stop(self):
@@ -193,6 +218,10 @@ class SyncWorker:
             try:
                 if action == "upload":
                     self._upload_when_stable(filename)
+                elif action == "mkdir":
+                    self.connection.mkdir(filename)
+                elif action == "rmdir":
+                    self.connection.rmdir(filename)
                 else:
                     self.connection.delete(filename)
             except (OSError, EOFError, socket.timeout, SyncError):

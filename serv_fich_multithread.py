@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import shutil
 import socket
 import tempfile
 import threading
@@ -161,6 +162,7 @@ def session(s):
                 fd, tempname = tempfile.mkstemp(prefix=".upload-", dir=filespath)
                 with os.fdopen(fd, "wb") as f:
                     f.write(filedata)
+                os.makedirs(os.path.dirname(target), exist_ok=True)
                 os.replace(tempname, target)
             except (OSError, EOFError):
                 if tempname is not None:
@@ -169,6 +171,36 @@ def session(s):
                     except OSError:
                         pass
                 sendER(s, 10)
+            else:
+                sendOK(s)
+
+        elif message.startswith(szasar.Command.MakeDir):
+            if state != State.Main:
+                sendER(s)
+                continue
+            if user == 0:
+                sendER(s, 7)
+                continue
+            try:
+                os.makedirs(safe_path(filespath, message[4:]), exist_ok=True)
+            except (OSError, ValueError):
+                sendER(s, 11)
+            else:
+                sendOK(s)
+
+        elif message.startswith(szasar.Command.RemoveDir):
+            if state != State.Main:
+                sendER(s)
+                continue
+            if user == 0:
+                sendER(s, 7)
+                continue
+            try:
+                shutil.rmtree(safe_path(filespath, message[4:]))
+            except FileNotFoundError:
+                sendOK(s)
+            except (OSError, ValueError):
+                sendER(s, 11)
             else:
                 sendOK(s)
 
