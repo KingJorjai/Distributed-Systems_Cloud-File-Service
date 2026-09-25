@@ -38,6 +38,32 @@ source .venv/bin/activate
 python cli_fich.py localhost 6012 client_files
 ```
 
+### Windows
+
+From PowerShell, create and activate a Windows virtual environment:
+
+```powershell
+py -3.13 -m venv .venv-win
+.\.venv-win\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+Start the server in one PowerShell window:
+
+```powershell
+cd C:\Users\<usuario>\DS\Distributed-Systems_Cloud-File-Service
+.\.venv-win\Scripts\Activate.ps1
+python serv_fich_multithread.py
+```
+
+Start the client in another PowerShell window:
+
+```powershell
+cd C:\Users\<usuario>\DS\Distributed-Systems_Cloud-File-Service
+.\.venv-win\Scripts\Activate.ps1
+python cli_fich.py localhost 6012 client_files
+```
+
 The client arguments are `server`, `port`, and `local_folder`. The default local folder is `client_files`.
 
 The client automatically uploads created, modified, renamed, and deleted files. Existing files are uploaded when it starts. Changes made directly on the server are not synchronized back to the client.
