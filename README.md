@@ -51,7 +51,6 @@ python -m pip install -r requirements.txt
 Start the server in one PowerShell window:
 
 ```powershell
-cd C:\Users\<usuario>\DS\Distributed-Systems_Cloud-File-Service
 .\.venv-win\Scripts\Activate.ps1
 python serv_fich_multithread.py
 ```
@@ -59,7 +58,6 @@ python serv_fich_multithread.py
 Start the client in another PowerShell window:
 
 ```powershell
-cd C:\Users\<usuario>\DS\Distributed-Systems_Cloud-File-Service
 .\.venv-win\Scripts\Activate.ps1
 python cli_fich.py localhost 6012 client_files
 ```

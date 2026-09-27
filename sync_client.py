@@ -1,3 +1,4 @@
+import hashlib
 import queue
 import socket
 import threading
@@ -8,33 +9,25 @@ from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
 import szasar
+from db_manager import ClientDB  
 
 
 class SyncError(Exception):
     """Raised when the server rejects a synchronization request."""
-
     pass
 
-# TODO Generales
-# 1. Implementar DB del cliente (fichero | rev | hash)
-# 2. Cambios a upload (Estan comentados mas abajo)
+
 class SyncConnection:
     """Manage the TCP connection used by the automatic synchronizer."""
 
     def __init__(self, server, port, user, password):
-        """Initialize a connection configuration.
-
-        Args:
-            server: Server hostname or IP address.
-            port: Server TCP port.
-            user: Username used for authentication.
-            password: Password used for authentication.
-        """
+        """Initialize a connection configuration."""
         self.server = server
         self.port = port
         self.user = user
         self.password = password
         self.socket = None
+        self.db = ClientDB() 
 
     def connect(self):
         """Open the socket and authenticate with the server."""
@@ -51,25 +44,72 @@ class SyncConnection:
                 pass
             self.socket.close()
             self.socket = None
-    # Modificaciones TODO a upload
-    # 1. Enviar el rev del fichero al servidor
-    # 2. Esperar respuesta
-    # 3. En caso de conflicto
-    #   3.1 Almacenar el nombre del fichero en conflicto y, al final descargarlo
-    # 4. Mandar hash del fichero
-    # 5. Esperar respuesta
-    # 6. Si da permiso el servidor subir archivo
-    # 7. Si ha habido conflicto descargar fichero en conflicto
+
     def upload(self, filename, data):
-        """Upload file data to the authenticated user's server directory."""
-        self._command("{}{}?{}".format(szasar.Command.Upload, filename, len(data)))
+        """Upload file data with revision control and conflict resolution."""
+        
+        info = self.db.get_file_info(filename)
+        rev_local = info[0] if info else 0
+
+        cmd = "{}{}?{}?{}\r\n".format(szasar.Command.Upload, filename, len(data), rev_local)
+        self.socket.sendall(cmd.encode("ascii"))
+        
+        response = szasar.recvline(self.socket).decode("ascii")
+        if response.startswith("ER"):
+            raise SyncError(response)
+
+        conflicto = None
+
+        if response.startswith("CNFL"):
+            conflicto = response[4:] 
+            print(f"[!] Conflicto detectado en '{filename}'. Copia remota guardada como '{conflicto}'.")
+            
+            self._send_upload2(data)
+            
+            nuevo_hash = hashlib.sha256(data).hexdigest()
+            self.db.update_file_info(filename, rev_local + 1, nuevo_hash)
+
+        elif response.startswith("HASH"):
+            hash_local = hashlib.sha256(data).hexdigest()
+            self.socket.sendall(f"HASH{hash_local}\r\n".encode("ascii"))
+            
+            resp_hash = szasar.recvline(self.socket).decode("ascii")
+            
+            if resp_hash.startswith("OK_UP_TO_DATE"):
+                return
+            elif resp_hash.startswith("OK"):
+                self._send_upload2(data)
+                
+                self.db.update_file_info(filename, rev_local + 1, hash_local)
+            else:
+                raise SyncError(f"Respuesta inesperada al enviar HASH: {resp_hash}")
+                
+        elif response.startswith("OK"):
+            self._send_upload2(data)
+            nuevo_hash = hashlib.sha256(data).hexdigest()
+            self.db.update_file_info(filename, rev_local + 1, nuevo_hash)
+            
+        else:
+            raise SyncError(f"Respuesta inesperada en Upload: {response}")
+
+        if conflicto:
+            self.download_conflict(conflicto)
+
+    def _send_upload2(self, data):
+        """Helper para enviar los datos reales del archivo."""
         self.socket.sendall((szasar.Command.Upload2 + "\r\n").encode("ascii"))
         self.socket.sendall(data)
         self._read_response()
 
+    def download_conflict(self, filename_conflicto):
+        """Descarga el fichero en conflicto."""
+        print(f"[*] Pendiente descargar fichero en conflicto: {filename_conflicto}")
+        pass
+
     def delete(self, filename):
         """Delete a file from the authenticated user's server directory."""
         self._command(szasar.Command.Delete + filename)
+        # Opcional: borrar de la BD local si quieres mantenerla limpia
 
     def mkdir(self, dirname):
         """Create a directory in the authenticated user's server directory."""

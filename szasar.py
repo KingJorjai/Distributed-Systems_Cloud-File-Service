@@ -1,7 +1,7 @@
 class Command:
     """Commands supported by the line-based file service protocol."""
 
-    User, Password, Download, Download2, Upload, Upload2, MakeDir, RemoveDir, Delete, Exit = (
+    User, Password, Download, Download2, Upload, Upload2, MakeDir, RemoveDir, Delete, Exit, Hash = (
         "USER",
         "PASS",
         "DOWN",
@@ -12,6 +12,7 @@ class Command:
         "RMDR",
         "DELE",
         "EXIT",
+        "HASH"
     )
 
 

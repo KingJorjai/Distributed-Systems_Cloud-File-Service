@@ -5,7 +5,7 @@ import socket
 import sys
 import signal
 import time
-
+import db_manager
 import szasar
 from sync_client import SyncError, SyncWorker
 # TODO Generales
@@ -102,6 +102,7 @@ if __name__ == "__main__":
 
     signal.signal(signal.SIGINT, handler)
     print("\nLogged in")
+    db_client = db_manager.ClientDB()
     while running:
         time.sleep(1)
     s.close()

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-
 import os
 import shutil
 import socket
 import tempfile
 import threading
-
+import db_manager
 import szasar
+
 
 PORT = 6012
 FILES_PATH = "files"
@@ -19,24 +19,19 @@ PASSWORDS = ("", "sar", "sza")
 # 1. Eliminar el comando de listar, ya no es necesario ✔️
 # 2. Implementar DB del cliente en el servidor (fichero | rev | hash)
 # 3. Cambios a upload (Estan comentados mas abajo)
-# 4. Mensaje Update para que el servidor informe a clientes de cambios en su cuenta 
- 
+# 4. Mensaje Update para que el servidor informe a clientes de cambios en su cuenta
 
 class State:
     """States used by one client session in the multithreaded server."""
-
-    Identification, Authentication, Main, Downloading, Uploading = range(5)
-
+    Identification, Authentication, Main, Downloading, Uploading, WaitHash = range(6)
 
 def sendOK(s, params=""):
     """Send a successful protocol response with optional parameters."""
     s.sendall(("OK{}\r\n".format(params)).encode("ascii"))
 
-
 def sendER(s, code=1):
     """Send a protocol error response with an error code."""
     s.sendall(("ER{}\r\n".format(code)).encode("ascii"))
-
 
 def safe_path(root, filename):
     """Resolve a filename while preventing access outside the user's root."""
@@ -48,20 +43,31 @@ def safe_path(root, filename):
         raise ValueError("Ruta no válida")
     return target
 
+def generate_name_conflict(files_root, filename):
+    """Return an unused conflict filename relative to the user's file root."""
+    directory, original_name = os.path.split(filename)
+    base, ext = os.path.splitext(original_name)
+    counter = 1
+    while True:
+        conflict_name = f"{base}(Copy on conflict {counter:02d}){ext}"
+        new_name = (
+            os.path.join(directory, conflict_name) if directory else conflict_name
+        )
+        if not os.path.exists(safe_path(files_root, new_name)):
+            return new_name
+        counter += 1
 
-def session(s):
+def session(s, db_server):
     """Serve one authenticated client session until it disconnects."""
     state = State.Identification
-    
     while True:
         try:
             message = szasar.recvline(s).decode("ascii")
         except EOFError:
             return
-        # 		print( "---SERVER: Leido msg {} {}\r\n.".format( message[0:4], message[4:] ) )
+        #       print( "---SERVER: Leido msg {} {}\r\n.".format( message[0:4], message[4:] ) )
         if not message:
             return
-
         if message.startswith(szasar.Command.User):
             if state != State.Identification:
                 sendER(s)
@@ -73,7 +79,6 @@ def session(s):
             else:
                 sendOK(s)
                 state = State.Authentication
-
         elif message.startswith(szasar.Command.Password):
             if state != State.Authentication:
                 sendER(s)
@@ -86,7 +91,6 @@ def session(s):
             else:
                 sendER(s, 3)
                 state = State.Identification
-
         elif message.startswith(szasar.Command.Download):
             if state != State.Main:
                 sendER(s)
@@ -104,7 +108,6 @@ def session(s):
             else:
                 sendOK(s, filesize)
                 state = State.Downloading
-
         elif message.startswith(szasar.Command.Download2):
             if state != State.Downloading:
                 sendER(s)
@@ -118,6 +121,7 @@ def session(s):
             else:
                 sendOK(s)
                 s.sendall(filedata)
+
         # Modificaciones TODO a upload
         # 1. Cada vez que el cliente quiere subir un archivo, el servidor manda el rev del archivo
         # 2. Si la rev es distinta, hay un conflicto (alguien ha modificado el archivo en el servidor)
@@ -135,7 +139,15 @@ def session(s):
                 sendER(s, 7)
                 continue
             try:
-                filename, filesize = message[4:].split("?")
+                upload_fields = message[4:].split("?")
+                if len(upload_fields) == 2:
+                    filename, filesize = upload_fields
+                    rev_client = None
+                elif len(upload_fields) == 3:
+                    filename, filesize, rev = upload_fields
+                    rev_client = int(rev)
+                else:
+                    raise ValueError("Formato de subida no válido")
                 filesize = int(filesize)
                 target = safe_path(filespath, filename)
             except (ValueError, TypeError):
@@ -144,18 +156,47 @@ def session(s):
             if filesize > MAX_FILE_SIZE:
                 sendER(s, 8)
                 continue
-            svfs = os.statvfs(filespath)
-            if filesize + SPACE_MARGIN > svfs.f_bsize * svfs.f_bavail:
+            if filesize + SPACE_MARGIN > shutil.disk_usage(filespath).free:
                 sendER(s, 9)
                 continue
-            sendOK(s)
-            state = State.Uploading
 
+            info = db_server.get_file_info(user, filename)
+            rev_server = info[0] if info else 0
+            if rev_client is None:
+                sendOK(s)
+                state = State.Uploading
+            elif rev_client != rev_server:
+                if os.path.exists(target):
+                    name_conflict = generate_name_conflict(filespath, filename)
+                    target_conflict = safe_path(filespath, name_conflict)
+                    os.rename(target, target_conflict)
+                    s.sendall(f"CNFL{name_conflict}\r\n".encode("ascii"))
+                else:
+                    sendOK(s)
+                state = State.Uploading
+            else:
+                s.sendall((szasar.Command.Hash + "\r\n").encode("ascii"))
+                state = State.WaitHash
+        elif message.startswith("HASH"):
+            if state != State.WaitHash:
+                sendER(s)
+                continue
+
+            hash_client = message[4:].strip()
+            info = db_server.get_file_info(user, filename)
+            hash_server = info[1] if info else None
+            if hash_client == hash_server:
+                s.sendall(b"OK_UP_TO_DATE\r\n")
+                state = State.Main
+            else:
+                sendOK(s)
+                state = State.Uploading
         elif message.startswith(szasar.Command.Upload2):
             if state != State.Uploading:
                 sendER(s)
                 continue
             state = State.Main
+
             tempname = None
             try:
                 filedata = szasar.recvall(s, filesize)
@@ -164,6 +205,10 @@ def session(s):
                     f.write(filedata)
                 os.makedirs(os.path.dirname(target), exist_ok=True)
                 os.replace(tempname, target)
+                new_hash = db_manager.calculate_hash_file(target)
+                info = db_server.get_file_info(user, filename)
+                new_rev = (info[0] + 1) if info else 1
+                db_server.update_file_info(user, filename, new_rev, new_hash)
             except (OSError, EOFError):
                 if tempname is not None:
                     try:
@@ -173,7 +218,6 @@ def session(s):
                 sendER(s, 10)
             else:
                 sendOK(s)
-
         elif message.startswith(szasar.Command.MakeDir):
             if state != State.Main:
                 sendER(s)
@@ -187,7 +231,6 @@ def session(s):
                 sendER(s, 11)
             else:
                 sendOK(s)
-
         elif message.startswith(szasar.Command.RemoveDir):
             if state != State.Main:
                 sendER(s)
@@ -219,23 +262,21 @@ def session(s):
                 sendER(s, 11)
             else:
                 sendOK(s)
-
         elif message.startswith(szasar.Command.Exit):
             sendOK(s)
             s.close()
             return
-
         else:
             sendER(s)
 
 if __name__ == "__main__":
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
     s.bind(("", PORT))
     s.listen(5)
 
-    # 	signal.signal(signal.SIGCHLD, signal.SIG_IGN)
+    #   signal.signal(signal.SIGCHLD, signal.SIG_IGN)
 
+    db_server = db_manager.ServerDB("server_sync.db")
     threads = []
     dialog = []
 
@@ -243,6 +284,6 @@ if __name__ == "__main__":
         sc, address = s.accept()
         print("Conexión aceptada del socket {0[0]}:{0[1]}.".format(address))
         dialog.append(sc)
-        t = threading.Thread(target=session, args=(dialog[-1],))
+        t = threading.Thread(target=session, args=(dialog[-1], db_server))
         threads.append(t)
         t.start()
