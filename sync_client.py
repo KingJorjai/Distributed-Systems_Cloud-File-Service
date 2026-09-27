@@ -27,7 +27,8 @@ class SyncConnection:
         self.user = user
         self.password = password
         self.socket = None
-        self.db = ClientDB() 
+        name_db_local = f"client_sync_{self.user}.db"
+        self.db = ClientDB(name_db_local) 
 
     def connect(self):
         """Open the socket and authenticate with the server."""
