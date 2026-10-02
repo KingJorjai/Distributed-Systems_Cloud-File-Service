@@ -15,7 +15,7 @@ The client watches a local folder with [`watchdog`](https://python-watchdog.read
 - Separate TCP connection for automatic synchronization.
 - Debounced file events and retries after transient connection failures.
 - Atomic server-side uploads.
-- Manual file operations remain available through the interactive client.
+- Recursive synchronization of files and directories below the local folder.
 
 !!! warning
     Changes made directly on the server are not synchronized back to the client. Bidirectional conflict resolution is outside the current scope.

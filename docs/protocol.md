@@ -8,7 +8,6 @@ The service uses a simple line-based TCP protocol. Every command ends with `CRLF
 | --- | --- |
 | `USERname` | Select a user. |
 | `PASSpassword` | Authenticate the user. |
-| `LIST` | List files and sizes. |
 | `DOWNfilename` | Prepare a file download. |
 | `DOW2` | Request the prepared file bytes. |
 | `UPLOfilename?size` | Prepare an upload. |
@@ -18,7 +17,7 @@ The service uses a simple line-based TCP protocol. Every command ends with `CRLF
 | `DELEfilename` | Delete a file. |
 | `EXIT` | Close the session. |
 
-Commands use the four-character prefixes defined in `szasar.Command`. The protocol does not add spaces between a command prefix and its arguments.
+Commands use the four-character prefixes defined in `szasar.Command`. The protocol does not add spaces between a command prefix and its arguments. There is no `LIST` command in the current implementation; clients must know a path before requesting it with `DOWN`.
 
 ## Upload flow
 
@@ -44,4 +43,4 @@ The server validates permissions, size, available space, and the target path bef
 
 - `OK` means the command was accepted.
 - `OK<size>` announces the size of a file prepared for download.
-- `ER<code>` reports a protocol or filesystem error. The interactive client maps these codes to user-facing messages.
+- `ER<code>` reports a protocol or filesystem error. The client maps these codes to user-facing messages.

@@ -54,4 +54,5 @@ The default local folder is `client_files`.
 3. Wait briefly for the file to stabilize.
 4. Check the corresponding file under `files/<user>/` on the server.
 
-The anonymous user can list and download files but cannot upload or delete them.
+The anonymous user can download known files but cannot upload, create directories,
+or delete files. File listing is not currently implemented by the server.

@@ -1,6 +1,6 @@
 # Docker Deployment
 
-Docker Compose runs the multithreaded server and the interactive client as separate services.
+Docker Compose runs the multithreaded server and the automatic synchronization client as separate services.
 
 ```mermaid
 flowchart LR
@@ -31,7 +31,7 @@ sed -i "s/^DOCKER_UID=.*/DOCKER_UID=$(id -u)/; s/^DOCKER_GID=.*/DOCKER_GID=$(id 
 docker compose build
 ```
 
-The server image contains `serv_fich_multithread.py`. The client image contains the interactive client and `watchdog`.
+The server image contains `serv_fich_multithread.py`. The client image contains the authentication prompt and automatic synchronizer based on `watchdog`.
 
 ## Use published images
 

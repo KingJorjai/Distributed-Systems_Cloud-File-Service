@@ -9,19 +9,19 @@ flowchart LR
     Q --> C[Sync worker]
     C -->|TCP commands and bytes| S[Multithreaded server]
     S --> D[files/user]
-    M[Interactive menu] -->|Manual TCP connection| S
+    A[Authenticated client] -->|Authentication connection| S
 ```
 
 ## Client
 
-`SyncWorker` watches the configured local folder. `ChangeHandler` converts filesystem events into queue entries:
+`SyncWorker` watches the configured local folder recursively. `ChangeHandler` converts filesystem events into queue entries:
 
 - created and modified files become uploads;
 - deleted files become delete operations;
 - moved files become a delete followed by an upload;
-- directories are ignored.
+- created and deleted directories become directory operations.
 
-The worker coalesces repeated events for the same path and waits for the file size and modification time to stabilize before uploading. A separate socket prevents automatic synchronization from competing with the interactive menu connection.
+The worker coalesces repeated events for the same path and waits for the file size and modification time to stabilize before uploading. Directories are created and removed remotely, and renamed files or directories are represented as delete/create operations. The client keeps one connection for authentication and a separate connection for automatic synchronization.
 
 ## Server
 

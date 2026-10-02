@@ -29,7 +29,7 @@ python cli_fich.py [server [port [local_folder]]]
 
 | User | Password | Permissions |
 | --- | --- | --- |
-| `anonimous` | empty | List and download. |
+| `anonimous` | empty | Download known files only. |
 | `sar` | `sar` | Full file operations. |
 | `sza` | `sza` | Full file operations. |
 
