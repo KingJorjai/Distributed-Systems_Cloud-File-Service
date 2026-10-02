@@ -51,3 +51,10 @@ Los TODOs principales se centran en tres temas:
 1. Eliminar comandos y menús obsoletos.
 2. Implementar seguimiento de revisiones y hashes para sincronización fiable.
 3. Gestionar conflictos en uploads y notificar cambios con mensajes Update.
+
+## 4. Seguridad y despliegue
+
+- [ ] Añadir TLS para proteger las credenciales y los datos transferidos.
+- [ ] Sustituir las credenciales de desarrollo por secretos gestionados en producción.
+- [ ] Añadir persistencia y gestión segura de usuarios y permisos.
+- [ ] Validar permisos de volúmenes y configuración antes de iniciar el servidor.

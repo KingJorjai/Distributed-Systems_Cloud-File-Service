@@ -10,6 +10,16 @@ import szasar
 from config import load_config
 
 USERS = ("anonimous", "sar", "sza")
+APP_CONFIG = load_config()
+PORT = APP_CONFIG.server.port
+FILES_PATH = APP_CONFIG.server.files_path
+MAX_FILE_SIZE = APP_CONFIG.server.max_file_size
+SPACE_MARGIN = APP_CONFIG.server.space_margin
+PASSWORDS = (
+    "",
+    APP_CONFIG.passwords["sar"],
+    APP_CONFIG.passwords["sza"],
+)
 
 # TODO Generales
 # 1. Eliminar el comando de listar, ya no es necesario ✔️
@@ -24,7 +34,7 @@ class State:
     Identification, Authentication, Main, Downloading, Uploading = range(5)
 
 
-def sendOK(s, params=""):
+def sendOK(s, params: str | int = ""):
     """Send a successful protocol response with optional parameters."""
     s.sendall(("OK{}\r\n".format(params)).encode("ascii"))
 
@@ -53,6 +63,11 @@ def safe_path(root, filename):
 def session(s):
     """Serve one authenticated client session until it disconnects."""
     state = State.Identification
+    user = 0
+    filespath = FILES_PATH
+    filename = ""
+    filesize = 0
+    target = ""
     
     while True:
         try:
@@ -230,14 +245,6 @@ def session(s):
             sendER(s)
 
 if __name__ == "__main__":
-    app_config = load_config()
-    config = app_config.server
-    PORT = config.port
-    FILES_PATH = config.files_path
-    MAX_FILE_SIZE = config.max_file_size
-    SPACE_MARGIN = config.space_margin
-    passwords = app_config.passwords
-    PASSWORDS = ("", passwords["sar"], passwords["sza"])
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     s.bind(("", PORT))

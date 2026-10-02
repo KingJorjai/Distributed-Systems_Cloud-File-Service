@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import serv_fich_multithread
 from config import ConfigurationError, load_config, validate_port
 from serv_fich_multithread import is_authenticated
 
@@ -71,6 +72,11 @@ class LoadConfigTests(unittest.TestCase):
         self.assertFalse(is_authenticated(1, "", ("", "")))
         self.assertTrue(is_authenticated(1, "configured-secret", passwords))
         self.assertFalse(is_authenticated(1, "wrong", passwords))
+
+    def test_server_configuration_is_available_when_imported(self):
+        self.assertEqual(serv_fich_multithread.PORT, 50012)
+        self.assertEqual(serv_fich_multithread.FILES_PATH, "files")
+        self.assertEqual(len(serv_fich_multithread.PASSWORDS), 3)
 
 
 if __name__ == "__main__":
