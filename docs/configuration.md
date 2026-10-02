@@ -11,7 +11,7 @@ python cli_fich.py [server [port [local_folder]]]
 | Setting | Default | Description |
 | --- | --- | --- |
 | `server` | `localhost` | Server hostname or IP address. |
-| `port` | `6012` | Server TCP port. |
+| `port` | `50012` | Server TCP port. |
 | `local_folder` | `client_files` | Folder watched by the automatic synchronizer. |
 
 ## Server settings
@@ -20,7 +20,7 @@ python cli_fich.py [server [port [local_folder]]]
 
 | Setting | Value | Description |
 | --- | --- | --- |
-| `PORT` | `6012` | Listening TCP port. |
+| `PORT` | `50012` | Listening TCP port. |
 | `FILES_PATH` | `files` | Root storage directory. |
 | `MAX_FILE_SIZE` | 10 MiB | Maximum upload size. |
 | `SPACE_MARGIN` | 50 MiB | Required free-space margin. |

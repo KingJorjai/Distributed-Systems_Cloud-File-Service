@@ -14,9 +14,9 @@ RUN mkdir -p /app/files \
     && chown -R appuser:appuser /app
 
 USER appuser
-EXPOSE 6012
+EXPOSE 50012
 
 HEALTHCHECK --interval=5s --timeout=3s --start-period=5s --retries=5 \
-    CMD python -c "import socket; s=socket.create_connection(('127.0.0.1', 6012), 2); s.close()"
+    CMD python -c "import socket; s=socket.create_connection(('127.0.0.1', 50012), 2); s.close()"
 
 CMD ["python", "serv_fich_multithread.py"]

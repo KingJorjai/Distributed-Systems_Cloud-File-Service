@@ -35,7 +35,7 @@ Start the client in another terminal:
 
 ```sh
 source .venv/bin/activate
-python cli_fich.py localhost 6012 client_files
+python cli_fich.py localhost 50012 client_files
 ```
 
 ### Windows
@@ -61,7 +61,7 @@ Start the client in another PowerShell window:
 ```powershell
 cd C:\Users\<usuario>\DS\Distributed-Systems_Cloud-File-Service
 .\.venv-win\Scripts\Activate.ps1
-python cli_fich.py localhost 6012 client_files
+python cli_fich.py localhost 50012 client_files
 ```
 
 The client arguments are `server`, `port`, and `local_folder`. The default local folder is `client_files`.

@@ -21,7 +21,7 @@ flowchart LR
 - moved files become a delete followed by an upload;
 - created and deleted directories become directory operations.
 
-The worker coalesces repeated events for the same path and waits for the file size and modification time to stabilize before uploading. Directories are created and removed remotely, and renamed files or directories are represented as delete/create operations. The client keeps one connection for authentication and a separate connection for automatic synchronization.
+The worker coalesces repeated events for the same path and waits for the file size and modification time to stabilize before uploading. Directories are created and removed remotely, and renamed files or directories are represented as delete/create operations. After the login performed by `cli_fich.py`, `SyncWorker` opens a separate connection for automatic synchronization.
 
 ## Server
 

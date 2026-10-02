@@ -28,7 +28,7 @@ source .venv/bin/activate
 python serv_fich_multithread.py
 ```
 
-The server listens on port `6012` by default.
+The server listens on port `50012` by default.
 
 ## Start the client
 
@@ -36,7 +36,7 @@ In a second terminal:
 
 ```sh
 source .venv/bin/activate
-python cli_fich.py localhost 6012 client_files
+python cli_fich.py localhost 50012 client_files
 ```
 
 The arguments are:

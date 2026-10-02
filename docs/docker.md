@@ -6,13 +6,13 @@ Docker Compose runs the multithreaded server and the automatic synchronization c
 flowchart LR
     Host[Host filesystem] -->|./files| S[server container]
     Host -->|./client_files| C[client container]
-    C -->|server:6012| S
+    C -->|server:50012| S
 ```
 
 ## Requirements
 
 - Docker Engine with Compose v2.
-- A free host port, `6012` by default.
+- A free host port, `50012` by default.
 
 ## Configure permissions
 
@@ -62,7 +62,7 @@ docker compose ps
 docker compose logs -f server
 ```
 
-The server is exposed at `localhost:6012` on the host and at `server:6012` inside the Compose network.
+The server is exposed at `localhost:50012` on the host and at `server:50012` inside the Compose network.
 
 ## Start the client
 
