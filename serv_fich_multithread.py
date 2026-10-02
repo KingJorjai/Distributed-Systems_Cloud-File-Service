@@ -7,13 +7,19 @@ import tempfile
 import threading
 
 import szasar
+from config import load_config
 
-PORT = 50012
-FILES_PATH = "files"
-MAX_FILE_SIZE = 10 * 1 << 20  # 10 MiB
-SPACE_MARGIN = 50 * 1 << 20  # 50 MiB
 USERS = ("anonimous", "sar", "sza")
-PASSWORDS = ("", "sar", "sza")
+APP_CONFIG = load_config()
+PORT = APP_CONFIG.server.port
+FILES_PATH = APP_CONFIG.server.files_path
+MAX_FILE_SIZE = APP_CONFIG.server.max_file_size
+SPACE_MARGIN = APP_CONFIG.server.space_margin
+PASSWORDS = (
+    "",
+    APP_CONFIG.passwords["sar"],
+    APP_CONFIG.passwords["sza"],
+)
 
 # TODO Generales
 # 1. Eliminar el comando de listar, ya no es necesario ✔️
@@ -28,7 +34,7 @@ class State:
     Identification, Authentication, Main, Downloading, Uploading = range(5)
 
 
-def sendOK(s, params=""):
+def sendOK(s, params: str | int = ""):
     """Send a successful protocol response with optional parameters."""
     s.sendall(("OK{}\r\n".format(params)).encode("ascii"))
 
@@ -36,6 +42,11 @@ def sendOK(s, params=""):
 def sendER(s, code=1):
     """Send a protocol error response with an error code."""
     s.sendall(("ER{}\r\n".format(code)).encode("ascii"))
+
+
+def is_authenticated(user, password, passwords):
+    """Return whether a user can authenticate with the configured password."""
+    return user == 0 or bool(passwords[user]) and passwords[user] == password
 
 
 def safe_path(root, filename):
@@ -52,6 +63,11 @@ def safe_path(root, filename):
 def session(s):
     """Serve one authenticated client session until it disconnects."""
     state = State.Identification
+    user = 0
+    filespath = FILES_PATH
+    filename = ""
+    filesize = 0
+    target = ""
     
     while True:
         try:
@@ -78,7 +94,7 @@ def session(s):
             if state != State.Authentication:
                 sendER(s)
                 continue
-            if user == 0 or PASSWORDS[user] == message[4:]:
+            if is_authenticated(user, message[4:], PASSWORDS):
                 sendOK(s)
                 filespath = os.path.join(FILES_PATH, USERS[user])
                 os.makedirs(filespath, exist_ok=True)

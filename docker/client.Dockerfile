@@ -8,6 +8,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN python -m pip install --no-cache-dir -r requirements.txt
 
+COPY config.py config.toml.example ./
+RUN cp config.toml.example config.toml
 COPY cli_fich.py sync_client.py szasar.py ./
 RUN mkdir -p /data \
     && useradd --create-home --uid 10001 appuser \

@@ -25,6 +25,8 @@ In the first terminal:
 
 ```sh
 source .venv/bin/activate
+export APP_PASSWORD_SAR='set-a-local-password'
+export APP_PASSWORD_SZA='set-another-local-password'
 python serv_fich_multithread.py
 ```
 
@@ -49,7 +51,7 @@ The default local folder is `client_files`.
 
 ## Verify synchronization
 
-1. Authenticate as `sar` with password `sar`, or `sza` with password `sza`.
+1. Authenticate with one of the passwords configured in `APP_PASSWORD_SAR` or `APP_PASSWORD_SZA`.
 2. Create or edit a file in `client_files`.
 3. Wait briefly for the file to stabilize.
 4. Check the corresponding file under `files/<user>/` on the server.

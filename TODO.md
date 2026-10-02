@@ -16,6 +16,8 @@ Este documento recoge las funcionalidades que todavía no están implementadas.
 
 ## Seguridad y operación
 
-- [ ] Sustituir las credenciales educativas fijadas en el código por una configuración segura.
+- [ ] Sustituir las credenciales educativas por secretos gestionados de forma segura.
 - [ ] Añadir cifrado TLS al protocolo TCP.
+- [ ] Añadir persistencia y gestión segura de usuarios y permisos.
+- [ ] Validar permisos de volúmenes y configuración antes de iniciar el servidor.
 - [ ] Hacer persistente la cola de cambios para no perder operaciones pendientes al cerrar el cliente.

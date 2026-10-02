@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
 
-import os
+import signal
 import socket
 import sys
-import signal
 import time
 
 import szasar
+from config import ConfigurationError, load_config, validate_port
 from sync_client import SyncError, SyncWorker
+
 # TODO Generales
 # 1. Eliminar el comando de listar, ya no es necesario ✔️
 # 2. Cambios a upload (Estan comentados mas abajo)
 # 3. Eliminar el menu, ya no es necesario. Solo dejar logearse ✔️
 # 4. Mensaje Update para que el servidor informe al cliente de cambios en el servidor
 #   4.1 El Cliente mira los cambios y elimina ficheros o descarga ficheros (nuevos o modificados)
-SERVER = "localhost"
-PORT = 50012
-LOCAL_PATH = "client_files"
 ER_MSG = (
     "Correcto.",
     "Comando desconocido o inesperado.",
@@ -64,19 +62,28 @@ def int2bytes(n):
 
 
 if __name__ == "__main__":
+    config = load_config().client
+    server = config.server
+    port = config.port
+    local_path = config.local_path
+
     if len(sys.argv) > 4:
         print("Uso: {} [<servidor> [<puerto> [<carpeta-local>]]]".format(sys.argv[0]))
         exit(2)
 
     if len(sys.argv) >= 2:
-        SERVER = sys.argv[1]
+        server = sys.argv[1]
     if len(sys.argv) == 3:
-        PORT = int(sys.argv[2])
+        try:
+            port = validate_port(sys.argv[2])
+        except ConfigurationError as error:
+            print(f"Puerto inválido: {error}")
+            exit(2)
     if len(sys.argv) == 4:
-        LOCAL_PATH = sys.argv[3]
+        local_path = sys.argv[3]
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((SERVER, PORT))
+    s.connect((server, port))
 
     while True:
         user = input("Introduce el nombre de usuario: ")
@@ -93,7 +100,7 @@ if __name__ == "__main__":
         if not iserror(message):
             break
 
-    sync_worker = SyncWorker(LOCAL_PATH, SERVER, PORT, user, password)
+    sync_worker = SyncWorker(local_path, server, port, user, password)
     try:
         sync_worker.start()
     except (OSError, EOFError, socket.timeout, SyncError) as error:

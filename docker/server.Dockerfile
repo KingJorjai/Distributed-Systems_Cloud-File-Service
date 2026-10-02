@@ -8,6 +8,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN python -m pip install --no-cache-dir -r requirements.txt
 
+COPY config.py config.toml.example ./
+RUN cp config.toml.example config.toml
 COPY serv_fich_multithread.py szasar.py ./
 RUN mkdir -p /app/files \
     && useradd --create-home --uid 10001 appuser \
@@ -17,6 +19,6 @@ USER appuser
 EXPOSE 50012
 
 HEALTHCHECK --interval=5s --timeout=3s --start-period=5s --retries=5 \
-    CMD python -c "import socket; s=socket.create_connection(('127.0.0.1', 50012), 2); s.close()"
+    CMD python -c "import os,socket; s=socket.create_connection(('127.0.0.1', int(os.environ.get('SERVER_PORT', '50012'))), 2); s.close()"
 
 CMD ["python", "serv_fich_multithread.py"]
