@@ -8,7 +8,7 @@ import threading
 
 import szasar
 
-PORT = 6012
+PORT = 50012
 FILES_PATH = "files"
 MAX_FILE_SIZE = 10 * 1 << 20  # 10 MiB
 SPACE_MARGIN = 50 * 1 << 20  # 50 MiB

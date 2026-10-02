@@ -15,7 +15,7 @@ from sync_client import SyncError, SyncWorker
 # 4. Mensaje Update para que el servidor informe al cliente de cambios en el servidor
 #   4.1 El Cliente mira los cambios y elimina ficheros o descarga ficheros (nuevos o modificados)
 SERVER = "localhost"
-PORT = 6012
+PORT = 50012
 LOCAL_PATH = "client_files"
 ER_MSG = (
     "Correcto.",
