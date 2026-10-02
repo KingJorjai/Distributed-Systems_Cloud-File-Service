@@ -28,6 +28,8 @@ Start the server in one terminal:
 
 ```sh
 source .venv/bin/activate
+export APP_PASSWORD_SAR='set-a-local-password'
+export APP_PASSWORD_SZA='set-another-local-password'
 python serv_fich_multithread.py
 ```
 
@@ -35,7 +37,7 @@ Start the client in another terminal:
 
 ```sh
 source .venv/bin/activate
-python cli_fich.py localhost 6012 client_files
+python cli_fich.py localhost 50012 client_files
 ```
 
 ### Windows
@@ -53,6 +55,8 @@ Start the server in one PowerShell window:
 ```powershell
 cd C:\Users\<usuario>\DS\Distributed-Systems_Cloud-File-Service
 .\.venv-win\Scripts\Activate.ps1
+$env:APP_PASSWORD_SAR = "set-a-local-password"
+$env:APP_PASSWORD_SZA = "set-another-local-password"
 python serv_fich_multithread.py
 ```
 
@@ -61,7 +65,7 @@ Start the client in another PowerShell window:
 ```powershell
 cd C:\Users\<usuario>\DS\Distributed-Systems_Cloud-File-Service
 .\.venv-win\Scripts\Activate.ps1
-python cli_fich.py localhost 6012 client_files
+python cli_fich.py localhost 50012 client_files
 ```
 
 The client arguments are `server`, `port`, and `local_folder`. The default local folder is `client_files`.

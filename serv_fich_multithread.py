@@ -7,13 +7,9 @@ import tempfile
 import threading
 
 import szasar
+from config import load_config
 
-PORT = 6012
-FILES_PATH = "files"
-MAX_FILE_SIZE = 10 * 1 << 20  # 10 MiB
-SPACE_MARGIN = 50 * 1 << 20  # 50 MiB
 USERS = ("anonimous", "sar", "sza")
-PASSWORDS = ("", "sar", "sza")
 
 # TODO Generales
 # 1. Eliminar el comando de listar, ya no es necesario ✔️
@@ -36,6 +32,11 @@ def sendOK(s, params=""):
 def sendER(s, code=1):
     """Send a protocol error response with an error code."""
     s.sendall(("ER{}\r\n".format(code)).encode("ascii"))
+
+
+def is_authenticated(user, password, passwords):
+    """Return whether a user can authenticate with the configured password."""
+    return user == 0 or bool(passwords[user]) and passwords[user] == password
 
 
 def safe_path(root, filename):
@@ -78,7 +79,7 @@ def session(s):
             if state != State.Authentication:
                 sendER(s)
                 continue
-            if user == 0 or PASSWORDS[user] == message[4:]:
+            if is_authenticated(user, message[4:], PASSWORDS):
                 sendOK(s)
                 filespath = os.path.join(FILES_PATH, USERS[user])
                 os.makedirs(filespath, exist_ok=True)
@@ -229,6 +230,14 @@ def session(s):
             sendER(s)
 
 if __name__ == "__main__":
+    app_config = load_config()
+    config = app_config.server
+    PORT = config.port
+    FILES_PATH = config.files_path
+    MAX_FILE_SIZE = config.max_file_size
+    SPACE_MARGIN = config.space_margin
+    passwords = app_config.passwords
+    PASSWORDS = ("", passwords["sar"], passwords["sza"])
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     s.bind(("", PORT))

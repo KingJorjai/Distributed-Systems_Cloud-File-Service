@@ -6,13 +6,13 @@ Docker Compose runs the multithreaded server and the automatic synchronization c
 flowchart LR
     Host[Host filesystem] -->|./files| S[server container]
     Host -->|./client_files| C[client container]
-    C -->|server:6012| S
+    C -->|server:50012| S
 ```
 
 ## Requirements
 
 - Docker Engine with Compose v2.
-- A free host port, `6012` by default.
+- A free host port, `50012` by default.
 
 ## Configure permissions
 
@@ -24,6 +24,8 @@ sed -i "s/^DOCKER_UID=.*/DOCKER_UID=$(id -u)/; s/^DOCKER_GID=.*/DOCKER_GID=$(id 
 ```
 
 `.env` is local configuration and must not be committed.
+Set `APP_PASSWORD_SAR` and `APP_PASSWORD_SZA` in `.env` before starting the
+server if authenticated users are required.
 
 ## Build the images
 
@@ -62,7 +64,10 @@ docker compose ps
 docker compose logs -f server
 ```
 
-The server is exposed at `localhost:6012` on the host and at `server:6012` inside the Compose network.
+The server is exposed at `localhost:50012` on the host and at `server:50012` inside the Compose network by default.
+`SERVER_PUBLISHED_PORT` changes the host port, while `SERVER_INTERNAL_PORT`
+changes the container and client port. Set both when moving the complete service
+to another port.
 
 ## Start the client
 
@@ -74,7 +79,9 @@ docker compose run --rm client
 
 The client connects to the Compose service name `server` and watches `/data`, which is mapped to the host's `client_files/` directory.
 
-Authenticate with the development user `sar` and password `sar`, or `sza` and password `sza`. Then create or modify a file in `client_files/` on the host. It should appear under `files/<user>/` after synchronization.
+Authenticate with one of the passwords configured in `.env`. Then create or modify
+a file in `client_files/` on the host. It should appear under `files/<user>/` after
+synchronization.
 
 ## Stop the services
 

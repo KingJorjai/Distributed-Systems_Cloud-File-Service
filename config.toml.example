@@ -1,0 +1,10 @@
+[client]
+server = "localhost"
+port = 50012
+local_path = "client_files"
+
+[server]
+port = 50012
+files_path = "files"
+max_file_size = 10485760
+space_margin = 52428800
