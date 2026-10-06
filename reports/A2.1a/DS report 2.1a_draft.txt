@@ -2,343 +2,214 @@ ACTIVITY 2.1a. LET'S TRUST THE CLOCKS
 
 Clock synchronization in a distributed cloud file service
 
-Authors: [add authors]
-Date: [add date]
-
-
-INDEX
-
-1. Introduction
-2. What is good time?
-3. Synchronization without an external reference
-4. NTP infrastructure and Linux configuration
-5. NTP symmetric protocol simulation
-6. Comparison with Cristian's algorithm
-7. Conclusions
+Authors: [add authors]                                      Date: [add date]
 
 
 1. INTRODUCTION
 
-The cloud file service has a client and a server that execute independently and
-communicate through messages. If two clients modify the same document, file
-modification times can help detect a possible conflict, but only if the clocks
-are sufficiently synchronized. This report studies what sufficiently good time
-means and how clocks can be synchronized when a common external time source is
-not available.
+In a distributed file service, clients and servers have independent clocks.
+Message transmission takes time, so the timestamp of a modification cannot be
+treated as an exact global ordering. This matters when two users modify a
+shared document: if the clock error is comparable with the time between
+modifications, the service must report an uncertain or concurrent update
+instead of silently choosing an order.
 
-The practical part simulates the NTP symmetric protocol described in the
-professor's laboratory document. The same observations are then used to apply
-Cristian's algorithm. The values in Section 5 are an explicit worked
-simulation, not measurements taken from a real email exchange; a real group
-experiment should replace them with its four recorded timestamps.
+This report defines the requirements for useful time, proposes synchronization
+without an external reference, summarizes NTP, and analyzes the class
+simulation using NTP symmetric operation and Cristian's algorithm. The
+terminology and algorithmic background follow Sections 2.2 and 2.2.1 of the
+Topic 2 notes.
 
 
 2. WHAT IS GOOD TIME?
 
-2.1 Reference and definitions
+Time is good only with respect to a reference and an application. External
+synchronization compares a local clock with a reliable physical reference such
+as UTC. Internal synchronization instead bounds the difference between the
+clocks of the nodes in one distributed system; this is usually the relevant
+goal for ordering file-service events.
 
-Time is not simply "good" or "bad". It is good with respect to a reference and
-an intended use. For a computer, the reference may be UTC distributed by GPS,
-an atomic-clock-backed NTP source, or another clock selected by the system.
-For internal synchronization, the reference can instead be one participating
-clock or a value computed from several clocks.
+Important quantities are:
 
-We use the following terms:
+* Deviation (offset), theta: the difference between a local clock and the
+  reference at an instant.
+* Precision/accuracy: the maximum error that can be guaranteed after an
+  adjustment.
+* Drift: the rate at which the deviation changes.
+* Resolution: the smallest interval represented by the clock.
 
-- Resolution is the interval between updates of the local time register. It
-  limits the ability to distinguish close events.
-- Deviation (offset) is the difference between the local clock and the
-  reference at an instant: theta(t) = tau(t) - t.
-- Drift is the rate at which the deviation changes:
-  delta(t) = d(theta(t))/dt.
-- Accuracy (called precision in the laboratory document) is the maximum
-  deviation that can be guaranteed after adjustment.
+A clock may have fine resolution but poor accuracy, or be accurate immediately
+after synchronization and become inaccurate because of drift. Network delay,
+congestion, operating-system scheduling, oscillator quality and temperature
+also affect the result. Therefore, the report must state both an estimated
+deviation and its uncertainty.
 
-A clock can have good resolution but poor accuracy, or good accuracy at one
-   instant but significant drift afterwards. Temperature, oscillator quality,
-   operating-system scheduling and network delay all affect the result. The
-   time displayed by a phone or PC is therefore an estimate maintained by a
-   clock discipline algorithm, not an exact observation of UTC.
-
-2.2 Requirements depend on the application
-
-For the cloud file service, the relevant requirement is not necessarily
-absolute UTC accuracy. We mainly need timestamps from different nodes to be
-comparable. If the possible clock error is smaller than the time separating
-two modifications, timestamps are useful for conflict detection. If the
-modifications are closer than that error bound, the service must treat the
-ordering as uncertain or use versions and explicit conflict resolution.
-
-The clock resolution should also be smaller than the shortest interval between
-events that must be ordered. Synchronization must be repeated because even a
-small drift eventually makes the original adjustment inaccurate.
+The notes define a synchronization period as the maximum interval between two
+adjustments that keeps the deviation within the required bound. The adjustment
+period is the time used to accelerate or decelerate the software clock to
+compensate for the deviation, and must be shorter than the synchronization
+period. Gradual correction is preferable to a backward jump because it
+preserves the monotonic increase of time, which applications may rely on.
 
 
 3. SYNCHRONIZATION WITHOUT AN EXTERNAL REFERENCE
 
-3.1 Proposed message-passing strategy
+Let A and B exchange messages without trusting timestamps added by the
+communication service. A can be the reference for one round:
 
-Assume nodes A and B exchange messages through a channel that does not add
-trusted timestamps. A initiates a round and becomes the reference for that
-round. The protocol is:
+1. A records T1 and sends a request.
+2. B records T2 on receipt and T3 immediately before replying.
+3. A records T4 on receipt of the reply.
+4. A estimates B's deviation and sends a correction.
 
-1. A records its local time T1 immediately before sending a request to B.
-2. B records its local arrival time T2 immediately after receiving the request.
-3. B records its local time T3 immediately before sending the reply. The reply
-   contains T2 and T3.
-4. A records its local arrival time T4 immediately after receiving the reply.
-5. A estimates B's offset and the round-trip delay, and sends an adjustment
-   instruction to B or applies the correction locally.
-
-The values cannot reveal the exact one-way delays. If the forward and reverse
-   delays are t and t', and B is ahead of A by theta, then:
+Let t and t' be the forward and reverse communication times, and let theta be
+B minus A. Then:
 
     T2 = T1 + t + theta
     T4 = T3 + t' - theta
 
-The measured round-trip delay is:
+The four timestamps give:
 
-    d = T2 - T1 + T4 - T3
+    d = (T2 - T1) + (T4 - T3) = t + t'
+    theta = (T2 - T1 + T3 - T4) / 2
 
-The offset estimate and its error bound are:
+Without knowing t and t' separately, the conservative error bound is d/2.
+Thus, the estimate is useful only together with its accuracy interval. Several
+rounds should be made and the smallest-delay sample selected, since it gives
+the narrowest possible interval. Synchronization must be repeated to account
+for clock drift.
 
-    theta_i = (T2 - T1 + T3 - T4) / 2
-    accuracy bound = d / 2; theta is in [theta_i - d/2, theta_i + d/2]
-
-The notation above means that the estimate can be wrong by at most d/2 when
-no assumption is made about the asymmetry of the two network delays. Repeated
-rounds should be performed and the sample with the smallest d selected, since
-it has the smallest possible error interval. A more robust implementation can
-combine several low-delay samples and periodically correct clock drift.
-
-3.2 Extension to several nodes
-
-With more than two nodes, one node can be elected as the coordinator for each
-round. Each node exchanges a timestamp request and reports its offset and
-uncertainty. The coordinator chooses a reference time, for example its own
-clock or the median of the reported clock values, rejects clear outliers, and
-distributes corrections. The uncertainty of each correction must include both
-the timestamp measurement error and the network delay bound.
-
-This is internal synchronization: it orders events consistently inside the
-cloud service but does not guarantee that the resulting time equals UTC. It
-also has a failure point if the coordinator is unavailable, so a new one must
-be selected or a distributed averaging method must be used.
+For several nodes, a coordinator can collect estimates, reject missing or
+clearly spurious responses, calculate an internal reference (for example, an
+average or median), and distribute each node's correction. This is an internal
+reference, not UTC. A distributed statistical approach such as Berkeley's
+algorithm avoids depending permanently on one time server and can select a new
+coordinator after a failure.
 
 
-4. NTP INFRASTRUCTURE AND LINUX CONFIGURATION
+4. NTP INFRASTRUCTURE AND OPERATION
 
-4.1 Hierarchy
+The Network Time Protocol (NTP) provides redundant synchronization with UTC.
+Its hierarchy is organized into strata: primary servers obtain a reference
+from reliable clocks, secondary servers synchronize with them, and lower
+layers serve clients. Accuracy generally decreases as the number of network
+hops from the UTC source increases, so several sources are used and the
+logical structure can be reconfigured when a server becomes unavailable.
 
-NTP is normally organized as a hierarchy of strata. Stratum 0 contains
-reference clocks such as GPS or atomic clocks and does not normally serve
-ordinary clients directly. Stratum 1 servers are directly connected to those
-references. Stratum 2 servers synchronize with several stratum 1 servers, and
-lower levels continue the distribution. A client normally selects among
-several servers using delay, offset, reachability and stability information.
+NTP supports multiple modes. Multicast is suitable for a local network with
+bounded communication time. Procedure-call mode resembles Cristian's
+client/server exchange. Symmetric mode is intended for strong internal
+synchronization: two servers exchange timing information and both adjust
+their clocks. NTP uses an algorithm similar to Cristian's to estimate
+deviation and precision, but its symmetric mode uses a double exchange to
+compensate communication delays.
 
-Multiple sources are important because one source can fail or provide a bad
-measurement. NTP also avoids making every client contact a single root server,
-which would create unnecessary load and a single point of failure.
-
-4.2 Protocol and Linux configuration
-
-NTP uses timestamped messages and estimates both clock offset and network
-delay. In symmetric mode, both peers can exchange timing information. In the
-more common client-server mode, the client polls configured servers and uses
-several samples to discipline its clock. The clock is normally adjusted
-gradually (slewed) when the correction is small, rather than jumping, because
-large time jumps can break application assumptions.
-
-On Linux, the active time service depends on the distribution. Typical
+In Linux, the active implementation depends on the distribution. Useful
 inspection commands are:
 
     timedatectl status
     timedatectl show-timesync --all
-    systemctl status systemd-timesyncd
-
-On systems using chrony, the corresponding inspection commands are:
-
     chronyc sources -v
     chronyc tracking
 
-The configuration should specify several trusted NTP servers, enable the time
-service at boot, and restrict unsolicited access when the machine is serving
-time to others. The exact file and service name must be checked for the Linux
-distribution instead of assuming that all systems use the same daemon.
+A practical configuration should use several trusted servers, start the time
+service automatically, and restrict unsolicited access when the host serves
+time. The service should discipline the software clock gradually whenever
+possible.
 
 
-5. NTP SYMMETRIC PROTOCOL SIMULATION
+5. NTP SYMMETRIC PROTOCOL: CLASS SIMULATION
 
-5.1 Simulated observation
+The experiment used A as the client/reference clock and B as the peer. The
+measured results were:
 
-We use milliseconds and select A's clock as the local reference for the
-calculation. The four readings are:
+    Deviation (B - A)             +38.00 s
+    Communication time (t + t')   40.00 s
+    Accuracy                       +/-20.00 s
 
-    T1 = 1000.000 ms    A sends request
-    T2 = 1000.120 ms    B receives request
-    T3 = 1000.140 ms    B sends reply
-    T4 = 1000.170 ms    A receives reply
+The 40 seconds are the communication time represented by t+t' in the NTP
+calculation. They are not the complete request-response interval. The
+experiment introduced a 40-second difference between the server readings T2
+and T3, which is consistent with this communication-time result.
 
-The timestamps are chosen to represent a B clock approximately ahead of A and
-unequal message delays. They satisfy the protocol's ordering T1 <= T2 and
-T3 <= T4 when the clock readings are interpreted with their respective local
-clocks.
+Using the NTP convention server minus client:
 
-5.2 Calculations
+    theta_NTP = (T2 - T1 + T3 - T4) / 2 = +38.00 s
 
-Round-trip delay:
+B is therefore estimated to be 38 seconds ahead of A. Synchronizing B to A
+would require a correction of -38 seconds, applied according to the selected
+clock-discipline policy. Since only t+t' is bounded, the accuracy is:
 
-    d = (T2 - T1) + (T4 - T3)
-      = (1000.120 - 1000.000) + (1000.170 - 1000.140)
-      = 0.120 + 0.030
-      = 0.150 ms
+    accuracy = (t + t') / 2 = 40.00 / 2 = +/-20.00 s
 
-Estimated deviation of B with respect to A:
-
-    theta_i = (T2 - T1 + T3 - T4) / 2
-            = (0.120 + 0.140 - 0.170) / 2
-            = 0.090 / 2
-            = 0.045 ms
-
-Thus, B is estimated to be 0.045 ms ahead of A. A correction would subtract
-0.045 ms from B's clock, subject to the selected clock-discipline policy.
-
-The NTP accuracy bound is half the round-trip delay:
-
-    d / 2 = 0.150 / 2 = 0.075 ms
-
-Therefore the actual deviation is guaranteed, under the protocol assumptions,
-to lie in:
-
-    [theta_i - d/2, theta_i + d/2]
-    [0.045 - 0.075, 0.045 + 0.075]
-    [-0.030 ms, 0.120 ms]
-
-The bound is relatively wide compared with the estimate because the two
-one-way delays may be asymmetric. In a real experiment we would repeat the
-round and use the smallest-delay sample. The uncertainty would then be lower,
-although it would never be zero without additional assumptions about the
-network.
+The result should consequently be reported as +38.00 s +/-20.00 s, not as an
+exact 38-second difference. Repeating the exchange and choosing low-delay
+measurements can reduce the uncertainty, but variable and asymmetric delays
+cannot be eliminated entirely.
 
 
 6. COMPARISON WITH CRISTIAN'S ALGORITHM
 
-6.1 Calculation using the same observations
+In the same exercise, Cristian's client A measured a complete request-response
+interval of:
 
-For Cristian's algorithm, A is the client and B is the server. The elapsed
-time measured by A is:
+    D = 122.00 s
 
-    D = T4 - T1 = 1000.170 - 1000.000 = 0.170 ms
+Cristian estimates the server time at the midpoint of the client interval.
+Using the midpoint between the server readings T2 and T3, the deviation with
+the convention client minus server is:
 
-The server timestamp in the reply is T3 = 1000.140 ms. Cristian estimates
-that the reply timestamp corresponds to the midpoint of the client interval.
-The client's estimated midpoint is:
+    theta_Cristian = A - B = -38.00 s
 
-    T1 + D/2 = 1000.000 + 0.085 = 1000.085 ms
+Thus, A is 38 seconds behind B. This is the same physical relationship as
+the NTP result; the signs differ because NTP reports B-A whereas Cristian is
+reported as A-B.
 
-Consequently, using the convention client time minus server time, the
-estimated deviation is:
+From the Topic 2 notes, Cristian's accuracy is:
 
-    theta_C = 1000.085 - 1000.140 = -0.055 ms
+    accuracy = D / 2 - min
 
-The client is therefore estimated to be 0.055 ms behind B. The result is not
-identical to the NTP estimate because Cristian's calculation uses a server
-timestamp and assumes that the timestamp is associated with the middle of the
-round trip, while NTP uses all four timestamps.
+No positive minimum transmission time was available in this experiment, so
+min = 0 and:
 
-6.1.1 Answers to the questions from the board
+    accuracy = 122.00 / 2 = +/-61.00 s
 
-Using the notation from the board, let C be the client (A) and S be the server
-(B). The deviation of C with respect to S is defined as client time minus
-server time. Therefore:
+The Cristian result is therefore -38.00 s +/-61.00 s. NTP gives the narrower
+bound in this experiment (20 seconds versus 61 seconds) because the NTP
+calculation uses the communication-time estimate from the four timestamps,
+while Cristian uses the complete request-response interval.
 
-  theta(C,S) = (T1 + D/2) - t(mt)
-         = 1000.085 - 1000.140
-         = -0.055 ms
+Cristian's main advantages are simplicity and its small number of messages. It
+is appropriate when a client trusts a server and only needs approximate time.
+Its disadvantages are dependence on that server, sensitivity to the measured
+request-response delay, and lower fault tolerance. Replicating the server
+improves availability but introduces another synchronization problem.
 
-C is estimated to be 0.055 ms behind S. Equivalently, S is estimated to be
-0.055 ms ahead of C. The sign is important: a negative deviation means that
-the first clock in theta(C,S), namely C, is behind the second clock, S.
-
-The deviation is not exact because the message delays are unknown. Cristian's
-accuracy is:
-
-  accuracy = D/2 - min
-
-With no measured lower bound for the one-way transmission time, we use
-min = 0 ms:
-
-  accuracy = 0.170/2 - 0 = 0.085 ms
-
-Thus the estimated deviation of C with respect to S is -0.055 ms with a
-maximum error of 0.085 ms. The corresponding possible interval for the true
-deviation is:
-
-  [-0.055 - 0.085, -0.055 + 0.085] = [-0.140, 0.030] ms
-
-If a reliable positive value of min were measured, the accuracy interval would
-be narrower by that amount.
-
-The minimum one-way transmission time cannot be determined from a single
-exchange. If we conservatively assume min = 0, Cristian's accuracy bound is:
-
-    D/2 - min = 0.170/2 - 0 = 0.085 ms
-
-This is slightly worse than the NTP bound of 0.075 ms for this simulated
-sample. If a reliable lower bound for min were available, the Cristian bound
-would become smaller, but obtaining that bound is itself an additional
-measurement problem. The numerical comparison is therefore dependent on the
-assumptions, not a universal ranking.
-
-6.2 Advantages and disadvantages
-
-NTP advantages over Cristian's algorithm:
-
-- It uses four timestamps and explicitly estimates both offset and round-trip
-  delay, so it can represent the request and reply events more accurately.
-- It supports repeated samples, filtering, multiple peers, clock drift
-  estimation and a hierarchy of time sources.
-- It can operate in symmetric mode between peers and does not require one
-  node to be a permanent time server for all other nodes.
-- Its infrastructure provides fault tolerance through several servers and
-  source selection.
-
-NTP disadvantages:
-
-- It is considerably more complex to configure and implement.
-- Accuracy is still limited by variable and asymmetric network delays.
-- A bad or compromised time source can affect clients unless source selection
-  and access controls are configured carefully.
-- The hierarchy and periodic polling add traffic and operational overhead.
-
-Cristian's advantages are simplicity and a short request-response exchange.
-It is appropriate when a client has access to a trusted server and only needs
-an approximate time. Its disadvantages are the dependence on that server, the
-need to estimate or know the minimum message delay, and weaker support for
-multiple peers, filtering, failures and clock drift. In both algorithms, the
-uncertainty must be considered when deciding whether two file modifications
-are really ordered.
+NTP is more complex, but supports several sources, strata, filtering,
+reconfiguration, drift compensation and symmetric peer synchronization. Its
+accuracy remains limited by network delay and it requires more configuration.
+Neither method proves that two close file modifications are causally ordered:
+when their separation is below the uncertainty bound, the file service should
+use versions, causal metadata or explicit conflict detection.
 
 
 7. CONCLUSIONS
 
-Good time is time whose error, resolution and drift are bounded tightly enough
-for the application and with respect to a stated reference. In the cloud file
-service, a timestamp should not be treated as an exact ordering when the
-difference between two modifications is smaller than the synchronization
-error.
+Useful time is time whose deviation, drift and resolution are bounded relative
+to the application's reference. For a cloud file service, internal
+synchronization is often more important than exact UTC: all nodes need
+comparable timestamps and a known uncertainty.
 
-Without GPS or another external reference, a message exchange can select an
-internal reference and estimate each clock's deviation. The main unavoidable
-limitation is that the exact one-way network delays are unknown. NTP reduces
-the effect of this uncertainty with four timestamps, repeated measurements,
-peer selection and clock-drift compensation. The worked simulation produced
-an offset estimate of 0.045 ms and an accuracy bound of 0.075 ms.
+The class NTP simulation estimated B's clock as +38.00 seconds relative to A,
+with accuracy +/-20.00 seconds. Cristian's calculation described the same
+relationship as -38.00 seconds (A relative to B), with accuracy +/-61.00
+seconds. The comparison illustrates why the sign convention and the accuracy
+must always be stated.
 
-Cristian's algorithm is easier to understand and implement, but for the same
-sample its conservative accuracy bound was 0.085 ms and it depends more
-strongly on a trusted server and a usable minimum-delay estimate. Neither
-algorithm replaces versioning or explicit conflict resolution in a file
-service: synchronization improves the evidence used to order events, but it
-cannot eliminate concurrent updates or network uncertainty.
+Clock synchronization improves event ordering but cannot remove concurrent
+updates or network uncertainty. Consequently, timestamps should support, not
+replace, versioning and conflict-resolution mechanisms in the shared file
+service.
+
+Source: Topic 2 Notes, Sections 2.2, 2.2.1 and the NTP discussion in Section
+2.2.4.1; NTP experiment values from the group simulation.
