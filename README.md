@@ -14,6 +14,24 @@ Docker deployment is documented in the [Docker guide](https://kingjorjai.github.
 
 Docker images are published to [GitHub Container Registry](https://github.com/KingJorjai?tab=packages) from `main`.
 
+## Build the documentation
+
+Install the development dependencies and build the HTML documentation:
+
+```sh
+python -m pip install -r requirements-dev.txt
+mkdocs build --strict
+```
+
+To also generate the printable PDF with its cover page and contents:
+
+```sh
+python scripts/build_pdf.py
+```
+
+The PDF is written to `site/cloud-file-service.pdf`. Its review date is generated
+automatically each time the command runs.
+
 ## Quick start
 
 From the project directory, create the virtual environment and install the dependency:
