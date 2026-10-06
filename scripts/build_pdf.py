@@ -22,7 +22,6 @@ PAGES = (
     ("Architecture", "architecture/index.html"),
     ("Protocol", "protocol/index.html"),
     ("Limitations", "limitations/index.html"),
-    ("Server API", "api/server/index.html"),
     ("Protocol Helpers API", "api/protocol/index.html"),
 )
 
@@ -204,10 +203,8 @@ def build_document(
         position: relative; background: transparent; font-weight: 700;
         margin: 0 0 0.4em; padding: 0;
       }
-      .admonition-title::before {
-        position: static !important; display: inline-block !important;
-        width: 1.5em; margin: 0 0.35em 0 0; vertical-align: -0.1em;
-      }
+      .pdf-section .md-icon, .pdf-section .twemoji { display: none !important; }
+      .admonition-title::before { display: none !important; }
       .admonition p:last-child { margin-bottom: 0; }
       .mermaid {
         display: block; width: 100%; margin: 1.5em auto; text-align: center;

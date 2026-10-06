@@ -23,7 +23,8 @@ python -m pip install -r requirements-dev.txt
 mkdocs build --strict
 ```
 
-To also generate the printable PDF with its cover page and contents:
+To also generate the printable PDF with its cover page and contents (without the
+source-code API sections):
 
 ```sh
 npm install --global @mermaid-js/mermaid-cli@11.4.1
