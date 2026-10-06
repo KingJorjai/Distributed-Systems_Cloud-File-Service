@@ -38,10 +38,22 @@ jobs:
       - name: Build documentation
         run: mkdocs build --strict
 
+      - name: Install PDF browser
+        run: sudo apt-get update && sudo apt-get install --yes chromium
+
+      - name: Build PDF
+        run: python scripts/build_pdf.py
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: site
+
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloud-file-service-pdf
+          path: site/cloud-file-service.pdf
 
   deploy:
     needs: build
