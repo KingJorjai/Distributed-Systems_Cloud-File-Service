@@ -12,6 +12,8 @@ import tempfile
 from datetime import date
 from pathlib import Path
 
+MERMAID_RENDERER = Path(__file__).with_name("render_mermaid.mjs")
+
 PAGES = (
     ("Home", "index.html"),
     ("Quick Start", "quick-start/index.html"),
@@ -88,10 +90,10 @@ def prepare_article(article: str) -> str:
 
 
 def find_mermaid_cli() -> str:
-    command = shutil.which("mmdc")
+    command = shutil.which("node")
     if command is None:
         raise RuntimeError(
-            "Mermaid CLI is required to build the PDF. Install "
+            "Node.js is required to build the PDF. Install "
             "@mermaid-js/mermaid-cli before running this script."
         )
     return command
@@ -105,16 +107,6 @@ def render_mermaid_diagrams(
     """Replace Mermaid source blocks with SVG generated before printing."""
     with tempfile.TemporaryDirectory(prefix="cloud-file-service-mermaid-") as directory:
         directory_path = Path(directory)
-        puppeteer_config = directory_path / "puppeteer.json"
-        puppeteer_config.write_text(
-            json.dumps(
-                {
-                    "executablePath": shutil.which(browser) or browser,
-                    "args": ["--no-sandbox", "--disable-setuid-sandbox"],
-                }
-            ),
-            encoding="utf-8",
-        )
         counter = 0
 
         def render(match: re.Match[str]) -> str:
@@ -126,13 +118,10 @@ def render_mermaid_diagrams(
             subprocess.run(
                 [
                     mermaid_cli,
-                    "--input",
+                    str(MERMAID_RENDERER),
                     str(source),
-                    "--output",
                     str(output),
-                    "--puppeteerConfigFile",
-                    str(puppeteer_config),
-                    "--quiet",
+                    shutil.which(browser) or browser,
                 ],
                 check=True,
             )
