@@ -87,48 +87,58 @@ def prepare_article(article: str) -> str:
     )
 
 
-def render_mermaid_diagrams(article: str, browser: str) -> str:
+def find_mermaid_cli() -> str:
+    command = shutil.which("mmdc")
+    if command is None:
+        raise RuntimeError(
+            "Mermaid CLI is required to build the PDF. Install "
+            "@mermaid-js/mermaid-cli before running this script."
+        )
+    return command
+
+
+def render_mermaid_diagrams(
+    article: str,
+    mermaid_cli: str,
+    browser: str,
+) -> str:
     """Replace Mermaid source blocks with SVG generated before printing."""
     with tempfile.TemporaryDirectory(prefix="cloud-file-service-mermaid-") as directory:
         directory_path = Path(directory)
+        puppeteer_config = directory_path / "puppeteer.json"
+        puppeteer_config.write_text(
+            json.dumps(
+                {
+                    "executablePath": shutil.which(browser) or browser,
+                    "args": ["--no-sandbox", "--disable-setuid-sandbox"],
+                }
+            ),
+            encoding="utf-8",
+        )
         counter = 0
 
         def render(match: re.Match[str]) -> str:
             nonlocal counter
             counter += 1
-            source = directory_path / f"diagram-{counter}.html"
-            source.write_text(
-                f"""<!doctype html>
-<html><head><meta charset="utf-8"></head><body>
-<div class="mermaid">{match.group(1)}</div>
-<script type="module">
-import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
-mermaid.initialize({{ startOnLoad: false, securityLevel: "strict", theme: "neutral" }});
-window.addEventListener("load", async () => {{
-  await mermaid.run({{ nodes: document.querySelectorAll(".mermaid") }});
-}});
-</script>
-</body></html>""",
-                encoding="utf-8",
-            )
-            result = subprocess.run(
+            source = directory_path / f"diagram-{counter}.mmd"
+            output = directory_path / f"diagram-{counter}.svg"
+            source.write_text(html.unescape(match.group(1)), encoding="utf-8")
+            subprocess.run(
                 [
-                    browser,
-                    "--headless",
-                    "--no-sandbox",
-                    "--disable-gpu",
-                    "--virtual-time-budget=10000",
-                    "--dump-dom",
-                    source.as_uri(),
+                    mermaid_cli,
+                    "--input",
+                    str(source),
+                    "--output",
+                    str(output),
+                    "--puppeteerConfigFile",
+                    str(puppeteer_config),
+                    "--quiet",
                 ],
                 check=True,
-                capture_output=True,
-                text=True,
             )
-            svg = re.search(r"<svg\b.*?</svg>", result.stdout, re.DOTALL)
-            if svg is None:
+            if not output.is_file():
                 raise RuntimeError(f"Could not render Mermaid diagram {counter}.")
-            return svg.group(0)
+            return output.read_text(encoding="utf-8")
 
         return re.sub(
             r'<div class="mermaid">(.*?)</div>',
@@ -138,7 +148,12 @@ window.addEventListener("load", async () => {{
         )
 
 
-def build_document(site_dir: Path, metadata_path: Path, browser: str) -> str:
+def build_document(
+    site_dir: Path,
+    metadata_path: Path,
+    browser: str,
+    mermaid_cli: str,
+) -> str:
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     review_date = date.today().isoformat()
     sections = []
@@ -149,6 +164,7 @@ def build_document(site_dir: Path, metadata_path: Path, browser: str) -> str:
         page_id = f"section-{section_number}"
         article = render_mermaid_diagrams(
             prepare_article(article_from_page(page_path)),
+            mermaid_cli,
             browser,
         )
         sections.append(
@@ -274,7 +290,8 @@ def main() -> None:
             f"{args.site_dir} does not exist; run 'mkdocs build --strict' first."
         )
     browser = find_browser()
-    document = build_document(args.site_dir, args.metadata, browser)
+    mermaid_cli = find_mermaid_cli()
+    document = build_document(args.site_dir, args.metadata, browser, mermaid_cli)
     source = args.site_dir / "pdf.html"
     source.write_text(document, encoding="utf-8")
     args.output.parent.mkdir(parents=True, exist_ok=True)

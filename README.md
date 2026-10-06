@@ -26,6 +26,7 @@ mkdocs build --strict
 To also generate the printable PDF with its cover page and contents:
 
 ```sh
+npm install --global @mermaid-js/mermaid-cli@11.12.0
 python scripts/build_pdf.py
 ```
 
