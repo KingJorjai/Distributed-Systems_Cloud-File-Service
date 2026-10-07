@@ -56,6 +56,30 @@ docker compose -f compose.yaml -f compose.registry.yaml run --rm client
 
 Version tags such as `v1.0.0` are also published when pushed to GitHub.
 
+## Downloadable standalone bundles
+
+Pushing a tag such as `v1.0.0` also creates a GitHub Release with independent
+server and client bundles for Windows x64 and Linux x64. Each bundle contains
+the application executable, its Python runtime and dependencies,
+`config.toml.example`, a short README, and an empty data directory.
+
+The target machine does not need Python, `pip`, Docker, or an additional
+dependency download. Choose the asset matching the operating system and
+component, extract it, configure the environment variables or TOML file, and
+run the executable from the extracted directory:
+
+```text
+cloud-file-service-server-windows-x64-v1.0.0.zip
+cloud-file-service-client-windows-x64-v1.0.0.zip
+cloud-file-service-server-linux-x64-v1.0.0.tar.gz
+cloud-file-service-client-linux-x64-v1.0.0.tar.gz
+```
+
+The release also contains `SHA256SUMS` and a Compose package. Verify the
+checksum before extracting an asset. Standalone bundles are built with
+PyInstaller in folder mode; they are intentionally not a single executable so
+that configuration, documentation, and data directories remain visible.
+
 ## Start the server
 
 ```sh

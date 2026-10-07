@@ -14,6 +14,11 @@ Docker deployment is documented in the [Docker guide](https://kingjorjai.github.
 
 Docker images are published to [GitHub Container Registry](https://github.com/KingJorjai?tab=packages) from `main`.
 
+Tagged releases publish separate, self-contained client and server bundles for
+Windows x64 and Linux x64. They include the Python runtime and dependencies,
+so the target machine does not need Python, `pip`, or additional downloads.
+Download them from the repository's [Releases](https://github.com/KingJorjai/Distributed-Systems_Cloud-File-Service/releases) page.
+
 ## Build the documentation
 
 Install the development dependencies and build the HTML documentation:

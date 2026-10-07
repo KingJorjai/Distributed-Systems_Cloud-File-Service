@@ -1,0 +1,124 @@
+name: Build release bundles
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to attach bundles to
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build ${{ matrix.component }} (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - component: server
+            platform: windows-x64
+            runner: windows-latest
+            archive-format: zip
+          - component: client
+            platform: windows-x64
+            runner: windows-latest
+            archive-format: zip
+          - component: server
+            platform: linux-x64
+            runner: ubuntu-latest
+            archive-format: gztar
+          - component: client
+            platform: linux-x64
+            runner: ubuntu-latest
+            archive-format: gztar
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install release tooling
+        run: python -m pip install -r requirements.txt -r requirements-release.txt
+
+      - name: Build self-contained bundle
+        shell: bash
+        run: >
+          python scripts/build_release_bundle.py
+          ${{ matrix.component }}
+          --output release/${{ matrix.component }}-${{ matrix.platform }}
+          --archive-format ${{ matrix.archive-format }}
+
+      - name: Rename release asset
+        shell: bash
+        run: |
+          mkdir -p release-assets
+          if [ "${{ matrix.archive-format }}" = "zip" ]; then
+            extension=zip
+          else
+            extension=tar.gz
+          fi
+          source="release/${{ matrix.component }}-${{ matrix.platform }}/cloud-file-${{ matrix.component }}.${extension}"
+          target="release-assets/cloud-file-service-${{ matrix.component }}-${{ matrix.platform }}-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}.${extension}"
+          cp "$source" "$target"
+
+      - name: Upload bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-${{ matrix.component }}-${{ matrix.platform }}
+          path: release-assets/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Download bundles
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          pattern: bundle-*
+          merge-multiple: true
+
+      - name: Build Compose package
+        run: |
+          mkdir compose-package
+          cp compose.yaml compose.registry.yaml .env.example config.toml.example compose-package/
+          cp docs/docker.md compose-package/README-docker.md
+          zip -r "release-assets/compose-${RELEASE_TAG}.zip" compose-package
+
+      - name: Generate checksums
+        working-directory: release-assets
+        run: sha256sum * > SHA256SUMS
+
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$RELEASE_TAG" >/dev/null 2>&1 || \
+            gh release create "$RELEASE_TAG" --generate-notes
+          gh release upload "$RELEASE_TAG" release-assets/* --clobber
