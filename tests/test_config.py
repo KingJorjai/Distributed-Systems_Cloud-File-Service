@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import serv_fich_multithread
+from cli_fich import parse_client_args
 from config import ConfigurationError, load_config, validate_port
 from serv_fich_multithread import is_authenticated
 
@@ -77,6 +78,52 @@ class LoadConfigTests(unittest.TestCase):
         self.assertEqual(serv_fich_multithread.PORT, 50012)
         self.assertEqual(serv_fich_multithread.FILES_PATH, "files")
         self.assertEqual(len(serv_fich_multithread.PASSWORDS), 3)
+
+
+class ParseClientArgsTests(unittest.TestCase):
+    def write_config(self, content):
+        config_file = tempfile.NamedTemporaryFile(mode="w", delete=False)
+        self.addCleanup(lambda: Path(config_file.name).unlink(missing_ok=True))
+        config_file.write(content)
+        config_file.close()
+        return config_file.name
+
+    def test_parses_server_port_and_local_path(self):
+        path = self.write_config(
+            '[client]\nserver = "configured-server"\nport = 6100\n'
+            'local_path = "configured-client"\n'
+        )
+
+        with patch.dict(os.environ, {}, clear=True):
+            config = load_config(path).client
+
+        server, port, local_path = parse_client_args(
+            ["cli_fich.py", "example", "6200", "custom-dir"], config
+        )
+        self.assertEqual((server, port, local_path), ("example", 6200, "custom-dir"))
+
+    def test_defaults_come_from_configuration(self):
+        path = self.write_config(
+            '[client]\nserver = "configured-server"\nport = 6100\n'
+            'local_path = "configured-client"\n'
+        )
+
+        with patch.dict(os.environ, {}, clear=True):
+            config = load_config(path).client
+
+        self.assertEqual(
+            parse_client_args(["cli_fich.py"], config),
+            ("configured-server", 6100, "configured-client"),
+        )
+
+    def test_rejects_invalid_port(self):
+        path = self.write_config('[client]\nport = 6100\n')
+
+        with patch.dict(os.environ, {}, clear=True):
+            config = load_config(path).client
+
+        with self.assertRaises(SystemExit):
+            parse_client_args(["cli_fich.py", "example", "not-a-port"], config)
 
 
 if __name__ == "__main__":

@@ -61,26 +61,32 @@ def int2bytes(n):
         return str(round(n / (1 << 30))) + " GiB"
 
 
-if __name__ == "__main__":
-    config = load_config().client
+def parse_client_args(argv, config):
+    """Parse ``[servidor [puerto [carpeta-local]]]`` CLI arguments."""
     server = config.server
     port = config.port
     local_path = config.local_path
 
-    if len(sys.argv) > 4:
-        print("Uso: {} [<servidor> [<puerto> [<carpeta-local>]]]".format(sys.argv[0]))
-        exit(2)
+    if len(argv) > 4:
+        print("Uso: {} [<servidor> [<puerto> [<carpeta-local>]]]".format(argv[0]))
+        raise SystemExit(2)
 
-    if len(sys.argv) >= 2:
-        server = sys.argv[1]
-    if len(sys.argv) == 3:
+    if len(argv) >= 2:
+        server = argv[1]
+    if len(argv) >= 3:
         try:
-            port = validate_port(sys.argv[2])
+            port = validate_port(argv[2])
         except ConfigurationError as error:
             print(f"Puerto inválido: {error}")
-            exit(2)
-    if len(sys.argv) == 4:
-        local_path = sys.argv[3]
+            raise SystemExit(2)
+    if len(argv) == 4:
+        local_path = argv[3]
+    return server, port, local_path
+
+
+if __name__ == "__main__":
+    config = load_config().client
+    server, port, local_path = parse_client_args(sys.argv, config)
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((server, port))
