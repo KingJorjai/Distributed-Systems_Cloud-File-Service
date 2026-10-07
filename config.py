@@ -1,9 +1,13 @@
 """Application configuration loaded from TOML and environment variables."""
 
 import os
-import tomllib
 from dataclasses import dataclass
 from pathlib import Path
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
 
 DEFAULT_CONFIG_FILE = "config.toml"
 

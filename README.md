@@ -1,6 +1,6 @@
 # Cloud File Service
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Ruff](https://img.shields.io/badge/code%20style-Ruff-D7FF64?logo=ruff&logoColor=111111)](https://docs.astral.sh/ruff/)
 [![watchdog](https://img.shields.io/pypi/v/watchdog?logo=pypi&logoColor=white)](https://pypi.org/project/watchdog/)
 
@@ -65,7 +65,7 @@ python cli_fich.py localhost 50012 client_files
 From PowerShell, create and activate a Windows virtual environment:
 
 ```powershell
-py -3.13 -m venv .venv-win
+py -3.10 -m venv .venv-win
 .\.venv-win\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 ```

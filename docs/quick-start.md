@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- Python 3.11 or newer.
+- Python 3.10 or newer.
 - A virtual environment.
 - A local TCP port available for the server.
 
