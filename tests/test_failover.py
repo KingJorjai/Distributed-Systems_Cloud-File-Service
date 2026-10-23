@@ -143,11 +143,13 @@ class FailoverTests(unittest.TestCase):
         registration = ClientSession(self.client_config())
         registration.connect()
         registration.register("alice", "password-alice")
+        registration.register("bob", "password-bob")
         registration.close()
         client = ClientSession(self.client_config())
         self.addCleanup(client.close)
         client.connect_and_login("alice", "password-alice")
-        client.upload("alice", "before.txt", b"before")
+        client.upload("alice", "docs/before.txt", b"before")
+        client.share("docs", "bob", "ro")
         self.assertTrue(
             wait_until(
                 lambda: primary.store.state_hash()
@@ -174,6 +176,18 @@ class FailoverTests(unittest.TestCase):
                 == other.store.state_hash()
             )
         )
+        self.assertTrue(new_leader.store.list_shares(grantee="bob"))
+
+        listener = ClientSession(self.client_config())
+        self.addCleanup(listener.close)
+        listener.connect_and_login("alice", "password-alice")
+        listener.subscribe("listener-client")
+        notifier = ClientSession(self.client_config())
+        self.addCleanup(notifier.close)
+        notifier.connect_and_login("alice", "password-alice")
+        notifier.upload("alice", "notify.txt", b"n", client_id="notifier-client")
+        update = listener.read_notification()
+        self.assertEqual((update.owner, update.path, update.op), ("alice", "notify.txt", "U"))
 
         client.close()
         client = ClientSession(self.client_config())
