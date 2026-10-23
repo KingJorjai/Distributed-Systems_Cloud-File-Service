@@ -9,6 +9,7 @@ from pathlib import Path
 from urllib.parse import parse_qs
 
 import szasar
+from admin_service import AdminService
 from auth import validate_password, validate_username
 from election import ClusterNode
 from file_store import (
@@ -31,6 +32,7 @@ from replication import (
     ReplicationServer,
     Replicator,
 )
+from server_admin import AdminServer
 from tls import server_context
 
 
@@ -144,6 +146,13 @@ def session(sock, runtime):
             sendER(sock, 1)
             continue
 
+        if state == State.Main and user and user != "anonimous":
+            record = store.get_user(user)
+            if record is None or record.disabled:
+                sendER(sock, 17)
+                sock.close()
+                return
+
         if message.startswith(szasar.Command.User):
             if state != State.Identification:
                 sendER(sock)
@@ -174,7 +183,7 @@ def session(sock, runtime):
             if not runtime.is_primary():
                 sendER(sock, 13)
                 continue
-            if not config.registration_enabled:
+            if not store.registration_enabled(config.registration_enabled):
                 sendER(sock, 15)
                 continue
             username, separator, encoded_password = message[4:].partition("?")
@@ -614,6 +623,10 @@ class ServerRuntime:
         )
         self.cluster = ClusterNode(config, store, self.log)
         self.notification_hub = NotificationHub(store)
+        self.admin_service = AdminService(self)
+        self.admin_server = None
+        self._session_lock = threading.Lock()
+        self._active_sessions = 0
         self.replicator = None
         self.replication_server = None
         self._replication_thread = None
@@ -642,6 +655,11 @@ class ServerRuntime:
         )
         self.cluster.start()
         self.replicator = Replicator(self.config, self.log)
+        if self.config.admin_enabled:
+            self.admin_server = AdminServer(
+                self.config, self.admin_service, self.cluster
+            )
+            self.admin_server.start()
 
     def serve_forever(self):
         """Accept connections until :meth:`stop` is called."""
@@ -662,12 +680,54 @@ class ServerRuntime:
                 connection.close()
                 continue
             thread = threading.Thread(
-                target=session, args=(connection, self), daemon=True
+                target=self._handle_client, args=(connection,), daemon=True
             )
             thread.start()
 
+    def _handle_client(self, connection):
+        with self._session_lock:
+            self._active_sessions += 1
+        try:
+            session(connection, self)
+        finally:
+            with self._session_lock:
+                self._active_sessions -= 1
+            try:
+                connection.close()
+            except OSError:
+                pass
+
     def is_primary(self):
         return self.cluster.is_leader()
+
+    def active_sessions(self):
+        with self._session_lock:
+            return self._active_sessions
+
+    def admin_status(self):
+        cluster = self.cluster
+        leader = cluster.current_leader
+        if leader is None and cluster.is_leader():
+            leader = self.config.server_id
+        return {
+            "server_id": self.config.server_id,
+            "role": cluster.role,
+            "term": self.log.term(),
+            "primary": leader,
+            "commit_index": self.log.commit_index(),
+            "last_index": self.log.last_index(),
+            "peers": [peer.server_id for peer in cluster.peers],
+            "active_sessions": self.active_sessions(),
+            "users": len(self.store.list_users()),
+            "shares": len(self.store.list_shares()),
+            "registration_enabled": self.store.registration_enabled(
+                self.config.registration_enabled
+            ),
+            "is_primary": self.is_primary(),
+            "admin_url": self.admin_server.base_url()
+            if self.admin_server is not None
+            else None,
+        }
 
     def commit_operation(self, operation, origin_client_id=None):
         """Commit a deterministic operation through replication and local apply."""
@@ -688,6 +748,8 @@ class ServerRuntime:
         """Stop accepting new connections."""
         self._stop.set()
         self.cluster.stop()
+        if self.admin_server is not None:
+            self.admin_server.stop()
         self.notification_hub.close()
         if self.replication_server is not None:
             self.replication_server.stop()

@@ -64,6 +64,12 @@ class ServerConfig:
     failure_timeout: float = 2.0
     election_timeout: float = 1.0
     client_addresses: str = ""
+    admin_enabled: bool = False
+    admin_host: str = "127.0.0.1"
+    admin_port: int = 50080
+    admin_addresses: str = ""
+    allow_admin_failover: bool = False
+    admin_session_timeout: float = 3600.0
     max_file_size: int = 10 * 1 << 20
     space_margin: int = 50 * 1 << 20
 
@@ -161,6 +167,9 @@ def load_config(path: str | os.PathLike[str] | None = None) -> AppConfig:
             "SERVER_REPLICATION_PORT",
             60012,
         )
+    )
+    admin_port = validate_port(
+        _value(data, "server", "admin_port", "SERVER_ADMIN_PORT", 50080)
     )
     role = str(_value(data, "server", "role", "SERVER_ROLE", "primary"))
     if role not in {"primary", "secondary"}:
@@ -285,6 +294,55 @@ def load_config(path: str | os.PathLike[str] | None = None) -> AppConfig:
                     "SERVER_CLIENT_ADDRESSES",
                     "",
                 )
+            ),
+            admin_enabled=_boolean(
+                _value(
+                    data,
+                    "server",
+                    "admin_enabled",
+                    "SERVER_ADMIN_ENABLED",
+                    False,
+                ),
+                "SERVER_ADMIN_ENABLED",
+            ),
+            admin_host=str(
+                _value(
+                    data,
+                    "server",
+                    "admin_host",
+                    "SERVER_ADMIN_HOST",
+                    "127.0.0.1",
+                )
+            ),
+            admin_port=admin_port,
+            admin_addresses=str(
+                _value(
+                    data,
+                    "server",
+                    "admin_addresses",
+                    "SERVER_ADMIN_ADDRESSES",
+                    "",
+                )
+            ),
+            allow_admin_failover=_boolean(
+                _value(
+                    data,
+                    "server",
+                    "allow_admin_failover",
+                    "ALLOW_ADMIN_FAILOVER",
+                    False,
+                ),
+                "ALLOW_ADMIN_FAILOVER",
+            ),
+            admin_session_timeout=_number(
+                _value(
+                    data,
+                    "server",
+                    "admin_session_timeout",
+                    "ADMIN_SESSION_TIMEOUT",
+                    3600.0,
+                ),
+                "ADMIN_SESSION_TIMEOUT",
             ),
             max_file_size=_integer(
                 _value(data, "server", "max_file_size", "MAX_FILE_SIZE", 10 * 1 << 20),

@@ -245,6 +245,15 @@ class ClusterNode:
         else:
             self._become_follower()
 
+    def step_down(self):
+        with self._lock:
+            if self._role != Role.Leader:
+                return False
+            self._role = Role.Follower
+            self.current_leader = None
+            self.last_heartbeat = time.monotonic()
+            return True
+
     def handle_hb(self, message):
         term = int(message["term"])
         leader = message.get("leader")

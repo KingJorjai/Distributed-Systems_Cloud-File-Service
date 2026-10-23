@@ -151,6 +151,21 @@ class LoadConfigTests(unittest.TestCase):
         self.assertEqual(config.server.election_timeout, 0.4)
         self.assertIn("server2@s2", config.server.client_addresses)
 
+    def test_reads_admin_settings(self):
+        path = self.write_config(
+            '[server]\nadmin_enabled = true\nadmin_host = "0.0.0.0"\n'
+            'admin_port = 50081\nadmin_addresses = "server1@host1:50081"\n'
+            'allow_admin_failover = true\nadmin_session_timeout = 60\n'
+        )
+        with patch.dict(os.environ, {}, clear=True):
+            config = load_config(path)
+
+        self.assertTrue(config.server.admin_enabled)
+        self.assertEqual(config.server.admin_host, "0.0.0.0")
+        self.assertEqual(config.server.admin_port, 50081)
+        self.assertTrue(config.server.allow_admin_failover)
+        self.assertEqual(config.server.admin_session_timeout, 60.0)
+
     def test_rejects_invalid_role(self):
         path = self.write_config('[server]\nrole = "leader"\n')
         with patch.dict(os.environ, {}, clear=True):

@@ -44,6 +44,20 @@ class NotificationHub:
             if subscription in self._subscriptions:
                 self._subscriptions.remove(subscription)
 
+    def disconnect_user(self, username):
+        with self._lock:
+            subscriptions = [
+                item for item in self._subscriptions if item.username == username
+            ]
+            self._subscriptions = [
+                item for item in self._subscriptions if item.username != username
+            ]
+        for subscription in subscriptions:
+            try:
+                subscription.socket.close()
+            except OSError:
+                pass
+
     def close(self):
         with self._lock:
             subscriptions = list(self._subscriptions)

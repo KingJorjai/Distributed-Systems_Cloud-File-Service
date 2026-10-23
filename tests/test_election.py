@@ -106,6 +106,14 @@ class ClusterNodeTests(unittest.TestCase):
 
         self.assertEqual(node.role, Role.Follower)
 
+    def test_step_down_moves_to_follower(self):
+        node = self.make_node()
+        node.start()
+        self.addCleanup(node.stop)
+        self.assertTrue(node.step_down())
+        self.assertEqual(node.role, Role.Follower)
+        self.assertFalse(node.step_down())
+
     def test_coord_updates_leader(self):
         node = self.make_node(role="secondary")
         accepted = node.handle_coord({"term": 3, "leader": "server3"})

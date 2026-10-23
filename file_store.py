@@ -682,6 +682,24 @@ class FileStore:
             "created_at": _now(),
         }
 
+    def plan_user_disabled(self, username, disabled):
+        if self.get_user(username) is None:
+            raise UserNotFoundError(username)
+        return {
+            "kind": "user_state",
+            "username": username,
+            "disabled": bool(disabled),
+        }
+
+    def plan_setting(self, key, value):
+        return {"kind": "setting", "key": key, "value": str(value)}
+
+    def registration_enabled(self, default=True):
+        value = self.get_setting("registration_enabled")
+        if value is None:
+            return default
+        return str(value).lower() in {"1", "true", "yes", "on"}
+
     def plan_user_password(self, username, password):
         if not validate_password(password):
             raise StoreError("Password must be at least 8 characters.")
@@ -754,6 +772,14 @@ class FileStore:
             ),
         )
 
+    def _apply_user_state(self, operation):
+        cursor = self._connection.execute(
+            "UPDATE users SET disabled = ? WHERE username = ?",
+            (1 if operation["disabled"] else 0, operation["username"]),
+        )
+        if cursor.rowcount == 0:
+            raise UserNotFoundError(operation["username"])
+
     def _apply_password(self, operation):
         cursor = self._connection.execute(
             "UPDATE users SET password_hash = ?, salt = ?, iterations = ? "
@@ -812,6 +838,8 @@ class FileStore:
                     self._apply_user(item)
                 elif kind == "password":
                     self._apply_password(item)
+                elif kind == "user_state":
+                    self._apply_user_state(item)
                 elif kind == "share":
                     self._apply_share(item)
                 elif kind == "setting":
