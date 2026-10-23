@@ -1,10 +1,16 @@
 """Cluster membership, durable replication log, and replication transports."""
 
+import hmac
 import json
+import socket
 import sqlite3
+import ssl
 import threading
 from dataclasses import dataclass
 from pathlib import Path
+
+import szasar
+from tls import client_context, server_context
 
 
 @dataclass(frozen=True)
@@ -175,3 +181,274 @@ class ReplicationLog:
                 (term, index),
             )
             self._connection.commit()
+
+
+MAX_REPLICATION_MESSAGE = 64 * 1024 * 1024
+
+
+class ReplicationError(Exception):
+    """Raised for invalid or rejected replication messages."""
+
+
+def _encode(message):
+    return (json.dumps(message, separators=(",", ":")) + "\r\n").encode("utf-8")
+
+
+class PeerConnection:
+    """One outbound replication connection from the primary to a peer."""
+
+    def __init__(self, config, peer):
+        self.config = config
+        self.peer = peer
+        self.socket = None
+        self.reader = None
+
+    def connect(self):
+        raw = socket.create_connection(
+            (self.peer.host, self.peer.port),
+            timeout=self.config.replication_timeout,
+        )
+        context = client_context(
+            self.config.tls_ca_file,
+            self.config.tls_cert_file,
+            self.config.tls_key_file,
+        )
+        self.socket = context.wrap_socket(raw, server_hostname=self.peer.host)
+        self.reader = szasar.SocketReader(
+            self.socket, max_line=MAX_REPLICATION_MESSAGE
+        )
+        self.send(
+            {
+                "type": "HELLO",
+                "id": self.config.server_id,
+                "role": "primary",
+                "term": self.config.term,
+                "last_index": 0,
+                "commit_index": 0,
+                "token": self.config.cluster_token,
+            }
+        )
+        response = self.recv()
+        if response.get("type") != "HELLO_OK":
+            self.close()
+            raise ReplicationError(
+                "Replication handshake failed: {}".format(response)
+            )
+        self.remote = response
+
+    def send(self, message):
+        self.socket.sendall(_encode(message))
+
+    def recv(self):
+        line = self.reader.readline()
+        if not line:
+            raise ReplicationError("Replication connection closed.")
+        return json.loads(line.decode("utf-8"))
+
+    def close(self):
+        if self.socket is not None:
+            try:
+                self.socket.close()
+            except OSError:
+                pass
+            self.socket = None
+
+
+class ReplicationServer:
+    """Secondary-side listener for replication messages."""
+
+    def __init__(self, config, store, log):
+        self.config = config
+        self.store = store
+        self.log = log
+        self._socket = None
+        self._stop = threading.Event()
+        self._connections = set()
+        self._lock = threading.Lock()
+        self.port = None
+
+    def start(self):
+        context = server_context(
+            self.config.tls_cert_file,
+            self.config.tls_key_file,
+            self.config.tls_ca_file,
+            require_client_cert=True,
+        )
+        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        listener.bind(
+            (
+                self.config.replication_host or self.config.host,
+                self.config.replication_port,
+            )
+        )
+        listener.listen(5)
+        listener.settimeout(0.2)
+        self._context = context
+        self._socket = listener
+        self.port = listener.getsockname()[1]
+
+    def serve_forever(self):
+        while not self._stop.is_set():
+            try:
+                connection, _ = self._socket.accept()
+            except socket.timeout:
+                continue
+            except OSError:
+                break
+            try:
+                connection = self._context.wrap_socket(
+                    connection, server_side=True
+                )
+            except (OSError, ssl.SSLError):
+                connection.close()
+                continue
+            with self._lock:
+                self._connections.add(connection)
+            thread = threading.Thread(
+                target=self._handle, args=(connection,), daemon=True
+            )
+            thread.start()
+
+    def stop(self):
+        self._stop.set()
+        if self._socket is not None:
+            try:
+                self._socket.close()
+            except OSError:
+                pass
+            self._socket = None
+        with self._lock:
+            connections = list(self._connections)
+        for connection in connections:
+            try:
+                connection.close()
+            except OSError:
+                pass
+
+    def _send(self, connection, message):
+        connection.sendall(_encode(message))
+
+    def _handle(self, connection):
+        reader = szasar.SocketReader(
+            connection, max_line=MAX_REPLICATION_MESSAGE
+        )
+        try:
+            hello = json.loads(reader.readline().decode("utf-8"))
+            if hello.get("type") != "HELLO":
+                self._send(connection, {"type": "HELLO_ERROR"})
+                return
+            expected = self.config.cluster_token
+            if expected and not hmac.compare_digest(
+                expected, str(hello.get("token", ""))
+            ):
+                self._send(connection, {"type": "HELLO_ERROR"})
+                return
+            self._send(
+                connection,
+                {
+                    "type": "HELLO_OK",
+                    "id": self.config.server_id,
+                    "term": self.log.term(),
+                    "last_index": self.log.last_index(),
+                    "commit_index": self.log.commit_index(),
+                },
+            )
+            while not self._stop.is_set():
+                line = reader.readline()
+                if not line:
+                    return
+                message = json.loads(line.decode("utf-8"))
+                message_type = message.get("type")
+                if message_type == "RB":
+                    self._handle_rb(connection, message)
+                elif message_type == "COMMIT":
+                    self._handle_commit(connection, message)
+                elif message_type == "ABORT":
+                    self._handle_abort(connection, message)
+                elif message_type == "SNAP":
+                    self._handle_snap(connection, message)
+                elif message_type == "PING":
+                    self._send(connection, {"type": "PONG"})
+                else:
+                    self._send(
+                        connection,
+                        {
+                            "type": "ERROR",
+                            "message": "Unknown message type",
+                        },
+                    )
+        except (EOFError, OSError, ssl.SSLError, json.JSONDecodeError):
+            return
+        finally:
+            with self._lock:
+                self._connections.discard(connection)
+            try:
+                connection.close()
+            except OSError:
+                pass
+
+    def _handle_rb(self, connection, message):
+        term = int(message["term"])
+        index = int(message["index"])
+        if term < self.log.term():
+            self._send(connection, {"type": "ERROR", "message": "stale term"})
+            return
+        payload = json.dumps(message["op"], separators=(",", ":"))
+        self.log.append(term, index, payload)
+        self._send(
+            connection,
+            {
+                "type": "ACK",
+                "term": term,
+                "index": index,
+                "id": self.config.server_id,
+                "status": "ok",
+            },
+        )
+
+    def _handle_commit(self, connection, message):
+        term = int(message["term"])
+        index = int(message["index"])
+        last_applied = int(self.log.get_meta("last_applied", "0"))
+        try:
+            for current in range(last_applied + 1, index + 1):
+                entry = self.log.get(term, current)
+                if entry is None:
+                    raise ReplicationError(
+                        "Missing entry {} for commit.".format(current)
+                    )
+                self.store.apply_operation(entry["payload"])
+                self.log.mark_committed(term, current)
+                self.log.set_meta("last_applied", current)
+        except ReplicationError as error:
+            self._send(connection, {"type": "ERROR", "message": str(error)})
+            return
+        self.log.set_meta("commit_index", index)
+        self._send(
+            connection,
+            {"type": "COMMITTED", "term": term, "index": index},
+        )
+
+    def _handle_abort(self, connection, message):
+        term = int(message["term"])
+        index = int(message["index"])
+        self.log.truncate_from(term, index)
+        self._send(
+            connection,
+            {"type": "ABORTED", "term": term, "index": index},
+        )
+
+    def _handle_snap(self, connection, message):
+        self.store.import_snapshot(message["snapshot"])
+        self.log.set_meta("term", message["term"])
+        self.log.set_meta("commit_index", message["index"])
+        self.log.set_meta("last_applied", message["index"])
+        self._send(
+            connection,
+            {
+                "type": "SNAP_OK",
+                "term": message["term"],
+                "index": message["index"],
+            },
+        )

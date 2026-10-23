@@ -15,10 +15,12 @@ def server_context(cert_file, key_file, ca_file=None, require_client_cert=False)
     return context
 
 
-def client_context(ca_file=None):
+def client_context(ca_file=None, cert_file=None, key_file=None):
     """Create a client-side TLS context with hostname verification enabled."""
     context = ssl.create_default_context(cafile=ca_file or None)
     context.minimum_version = ssl.TLSVersion.TLSv1_2
     context.check_hostname = True
     context.verify_mode = ssl.CERT_REQUIRED
+    if cert_file and key_file:
+        context.load_cert_chain(cert_file, key_file)
     return context
