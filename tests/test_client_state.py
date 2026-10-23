@@ -49,6 +49,38 @@ class ClientStateTests(unittest.TestCase):
         self.state.ack(change_id)
         self.assertEqual(self.state.pending(), [])
 
+    def test_client_id_is_stable(self):
+        first = self.state.client_id
+        self.state.close()
+        self.state = ClientState(
+            "alice", "localhost", 50012, self.root, self.base / "state"
+        )
+        self.addCleanup(self.state.close)
+        self.assertEqual(self.state.client_id, first)
+
+    def test_clear_outbox(self):
+        self.state.enqueue("upload", "alice", "a.txt")
+        self.state.clear_outbox()
+        self.assertEqual(self.state.pending(), [])
+
+    def test_delete_tree_removes_state_and_outbox(self):
+        entry = ManifestEntry(
+            owner="alice",
+            path="dir/a.txt",
+            rev=1,
+            digest="abc",
+            size=3,
+            deleted=False,
+            access="rw",
+        )
+        self.state.set_file(entry)
+        self.state.enqueue("upload", "alice", "dir/a.txt")
+
+        self.state.delete_tree("alice", "dir")
+
+        self.assertIsNone(self.state.get_file("alice", "dir/a.txt"))
+        self.assertEqual(self.state.pending(), [])
+
     def test_users_are_isolated(self):
         self.state.enqueue("upload", "alice", "a.txt")
         other = ClientState(

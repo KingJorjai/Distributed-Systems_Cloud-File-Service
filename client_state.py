@@ -4,6 +4,7 @@ import hashlib
 import os
 import sqlite3
 import threading
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -24,6 +25,11 @@ CREATE TABLE IF NOT EXISTS outbox (
     owner      TEXT NOT NULL,
     path       TEXT NOT NULL,
     created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
 );
 """
 
@@ -60,6 +66,21 @@ class ClientState:
         )
         self._connection.executescript(SCHEMA)
         self._connection.commit()
+
+    @property
+    def client_id(self):
+        with self._lock:
+            row = self._connection.execute(
+                "SELECT value FROM meta WHERE key = 'client_id'"
+            ).fetchone()
+            if row is not None:
+                return row[0]
+            value = uuid.uuid4().hex
+            self._connection.execute(
+                "INSERT INTO meta(key, value) VALUES ('client_id', ?)", (value,)
+            )
+            self._connection.commit()
+            return value
 
     def close(self):
         with self._lock:
@@ -154,5 +175,30 @@ class ClientState:
         with self._lock:
             self._connection.execute(
                 "DELETE FROM outbox WHERE id = ?", (change_id,)
+            )
+            self._connection.commit()
+
+    def clear_outbox(self):
+        with self._lock:
+            self._connection.execute("DELETE FROM outbox")
+            self._connection.commit()
+
+    def delete_file(self, owner, path):
+        with self._lock:
+            self._connection.execute(
+                "DELETE FROM files WHERE owner = ? AND path = ?", (owner, path)
+            )
+            self._connection.commit()
+
+    def delete_tree(self, owner, prefix):
+        with self._lock:
+            pattern = prefix + "/%"
+            self._connection.execute(
+                "DELETE FROM files WHERE owner = ? AND (path = ? OR path LIKE ?)",
+                (owner, prefix, pattern),
+            )
+            self._connection.execute(
+                "DELETE FROM outbox WHERE owner = ? AND (path = ? OR path LIKE ?)",
+                (owner, prefix, pattern),
             )
             self._connection.commit()
