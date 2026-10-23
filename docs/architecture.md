@@ -59,6 +59,36 @@ preserves the current server version as a conflict copy named
 `<stem> (conflict <client id> <timestamp>)<suffix>` and returns its path to the
 client.
 
+## Replication
+
+The primary plans each mutation as deterministic operations: file writes include
+the exact revision, hash, size, `mtime_ns`, conflict copy name, and base64 data.
+It broadcasts the operation to the secondaries over mutual TLS, waits for a
+2/3 quorum, appends the committed entry to its durable log, applies it locally,
+and sends `COMMIT`. Secondaries store proposals in their own log and apply only
+committed entries in order.
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant P as Primary
+    participant S2 as Secondary 2
+    participant S3 as Secondary 3
+    C->>P: UPLO + bytes
+    P->>S2: RB(term, index, operation)
+    P->>S3: RB(term, index, operation)
+    S2-->>P: ACK
+    S3-->>P: ACK
+    P->>P: append commit + apply
+    P->>S2: COMMIT
+    P->>S3: COMMIT
+    P-->>C: OK<rev>
+```
+
+If a majority is not available, the primary sends `ABORT`, does not apply the
+operation, and returns `ER12`. Secondaries reject client mutations with `ER13`;
+reads and login are served from their local replicated state.
+
 ## Data flow
 
 ```mermaid

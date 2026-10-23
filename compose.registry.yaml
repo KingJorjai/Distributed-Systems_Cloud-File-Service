@@ -1,5 +1,11 @@
 services:
-  server:
+  server1:
+    build: null
+
+  server2:
+    build: null
+
+  server3:
     build: null
 
   client:

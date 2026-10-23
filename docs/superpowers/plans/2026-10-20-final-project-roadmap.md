@@ -468,8 +468,7 @@ Orden de recorte si hiciera falta: web admin completa → extras de GUI →
 reincorporación automática → copias de conflicto. No se recortan TLS, wizard,
 outbox, demo de failover ni memoria.
 
-M0 y M1 están implementados y fusionados. M2 (reconciliación al arrancar,
-tombstones y copias de conflicto) está implementado en la rama
-`feat/m2-reconciliation`; el plan detallado está en
-`2026-10-23-m2-reconciliation.md`. El siguiente paso es el plan detallado de M3
-(réplica pasiva, log y quórum).
+M0, M1 y M2 están implementados y fusionados. M3 (réplica pasiva, log durable,
+quórum y TLS/mTLS) está implementado en la rama `feat/m3-replication`; el plan
+detallado está en `2026-10-23-m3-replication.md`. El siguiente paso es el plan
+detallado de M4 (detección de fallos, elección, failover y reincorporación).

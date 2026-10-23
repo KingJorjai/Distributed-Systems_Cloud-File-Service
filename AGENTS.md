@@ -7,7 +7,8 @@ One-way file synchronization: a `watchdog` client watches a local folder and pus
 Entrypoints:
 - `serv_fich_multithread.py` — server entrypoint; delegates to `ServerRuntime`.
 - `cli_fich.py` — client CLI; authenticates interactively, then starts `SyncWorker`.
-- `server_runtime.py` — TLS listener, session threads, protocol state machine.
+- `server_runtime.py` — TLS listener, session threads, protocol state machine, replication wiring.
+- `replication.py` — peer parsing, durable log, mTLS replication server/client, quorum coordinator.
 - `file_store.py` — SQLite metadata, users/shares/settings, filesystem storage, ACLs.
 - `client_session.py` — TLS client protocol session used by CLI and future GUI.
 - `client_state.py` — client metadata and durable outbox.
@@ -43,6 +44,7 @@ mkdocs build --strict                     # docs
 Precedence: CLI args > environment > `config.toml` > defaults. `CONFIG_FILE` selects the TOML file. Copy `config.toml.example`; `config.toml` is gitignored.
 
 - TLS is mandatory. The server refuses to start without `TLS_CERT_FILE`/`TLS_KEY_FILE`; there is no plaintext fallback. Clients verify hostnames and use the system CA or `CLIENT_TLS_CA_FILE`.
+- Cluster settings: `SERVER_ID`, `SERVER_ROLE=primary|secondary`, `SERVER_PEERS=id@host:port,...`, `SERVER_PRIMARY`, `SERVER_REPLICATION_PORT`, `CLUSTER_TOKEN`, `SERVER_TERM`, `REPLICATION_TIMEOUT`. Replication uses a separate mTLS listener; an empty `SERVER_PEERS` keeps a standalone primary with quorum 1.
 - `python scripts/generate_dev_cert.py --output certs` creates a development CA, server certificate, and key. `certs/` is gitignored.
 - `APP_PASSWORD_SAR` / `APP_PASSWORD_SZA` bootstrap admin accounts; an empty value disables that account. `anonimous` is passwordless and read-only.
 - Registered users and shares live in `files/.cloudfs.sqlite3`; registration is controlled by `ALLOW_REGISTRATION`.
@@ -53,6 +55,7 @@ Precedence: CLI args > environment > `config.toml` > defaults. `CONFIG_FILE` sel
 - Commands are 4-character prefixes from `szasar.Command` concatenated directly with arguments (no spaces), terminated by CRLF; responses start with `OK` or `ER<code>`. Paths are URL-encoded with `szasar.encode_path`/`decode_path`.
 - Upload/download are two-step handshakes: `UPLOfilename?size[&rev=&hash=&client=]` → `OK`, then `UPL2\r\n` + raw bytes; the final response is `OK<rev>` or `OK<rev>\t<conflict path>`. `DOWNfilename` → `OK<size>`, then `DOW2\r\n` → `OK` + raw bytes.
 - `SYNC` returns `OK<count>`, tab-separated manifest lines, and `END`. `STATpath` returns `OK<rev>\t<hash>\t<size>`.
+- Replication messages are one JSON object per CRLF line over mTLS: `HELLO`, `HELLO_OK`, `RB`, `ACK`, `COMMIT`, `COMMITTED`, `ABORT`, `SNAP`. The primary commits after a 2/3 quorum; secondaries apply only committed entries and reject client mutations with `ER13`.
 - New commands: `REGI`, `CHPW`, `USRS`, `SYNC`, `STAT`. `DELEpath?rev=&client=` returns a revision and optional conflict path. Error codes 14–20 cover sharing, registration, users, long lines, and revision conflicts.
 - There is no `LIST` command. Keep protocol changes in sync across `szasar.py`, `server_runtime.py`, `client_session.py`, and `docs/protocol.md`.
 - Preserve `safe_path` traversal/symlink checks and atomic upload (`tempfile` + `os.replace`); uploads are limited by `MAX_FILE_SIZE` and `SPACE_MARGIN`.
@@ -60,6 +63,7 @@ Precedence: CLI args > environment > `config.toml` > defaults. `CONFIG_FILE` sel
 ## Behavior boundaries
 
 - At startup the client reconciles the server manifest with its state and local files, so it can download remote changes and apply tombstones. Server push notifications are still M5; without them, other clients observe changes on their next reconciliation. Conflict copies are implemented; version history and garbage collection are not.
+- `server1` is the primary in Compose; secondaries can serve reads but reject mutations. Election/failover and automatic rejoin are M4.
 - Renames are modeled as delete + upload (recursive for directories). Startup reconciliation uploads only new/modified local files and downloads missing/remote-modified files.
 - The client opens two TLS connections per run: the interactive login connection plus `SyncWorker`'s own authenticated connection.
 - Changes are persisted in the client outbox before execution and replayed after restart. Startup reconciliation handles offline changes before the watcher starts; uploads wait for size/mtime to stabilize (roughly 0.7 s).
@@ -79,6 +83,7 @@ python scripts/build_pdf.py           # needs Chromium + mermaid-cli@11.4.1
 ## Docker
 
 - Generate certificates with `python scripts/generate_dev_cert.py --output certs --host server --host localhost --host 127.0.0.1` before Compose.
-- `compose.yaml` builds both images, bind-mounts `./files`, `./client_files`, and `./certs`; uses host `DOCKER_UID`/`DOCKER_GID` from `.env`.
+- `compose.yaml` runs `server1` (primary), `server2`, `server3`, and `client`; bind-mounts `./files/server1..3`, `./client_files`, and `./certs`; uses host `DOCKER_UID`/`DOCKER_GID` and `CLUSTER_TOKEN` from `.env`.
+- Generate certs for `server1`, `server2`, `server3`, `localhost`, and `127.0.0.1`.
 - `compose.registry.yaml` only sets `build: null` — use it as an override to pull images from GHCR.
-- `SERVER_PUBLISHED_PORT` is the host port; `SERVER_INTERNAL_PORT` changes the container/client port. Set both together.
+- `SERVER_PUBLISHED_PORT` is the host port; `SERVER_INTERNAL_PORT` changes the internal client port. Replication uses `60012` inside the Compose network.

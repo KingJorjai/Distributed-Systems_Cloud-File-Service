@@ -13,8 +13,13 @@ The current synchronization design intentionally keeps the scope small.
   notifications arrive in M5.
 - A local delete is never sent for a file that was never synchronized, so a new
   local file created and removed while offline leaves no remote trace.
-- The server does not replicate yet; passive replication, quorum, election, and
-  failover are M3–M4.
+- Passive replication and quorum are implemented. Automatic primary election,
+  failover, and client redirection are M4.
+- A new or restarted secondary does not automatically request a snapshot yet;
+  snapshot export/import exists but automatic rejoin is M4.
+- Secondary reads may lag behind the primary.
+- If the primary loses quorum, uncommitted proposals are aborted; a secondary
+  that was unreachable may retain an uncommitted proposal until rejoin.
 - Sharing is modelled in the database, but `SHAR`/`UNSH` commands and
   notifications arrive in M5.
 - The client is supported on Windows x64 and Linux x64. macOS is out of scope.

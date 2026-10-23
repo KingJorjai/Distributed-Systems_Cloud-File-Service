@@ -128,6 +128,8 @@ session.
 | 9 | Insufficient free space |
 | 10 | Upload preparation/receive error |
 | 11 | Delete/directory error |
+| 12 | No quorum |
+| 13 | This server is not the primary |
 | 14 | Cannot share with yourself |
 | 15 | Registration disabled |
 | 16 | Invalid registration data |
@@ -135,6 +137,30 @@ session.
 | 18 | User already exists |
 | 19 | Protocol line too long |
 | 20 | Revision conflict |
+
+## Server-to-server replication
+
+Replication uses a separate TLS/mTLS listener and one JSON object per CRLF line.
+The primary connects to each peer and sends `HELLO`; the peer replies
+`HELLO_OK`. Mutations are sent as `RB` with `term`, `index`, and `operation`.
+Each secondary stores the proposal and replies `ACK`. Once a majority has
+acknowledged, the primary commits, applies locally, and sends `COMMIT`.
+Secondaries apply committed entries in order and reply `COMMITTED`. If quorum is
+not reached, the primary sends `ABORT` and truncates the proposal.
+
+```text
+HELLO    {id, role, term, last_index, commit_index, token}
+HELLO_OK {id, term, last_index, commit_index}
+RB       {term, index, operation}
+ACK      {term, index, id, status}
+COMMIT   {term, index}
+COMMITTED{term, index}
+ABORT    {term, index}
+SNAP     {term, index, snapshot}
+```
+
+`SNAP` replaces the local state during replica recovery. Automatic rejoin and
+snapshot transfer on reconnect are M4.
 
 ## Client state
 

@@ -70,8 +70,44 @@ Environment variables: `CLIENT_SERVER`, `CLIENT_PORT`, `CLIENT_LOCAL_PATH`,
 | `TLS_KEY_FILE` | `certs/server.key` | PEM private key. |
 | `TLS_CA_FILE` | `certs/ca.crt` | CA used by replication (reserved for M3). |
 | `ALLOW_REGISTRATION` | `true` | Enables `REGI`. |
+| `SERVER_ID` | `server1` | Cluster identity. |
+| `SERVER_ROLE` | `primary` | `primary` or `secondary`. |
+| `SERVER_PEERS` | empty | Comma-separated `id@host:port` replication peers. |
+| `SERVER_PRIMARY` | empty | Primary address used by a secondary. |
+| `SERVER_REPLICATION_HOST` | same as host | Replication listener address. |
+| `SERVER_REPLICATION_PORT` | `60012` | Replication listener port. |
+| `CLUSTER_TOKEN` | empty | Shared cluster handshake token. |
+| `SERVER_TERM` | `1` | Initial replication term. |
+| `REPLICATION_TIMEOUT` | `2.0` | Per-peer ACK timeout in seconds. |
 | `MAX_FILE_SIZE` | 10 MiB | Maximum upload size. |
 | `SPACE_MARGIN` | 50 MiB | Required free-space margin. |
+
+### Replication example
+
+Primary:
+
+```toml
+[server]
+server_id = "server1"
+role = "primary"
+peers = "server2@server2:60012,server3@server3:60012"
+cluster_token = "change-me"
+```
+
+Secondary:
+
+```toml
+[server]
+server_id = "server2"
+role = "secondary"
+primary = "server1@server1:60012"
+cluster_token = "change-me"
+```
+
+The replication listener requires mutual TLS. The server certificate and key are
+also used as the client certificate when connecting to peers; the cluster CA is
+`TLS_CA_FILE`. An empty `SERVER_PEERS` keeps a primary in standalone mode with
+quorum 1.
 
 The server refuses to start without a valid certificate and key. There is no
 plaintext mode.
