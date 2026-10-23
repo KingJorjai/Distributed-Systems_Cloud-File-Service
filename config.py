@@ -12,6 +12,21 @@ except ModuleNotFoundError:
 DEFAULT_CONFIG_FILE = "config.toml"
 
 
+def default_config_dir():
+    """Return the platform-standard per-user configuration directory."""
+    if os.name == "nt":
+        base = os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming")
+        return Path(base) / "CloudFileService"
+    if os.uname().sysname == "Darwin":
+        return Path.home() / "Library" / "Application Support" / "CloudFileService"
+    base = os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")
+    return Path(base) / "cloudfs"
+
+
+def default_config_path():
+    return default_config_dir() / DEFAULT_CONFIG_FILE
+
+
 class ConfigurationError(ValueError):
     """Raised when application configuration is invalid."""
 
@@ -128,7 +143,8 @@ def _boolean(value, name: str) -> bool:
 
 def load_config(path: str | os.PathLike[str] | None = None) -> AppConfig:
     """Load configuration using environment variables as the highest override."""
-    config_path = Path(path or os.environ.get("CONFIG_FILE", DEFAULT_CONFIG_FILE))
+    configured = path or os.environ.get("CONFIG_FILE")
+    config_path = Path(configured) if configured else default_config_path()
     data = _read_toml(config_path)
 
     client_port = validate_port(
@@ -284,3 +300,38 @@ def load_config(path: str | os.PathLike[str] | None = None) -> AppConfig:
             "sza": os.environ.get("APP_PASSWORD_SZA", ""),
         },
     )
+
+def _toml_value(value):
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return str(value)
+    escaped = str(value).replace("\\", "\\\\").replace('"', '\\"')
+    return '"{}"'.format(escaped)
+
+
+def save_client_config(path, client):
+    """Write the client section, preserving any other TOML sections."""
+    target = Path(path)
+    data = _read_toml(target)
+    data["client"] = {
+        "server": client.server,
+        "port": client.port,
+        "local_path": client.local_path,
+        "tls_ca_file": client.tls_ca_file,
+        "tls_server_name": client.tls_server_name,
+        "state_dir": client.state_dir,
+        "peers": client.peers,
+    }
+    lines = []
+    for section in sorted(data):
+        section_data = data[section]
+        if not isinstance(section_data, dict):
+            continue
+        lines.append("[{}]".format(section))
+        for key in sorted(section_data):
+            lines.append("{} = {}".format(key, _toml_value(section_data[key])))
+        lines.append("")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    return target

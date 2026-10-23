@@ -5,7 +5,13 @@ from pathlib import Path
 from unittest.mock import patch
 
 from cli_fich import parse_client_args
-from config import ConfigurationError, load_config, validate_port
+from config import (
+    ConfigurationError,
+    default_config_path,
+    load_config,
+    save_client_config,
+    validate_port,
+)
 from file_store import FileStore, InvalidPasswordError
 
 
@@ -156,6 +162,23 @@ class LoadConfigTests(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True):
             with self.assertRaises(ConfigurationError):
                 load_config(path)
+
+    def test_save_client_config_preserves_server_section(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.toml"
+            path.write_text("[server]\nport = 6200\n", encoding="utf-8")
+            config = load_config(path).client
+            from dataclasses import replace
+
+            save_client_config(path, replace(config, server="example", port=6300))
+
+            restored = load_config(path)
+            self.assertEqual(restored.client.server, "example")
+            self.assertEqual(restored.client.port, 6300)
+            self.assertEqual(restored.server.port, 6200)
+
+    def test_default_config_path_is_under_user_config(self):
+        self.assertTrue(str(default_config_path()).endswith("config.toml"))
 
     def test_rejects_invalid_registration_boolean(self):
         path = self.write_config('[server]\nregistration_enabled = "sometimes"\n')
