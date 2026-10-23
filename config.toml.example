@@ -5,6 +5,7 @@ local_path = "client_files"
 tls_ca_file = ""
 tls_server_name = ""
 state_dir = ""
+peers = ""
 
 [server]
 host = ""
@@ -23,5 +24,9 @@ replication_port = 60012
 cluster_token = ""
 term = 1
 replication_timeout = 2.0
+heartbeat_interval = 0.5
+failure_timeout = 2.0
+election_timeout = 1.0
+client_addresses = ""
 max_file_size = 10485760
 space_margin = 52428800

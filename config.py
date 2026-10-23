@@ -24,6 +24,7 @@ class ClientConfig:
     tls_ca_file: str = ""
     tls_server_name: str = ""
     state_dir: str = ""
+    peers: str = ""
 
 
 @dataclass(frozen=True)
@@ -44,6 +45,10 @@ class ServerConfig:
     cluster_token: str = ""
     term: int = 1
     replication_timeout: float = 2.0
+    heartbeat_interval: float = 0.5
+    failure_timeout: float = 2.0
+    election_timeout: float = 1.0
+    client_addresses: str = ""
     max_file_size: int = 10 * 1 << 20
     space_margin: int = 50 * 1 << 20
 
@@ -165,6 +170,7 @@ def load_config(path: str | os.PathLike[str] | None = None) -> AppConfig:
             state_dir=str(
                 _value(data, "client", "state_dir", "CLIENT_STATE_DIR", "")
             ),
+            peers=str(_value(data, "client", "peers", "CLIENT_PEERS", "")),
         ),
         server=ServerConfig(
             host=str(_value(data, "server", "host", "SERVER_HOST", "")),
@@ -224,6 +230,45 @@ def load_config(path: str | os.PathLike[str] | None = None) -> AppConfig:
                     2.0,
                 ),
                 "REPLICATION_TIMEOUT",
+            ),
+            heartbeat_interval=_number(
+                _value(
+                    data,
+                    "server",
+                    "heartbeat_interval",
+                    "HEARTBEAT_INTERVAL",
+                    0.5,
+                ),
+                "HEARTBEAT_INTERVAL",
+            ),
+            failure_timeout=_number(
+                _value(
+                    data,
+                    "server",
+                    "failure_timeout",
+                    "FAILURE_TIMEOUT",
+                    2.0,
+                ),
+                "FAILURE_TIMEOUT",
+            ),
+            election_timeout=_number(
+                _value(
+                    data,
+                    "server",
+                    "election_timeout",
+                    "ELECTION_TIMEOUT",
+                    1.0,
+                ),
+                "ELECTION_TIMEOUT",
+            ),
+            client_addresses=str(
+                _value(
+                    data,
+                    "server",
+                    "client_addresses",
+                    "SERVER_CLIENT_ADDRESSES",
+                    "",
+                )
             ),
             max_file_size=_integer(
                 _value(data, "server", "max_file_size", "MAX_FILE_SIZE", 10 * 1 << 20),

@@ -101,6 +101,26 @@ class ReplicationLog:
     def set_term(self, term):
         self.set_meta("term", term)
 
+    def advance_term(self, term):
+        with self._lock:
+            if term > self.term():
+                self._connection.execute(
+                    "INSERT INTO meta(key, value) VALUES ('term', ?) "
+                    "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                    (str(term),),
+                )
+                self._connection.execute(
+                    "INSERT INTO meta(key, value) VALUES ('voted_for', '') "
+                    "ON CONFLICT(key) DO UPDATE SET value = ''"
+                )
+                self._connection.commit()
+
+    def voted_for(self):
+        return self.get_meta("voted_for", "") or None
+
+    def set_voted_for(self, server_id):
+        self.set_meta("voted_for", server_id or "")
+
     def commit_index(self):
         return int(self.get_meta("commit_index", "0"))
 
@@ -109,7 +129,16 @@ class ReplicationLog:
             row = self._connection.execute(
                 "SELECT MAX(idx) FROM entries"
             ).fetchone()
-        return int(row[0]) if row[0] is not None else 0
+            entry_index = int(row[0]) if row[0] is not None else 0
+        return max(entry_index, int(self.get_meta("last_index", "0")))
+
+    def last_term(self):
+        with self._lock:
+            row = self._connection.execute(
+                "SELECT term FROM entries ORDER BY idx DESC LIMIT 1"
+            ).fetchone()
+            entry_term = int(row[0]) if row is not None else 0
+        return max(entry_term, int(self.get_meta("last_term", "0")))
 
     def next_index(self):
         return self.last_index() + 1
@@ -132,12 +161,15 @@ class ReplicationLog:
                         (term, index),
                     )
                     self._connection.commit()
-                return
-            self._connection.execute(
-                "INSERT INTO entries(term, idx, payload, committed) VALUES (?, ?, ?, ?)",
-                (term, index, payload, 1 if committed else 0),
-            )
-            self._connection.commit()
+            else:
+                self._connection.execute(
+                    "INSERT INTO entries(term, idx, payload, committed) VALUES (?, ?, ?, ?)",
+                    (term, index, payload, 1 if committed else 0),
+                )
+                self._connection.commit()
+            if index > int(self.get_meta("last_index", "0")):
+                self.set_meta("last_index", index)
+                self.set_meta("last_term", term)
 
     def mark_committed(self, term, index):
         with self._lock:
@@ -180,6 +212,40 @@ class ReplicationLog:
             self._connection.execute(
                 "DELETE FROM entries WHERE term = ? AND idx >= ? AND committed = 0",
                 (term, index),
+            )
+            row = self._connection.execute(
+                "SELECT MAX(idx) FROM entries"
+            ).fetchone()
+            remaining = int(row[0]) if row[0] is not None else 0
+            self._connection.execute(
+                "INSERT INTO meta(key, value) VALUES ('last_index', ?) "
+                "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                (str(max(remaining, self.commit_index())),),
+            )
+            self._connection.commit()
+
+    def reset_to(self, term, index):
+        with self._lock:
+            self._connection.execute("DELETE FROM entries")
+            self._connection.execute(
+                "INSERT INTO meta(key, value) VALUES ('term', ?) "
+                "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                (str(term),),
+            )
+            for key in ("commit_index", "last_applied", "last_index"):
+                self._connection.execute(
+                    "INSERT INTO meta(key, value) VALUES (?, ?) "
+                    "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                    (key, str(index)),
+                )
+            self._connection.execute(
+                "INSERT INTO meta(key, value) VALUES ('last_term', ?) "
+                "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                (str(term),),
+            )
+            self._connection.execute(
+                "INSERT INTO meta(key, value) VALUES ('voted_for', '') "
+                "ON CONFLICT(key) DO UPDATE SET value = ''"
             )
             self._connection.commit()
 

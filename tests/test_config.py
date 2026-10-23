@@ -129,6 +129,22 @@ class LoadConfigTests(unittest.TestCase):
         self.assertEqual(config.server.term, 3)
         self.assertEqual(config.server.replication_timeout, 1.5)
 
+    def test_reads_election_and_client_peers(self):
+        path = self.write_config(
+            '[client]\npeers = "s1:50012,s2:50012"\n\n'
+            '[server]\nheartbeat_interval = 0.2\nfailure_timeout = 1.0\n'
+            'election_timeout = 0.4\n'
+            'client_addresses = "server1@s1:50012,server2@s2:50012"\n'
+        )
+        with patch.dict(os.environ, {}, clear=True):
+            config = load_config(path)
+
+        self.assertEqual(config.client.peers, "s1:50012,s2:50012")
+        self.assertEqual(config.server.heartbeat_interval, 0.2)
+        self.assertEqual(config.server.failure_timeout, 1.0)
+        self.assertEqual(config.server.election_timeout, 0.4)
+        self.assertIn("server2@s2", config.server.client_addresses)
+
     def test_rejects_invalid_role(self):
         path = self.write_config('[server]\nrole = "leader"\n')
         with patch.dict(os.environ, {}, clear=True):

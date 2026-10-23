@@ -77,6 +77,24 @@ class ReplicationLogTests(unittest.TestCase):
         self.assertIsNone(self.log.get(1, 1))
         self.assertIsNone(self.log.get(1, 2))
 
+    def test_advance_term_persists_and_clears_vote(self):
+        self.log.set_voted_for("server2")
+        self.log.advance_term(4)
+
+        self.assertEqual(self.log.term(), 4)
+        self.assertIsNone(self.log.voted_for())
+
+    def test_reset_to_snapshot_index(self):
+        self.log.append(1, 1, '{"operations":[]}', committed=True)
+        self.log.reset_to(2, 7)
+
+        self.assertEqual(self.log.term(), 2)
+        self.assertEqual(self.log.commit_index(), 7)
+        self.assertEqual(self.log.last_index(), 7)
+        self.assertEqual(self.log.last_term(), 2)
+        self.assertIsNone(self.log.get(1, 1))
+        self.assertEqual(self.log.next_index(), 8)
+
     def test_committed_entries_survive_truncate(self):
         self.log.append(1, 1, '{"operations":[]}', committed=True)
         self.log.truncate_from(1, 1)
