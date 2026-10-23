@@ -29,6 +29,8 @@ class Command:
         ChangePassword,
         Users,
         Prim,
+        Share,
+        Unshare,
     ) = (
         "USER",
         "PASS",
@@ -46,6 +48,8 @@ class Command:
         "CHPW",
         "USRS",
         "PRIM",
+        "SHAR",
+        "UNSH",
     )
 
 

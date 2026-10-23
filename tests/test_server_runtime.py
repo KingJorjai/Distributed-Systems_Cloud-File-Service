@@ -220,6 +220,57 @@ class ProtocolIntegrationTests(RuntimeTestCase):
             sock.sendall(b"UPL2\r\nx")
             self.assertTrue(reader.readline().startswith(b"OK"))
 
+    def test_share_commands_and_acl(self):
+        with self.connect() as alice_sock, self.connect() as bob_sock:
+            alice = SocketReader(alice_sock)
+            bob = SocketReader(bob_sock)
+            self.register_and_login(alice_sock, alice, "alice", "password-alice")
+            self.register_and_login(bob_sock, bob, "bob", "password-bob")
+
+            self.assertEqual(
+                self.command(alice_sock, alice, "UPLOdocs/a.txt?size=1&rev=0"),
+                "OK",
+            )
+            alice_sock.sendall(b"UPL2\r\nx")
+            self.assertTrue(alice.readline().startswith(b"OK"))
+
+            self.assertEqual(
+                self.command(alice_sock, alice, "SHARdocs?bob?ro"), "OK"
+            )
+            alice_sock.sendall(b"SYNC\r\n")
+            alice_manifest = self.read_manifest(alice_sock, alice)
+            self.assertEqual(len(alice_manifest), 1)
+            bob_sock.sendall(b"SYNC\r\n")
+            bob_manifest = self.read_manifest(bob_sock, bob)
+            self.assertEqual(len(bob_manifest), 1)
+            self.assertEqual(bob_manifest[0].split("\t")[0], "alice")
+            self.assertEqual(bob_manifest[0].split("\t")[6], "ro")
+
+            response = self.command(
+                bob_sock, bob, "UPLO@alice/docs/a.txt?size=1&rev=0"
+            )
+            self.assertTrue(response.startswith("ER"))
+
+            self.assertEqual(self.command(alice_sock, alice, "SHARdocs?bob?rw"), "OK")
+            self.assertEqual(
+                self.command(
+                    bob_sock, bob, "UPLO@alice/docs/b.txt?size=1&rev=0"
+                ),
+                "OK",
+            )
+            bob_sock.sendall(b"UPL2\r\ny")
+            self.assertTrue(bob.readline().startswith(b"OK"))
+
+            self.assertEqual(self.command(alice_sock, alice, "UNSHdocs?bob"), "OK")
+            bob_sock.sendall(b"SYNC\r\n")
+            self.assertEqual(len(self.read_manifest(bob_sock, bob)), 0)
+
+    def test_share_to_self_is_rejected(self):
+        with self.connect() as sock:
+            reader = SocketReader(sock)
+            self.register_and_login(sock, reader, "alice", "password-alice")
+            self.assertEqual(self.command(sock, reader, "SHARa.txt?alice?rw"), "ER14")
+
     def test_plaintext_rejected(self):
         raw = socket.create_connection(
             ("127.0.0.1", self.runtime.port), timeout=5

@@ -18,6 +18,8 @@ from file_store import (
     InvalidPasswordError,
     InvalidPathError,
     NotFoundError,
+    SelfShareError,
+    StoreError,
     UserDisabledError,
     UserExistsError,
     UserNotFoundError,
@@ -272,6 +274,65 @@ def session(sock, runtime):
             for username in users:
                 sock.sendall((username + "\r\n").encode("ascii"))
             sock.sendall(b"END\r\n")
+
+        elif message.startswith(szasar.Command.Share):
+            if state != State.Main:
+                sendER(sock)
+                continue
+            if not runtime.is_primary():
+                sendER(sock, 13)
+                continue
+            if user == "anonimous":
+                sendER(sock, 7)
+                continue
+            encoded_path, separator, rest = message[4:].partition("?")
+            grantee, separator2, access = rest.partition("?")
+            if not separator or not separator2 or not grantee or not access:
+                sendER(sock, 16)
+                continue
+            try:
+                operation = store.plan_share_create(
+                    user, szasar.decode_path(encoded_path), grantee, access
+                )
+                runtime.commit_operation({"operations": [operation]})
+            except SelfShareError:
+                sendER(sock, 14)
+            except NoQuorumError:
+                sendER(sock, 12)
+            except NotPrimaryError:
+                sendER(sock, 13)
+            except (StoreError, InvalidPathError):
+                sendER(sock, 16)
+            else:
+                sendOK(sock)
+
+        elif message.startswith(szasar.Command.Unshare):
+            if state != State.Main:
+                sendER(sock)
+                continue
+            if not runtime.is_primary():
+                sendER(sock, 13)
+                continue
+            if user == "anonimous":
+                sendER(sock, 7)
+                continue
+            encoded_path, separator, grantee = message[4:].partition("?")
+            if not separator or not grantee:
+                sendER(sock, 16)
+                continue
+            try:
+                operation = store.plan_share_revoke(
+                    user, szasar.decode_path(encoded_path), grantee
+                )
+                runtime.commit_operation({"operations": [operation]})
+            except NoQuorumError:
+                sendER(sock, 12)
+            except NotPrimaryError:
+                sendER(sock, 13)
+            except (StoreError, InvalidPathError):
+                sendER(sock, 16)
+            else:
+                sendOK(sock)
 
         elif message.startswith(szasar.Command.ChangePassword):
             if state != State.Main:

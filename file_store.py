@@ -345,6 +345,38 @@ class FileStore:
             raise InvalidPasswordError(username)
         return User(row[0], row[4], False)
 
+    def plan_share_create(self, owner, path, grantee, access):
+        if owner == grantee:
+            raise SelfShareError("A user cannot share with themselves.")
+        if access not in {"ro", "rw"}:
+            raise StoreError("Share access must be 'ro' or 'rw'.")
+        if grantee == "anonimous":
+            raise StoreError("Anonymous users cannot be grantees.")
+        normalized = _normalize_path(path)
+        if self.get_user(owner) is None:
+            raise UserNotFoundError(owner)
+        if self.get_user(grantee) is None:
+            raise UserNotFoundError(grantee)
+        return {
+            "kind": "share",
+            "action": "create",
+            "owner": owner,
+            "path": normalized,
+            "grantee": grantee,
+            "access": access,
+            "created_at": _now(),
+        }
+
+    def plan_share_revoke(self, owner, path, grantee):
+        normalized = _normalize_path(path)
+        return {
+            "kind": "share",
+            "action": "revoke",
+            "owner": owner,
+            "path": normalized,
+            "grantee": grantee,
+        }
+
     def create_share(self, owner, path, grantee, access):
         if owner == grantee:
             raise SelfShareError("A user cannot share with themselves.")

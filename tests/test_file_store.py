@@ -257,6 +257,23 @@ class FileStoreTests(unittest.TestCase):
 
             self.assertEqual(first.state_hash(), other.state_hash())
 
+    def test_plan_share_create_and_revoke(self):
+        self.store.put("alice", "docs/a.txt", b"a")
+        create = self.store.plan_share_create("alice", "docs", "bob", "ro")
+        self.store.apply_operation({"operations": [create]})
+        entries = self.store.manifest("bob")
+        self.assertEqual(entries[0].access, "ro")
+
+        revoke = self.store.plan_share_revoke("alice", "docs", "bob")
+        self.store.apply_operation({"operations": [revoke]})
+        self.assertEqual(self.store.manifest("bob"), [])
+
+    def test_plan_share_rejects_self_and_anonymous(self):
+        with self.assertRaises(SelfShareError):
+            self.store.plan_share_create("alice", "a.txt", "alice", "rw")
+        with self.assertRaises(Exception):
+            self.store.plan_share_create("alice", "a.txt", "anonimous", "ro")
+
     def test_settings_round_trip(self):
         self.assertIsNone(self.store.get_setting("registration_enabled"))
         self.store.set_setting("registration_enabled", "false")
