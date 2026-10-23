@@ -25,6 +25,10 @@ The current synchronization design intentionally keeps the scope small.
   minimized instead.
 - The daemon keeps passwords in memory only. After a daemon restart, the user
   must log in again.
+- The admin panel has no login rate limiting, password reset email, user
+  deletion, or historical audit persistence; the audit log is in memory.
+- Admin mutations require the primary and quorum; secondary panels are
+  read-only and redirect actions when the primary admin URL is configured.
 - A local edit to an `ro` share is preserved as a local conflict copy while the
   remote version is restored.
 - Secondary reads may lag behind the primary.

@@ -11,6 +11,7 @@ Entrypoints:
 - `daemon_service.py`/`client_daemon.py` — background daemon owning `ClientSession` and `SyncWorker`.
 - `ipc.py` — authenticated Unix socket/named-pipe IPC.
 - `server_runtime.py` — TLS listener, session threads, protocol state machine, replication wiring.
+- `admin_service.py` / `server_admin.py` — replicated admin operations and the HTTPS admin panel.
 - `replication.py` — peer parsing, durable log, mTLS replication server/client, quorum coordinator.
 - `election.py` — heartbeats, persistent terms, election, fencing, and leader client endpoints.
 - `notification_hub.py` — per-user subscriptions and `UPDT` delivery on the primary.
@@ -51,6 +52,7 @@ Precedence: CLI args > environment > `config.toml` > defaults. `CONFIG_FILE` sel
 
 - TLS is mandatory. The server refuses to start without `TLS_CERT_FILE`/`TLS_KEY_FILE`; there is no plaintext fallback. Clients verify hostnames and use the system CA or `CLIENT_TLS_CA_FILE`.
 - Cluster settings: `SERVER_ID`, `SERVER_ROLE=primary|secondary`, `SERVER_PEERS=id@host:port,...` (all other nodes), `SERVER_PRIMARY`, `SERVER_REPLICATION_PORT`, `SERVER_CLIENT_ADDRESSES`, `CLUSTER_TOKEN`, `SERVER_TERM`, `REPLICATION_TIMEOUT`, `HEARTBEAT_INTERVAL`, `FAILURE_TIMEOUT`, `ELECTION_TIMEOUT`. Replication uses a separate mTLS listener; an empty `SERVER_PEERS` keeps a standalone primary with quorum 1.
+- Admin settings: `SERVER_ADMIN_ENABLED` (default false), `SERVER_ADMIN_HOST`, `SERVER_ADMIN_PORT`, `SERVER_ADMIN_ADDRESSES`, `ALLOW_ADMIN_FAILOVER`, `ADMIN_SESSION_TIMEOUT`. The panel is HTTPS-only and admin mutations require primary quorum.
 - Client discovery: `CLIENT_PEERS=host:port,...` are seeds; `PRIM` returns the current primary client endpoint. Leave `CLIENT_TLS_SERVER_NAME` empty when endpoints differ.
 - `python scripts/generate_dev_cert.py --output certs` creates a development CA, server certificate, and key. `certs/` is gitignored.
 - `APP_PASSWORD_SAR` / `APP_PASSWORD_SZA` bootstrap admin accounts; an empty value disables that account. `anonimous` is passwordless and read-only.
@@ -75,6 +77,7 @@ Precedence: CLI args > environment > `config.toml` > defaults. `CONFIG_FILE` sel
 
 - At startup the client reconciles the server manifest with its state and local files, so it can download remote changes and apply tombstones. Active clients receive `UPDT` notifications through a separate subscription connection; offline clients converge on the next reconciliation. Conflict copies are implemented; version history and garbage collection are not.
 - `server1` starts as primary in Compose. If it stops, `server2`/`server3` elect a new primary; clients use `PRIM` to redirect. A restarted old primary becomes a follower and receives a snapshot. Secondaries serve reads but reject mutations with `ER13` while they are followers.
+- Admin web actions are replicated; secondary panels redirect mutations to the primary admin URL. `sar`/`sza` are the bootstrap admins; self-disable and disabling the last enabled admin are rejected.
 - Shared files are mounted locally under `shared/<owner>/<path>`; owned files stay at the root. `ro` local edits are preserved as local conflict copies and the remote version is restored. Notifications require an active client; offline clients reconcile on the next start.
 - Renames are modeled as delete + upload (recursive for directories). Startup reconciliation uploads only new/modified local files and downloads missing/remote-modified files.
 - The client opens two TLS connections per run: the interactive login connection plus `SyncWorker`'s own authenticated connection.
@@ -94,7 +97,7 @@ python scripts/build_pdf.py           # needs Chromium + mermaid-cli@11.4.1
 ## Docker
 
 - Generate certificates with `python scripts/generate_dev_cert.py --output certs --host server --host localhost --host 127.0.0.1` before Compose.
-- `compose.yaml` runs `server1`, `server2`, `server3`, and `client`; bind-mounts `./files/server1..3`, `./client_files`, and `./certs`; uses host `DOCKER_UID`/`DOCKER_GID`, `CLUSTER_TOKEN`, and client seed endpoints. `server1` starts as primary; the others can elect a replacement.
+- `compose.yaml` runs `server1`, `server2`, `server3`, and `client`; bind-mounts `./files/server1..3`, `./client_files`, and `./certs`; uses host `DOCKER_UID`/`DOCKER_GID`, `CLUSTER_TOKEN`, and client seed endpoints. Admin ports 50080/50081/50082 are published for the demo.
 - Generate certs for `server1`, `server2`, `server3`, `localhost`, and `127.0.0.1`.
 - `compose.registry.yaml` only sets `build: null` — use it as an override to pull images from GHCR.
 - `SERVER_PUBLISHED_PORT` is the host port; `SERVER_INTERNAL_PORT` changes the internal client port. Replication uses `60012` inside the Compose network.

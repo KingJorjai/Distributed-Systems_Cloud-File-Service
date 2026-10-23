@@ -17,7 +17,7 @@ Docker images are published to [GitHub Container Registry](https://github.com/Ki
 Tagged releases publish self-contained server, CLI client, and GUI client
 bundles for Windows x64 and Linux x64. They include the Python runtime and
 dependencies, so the target machine does not need Python, `pip`, or additional
-downloads. The GUI uses a background daemon and a system tray.
+downloads. The GUI uses a background daemon and a system tray. The server exposes an optional HTTPS admin panel.
 Download them from the repository's [Releases](https://github.com/KingJorjai/Distributed-Systems_Cloud-File-Service/releases) page.
 
 ## Build the documentation

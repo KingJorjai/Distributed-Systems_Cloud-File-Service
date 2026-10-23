@@ -11,8 +11,9 @@
 5. Run `cloud-file-server.exe` on Windows or `./cloud-file-server` on Linux.
 
 The server listens on port `50012` by default and stores synchronized files in
-the `files` directory. It refuses plaintext connections. Keep this directory
-backed up.
+the `files` directory. It refuses plaintext connections. Set
+`SERVER_ADMIN_ENABLED=true` to serve the HTTPS admin panel on
+`SERVER_ADMIN_HOST:SERVER_ADMIN_PORT`. Keep the data directory backed up.
 
 The package is self-contained: Python and the required libraries are included.
 No Python installation or dependency download is required.

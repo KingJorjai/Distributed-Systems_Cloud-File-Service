@@ -90,6 +90,14 @@ matching grantees, excluding the originating `client_id`. The client
 into `SyncWorker`, and triggers a full reconciliation after reconnecting. Share
 creation/revocation sends `S`/`R` so the grantee adds or removes local copies.
 
+## Administration panel
+
+`AdminService` validates administrative requests and commits them through the
+same replicated mutation path as client operations. `AdminServer` serves the
+TLS panel with server-side sessions, CSRF tokens, and HTML forms. It runs only
+when `SERVER_ADMIN_ENABLED=true`; secondary nodes show status and redirect
+mutations to the primary admin URL.
+
 ## Replication
 
 The primary plans each mutation as deterministic operations: file writes include

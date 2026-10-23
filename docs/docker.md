@@ -150,6 +150,18 @@ under `shared/<owner>/` in their local data directory. Active clients receive
 `UPDT` notifications and download changes immediately; revoking a share removes
 the grantee's local copy on the next notification or reconciliation.
 
+## Administration panel
+
+Compose enables the HTTPS admin panel on all three nodes. Open the primary at
+`https://localhost:50080/` and log in with `sar` or `sza` using the passwords
+from `.env`. `server2` and `server3` are available at `https://localhost:50081/`
+and `https://localhost:50082/`; they are read-only and redirect mutations to
+the current primary.
+
+The development certificate is self-signed; import `./certs/ca.crt` into the
+browser or accept the warning. Set `ALLOW_ADMIN_FAILOVER=0` outside the demo if
+you do not want the step-down button.
+
 ## Demo failover
 
 Keep the client container running or start it again. Stop the primary:

@@ -7,6 +7,7 @@ services:
     user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
     ports:
       - "${SERVER_PUBLISHED_PORT:-50012}:${SERVER_INTERNAL_PORT:-50012}"
+      - "${SERVER_ADMIN_PUBLISHED_PORT:-50080}:50080"
     environment:
       CONFIG_FILE: /app/config.toml
       SERVER_HOST: 0.0.0.0
@@ -18,6 +19,11 @@ services:
       SERVER_REPLICATION_PORT: "60012"
       CLUSTER_TOKEN: "${CLUSTER_TOKEN:-change-me}"
       SERVER_CLIENT_ADDRESSES: "server1@server1:${SERVER_INTERNAL_PORT:-50012},server2@server2:${SERVER_INTERNAL_PORT:-50012},server3@server3:${SERVER_INTERNAL_PORT:-50012}"
+      SERVER_ADMIN_ENABLED: "true"
+      SERVER_ADMIN_HOST: "0.0.0.0"
+      SERVER_ADMIN_PORT: "50080"
+      SERVER_ADMIN_ADDRESSES: "server1@localhost:${SERVER_ADMIN_PUBLISHED_PORT:-50080},server2@localhost:${SERVER2_ADMIN_PUBLISHED_PORT:-50081},server3@localhost:${SERVER3_ADMIN_PUBLISHED_PORT:-50082}"
+      ALLOW_ADMIN_FAILOVER: "${ALLOW_ADMIN_FAILOVER:-1}"
       TLS_CERT_FILE: /app/certs/server.crt
       TLS_KEY_FILE: /app/certs/server.key
       TLS_CA_FILE: /app/certs/ca.crt
@@ -36,6 +42,8 @@ services:
       dockerfile: docker/server.Dockerfile
     image: "${IMAGE_PREFIX:-ghcr.io/kingjorjai/distributed-systems-cloud-file-service}-server:${IMAGE_TAG:-latest}"
     user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    ports:
+      - "${SERVER2_ADMIN_PUBLISHED_PORT:-50081}:50080"
     environment:
       CONFIG_FILE: /app/config.toml
       SERVER_HOST: 0.0.0.0
@@ -48,6 +56,11 @@ services:
       SERVER_REPLICATION_PORT: "60012"
       CLUSTER_TOKEN: "${CLUSTER_TOKEN:-change-me}"
       SERVER_CLIENT_ADDRESSES: "server1@server1:${SERVER_INTERNAL_PORT:-50012},server2@server2:${SERVER_INTERNAL_PORT:-50012},server3@server3:${SERVER_INTERNAL_PORT:-50012}"
+      SERVER_ADMIN_ENABLED: "true"
+      SERVER_ADMIN_HOST: "0.0.0.0"
+      SERVER_ADMIN_PORT: "50080"
+      SERVER_ADMIN_ADDRESSES: "server1@localhost:${SERVER_ADMIN_PUBLISHED_PORT:-50080},server2@localhost:${SERVER2_ADMIN_PUBLISHED_PORT:-50081},server3@localhost:${SERVER3_ADMIN_PUBLISHED_PORT:-50082}"
+      ALLOW_ADMIN_FAILOVER: "${ALLOW_ADMIN_FAILOVER:-1}"
       TLS_CERT_FILE: /app/certs/server.crt
       TLS_KEY_FILE: /app/certs/server.key
       TLS_CA_FILE: /app/certs/ca.crt
@@ -66,6 +79,8 @@ services:
       dockerfile: docker/server.Dockerfile
     image: "${IMAGE_PREFIX:-ghcr.io/kingjorjai/distributed-systems-cloud-file-service}-server:${IMAGE_TAG:-latest}"
     user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
+    ports:
+      - "${SERVER3_ADMIN_PUBLISHED_PORT:-50082}:50080"
     environment:
       CONFIG_FILE: /app/config.toml
       SERVER_HOST: 0.0.0.0
@@ -78,6 +93,11 @@ services:
       SERVER_REPLICATION_PORT: "60012"
       CLUSTER_TOKEN: "${CLUSTER_TOKEN:-change-me}"
       SERVER_CLIENT_ADDRESSES: "server1@server1:${SERVER_INTERNAL_PORT:-50012},server2@server2:${SERVER_INTERNAL_PORT:-50012},server3@server3:${SERVER_INTERNAL_PORT:-50012}"
+      SERVER_ADMIN_ENABLED: "true"
+      SERVER_ADMIN_HOST: "0.0.0.0"
+      SERVER_ADMIN_PORT: "50080"
+      SERVER_ADMIN_ADDRESSES: "server1@localhost:${SERVER_ADMIN_PUBLISHED_PORT:-50080},server2@localhost:${SERVER2_ADMIN_PUBLISHED_PORT:-50081},server3@localhost:${SERVER3_ADMIN_PUBLISHED_PORT:-50082}"
+      ALLOW_ADMIN_FAILOVER: "${ALLOW_ADMIN_FAILOVER:-1}"
       TLS_CERT_FILE: /app/certs/server.crt
       TLS_KEY_FILE: /app/certs/server.key
       TLS_CA_FILE: /app/certs/ca.crt

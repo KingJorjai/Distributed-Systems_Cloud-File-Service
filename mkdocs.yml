@@ -71,6 +71,7 @@ nav:
       - Configuration: configuration.md
       - Security: security.md
       - Desktop GUI: gui.md
+      - Server Administration: server-admin.md
       - Docker: docker.md
   - Concepts:
       - Architecture: architecture.md

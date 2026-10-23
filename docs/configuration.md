@@ -87,6 +87,12 @@ The client asks `PRIM` for the current primary and redirects if necessary. Leave
 | `SERVER_REPLICATION_HOST` | same as host | Replication listener address. |
 | `SERVER_REPLICATION_PORT` | `60012` | Replication listener port. |
 | `SERVER_CLIENT_ADDRESSES` | empty | `id@host:port,...` client endpoints used by `PRIM`. |
+| `SERVER_ADMIN_ENABLED` | `false` | Enables the HTTPS admin panel. |
+| `SERVER_ADMIN_HOST` | `127.0.0.1` | Admin listener address. |
+| `SERVER_ADMIN_PORT` | `50080` | Admin HTTPS port. |
+| `SERVER_ADMIN_ADDRESSES` | empty | `id@host:port,...` admin URLs for primary redirects. |
+| `ALLOW_ADMIN_FAILOVER` | `false` | Enables the demo step-down button. |
+| `ADMIN_SESSION_TIMEOUT` | `3600` | Admin session lifetime in seconds. |
 | `CLUSTER_TOKEN` | empty | Shared cluster handshake token. |
 | `SERVER_TERM` | `1` | Initial replication term. |
 | `REPLICATION_TIMEOUT` | `2.0` | Per-peer ACK timeout in seconds. |

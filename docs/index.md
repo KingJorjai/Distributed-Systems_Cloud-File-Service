@@ -20,6 +20,7 @@ The client watches a local folder with [`watchdog`](https://python-watchdog.read
 - Passive replication with a primary and two secondaries, quorum-confirmed mutations, durable logs, election, failover, and automatic rejoin.
 - Cross-user file and directory sharing with `ro`/`rw` ACLs and live change notifications.
 - Desktop GUI with background daemon, system tray, autostart, and CLI control.
+- Optional HTTPS server administration panel with users, shares, registration settings, replication status, and step-down demo.
 
 !!! warning
     Changes made directly on the server are not synchronized back to the client. Bidirectional conflict resolution is outside the current scope.

@@ -32,6 +32,14 @@ export TLS_KEY_FILE=/etc/cloudfs/privkey.pem
 When using a private CA, distribute `ca.crt` to clients and set
 `CLIENT_TLS_CA_FILE`. Do not commit private keys.
 
+## Administration panel
+
+The admin panel is HTTPS-only and disabled by default. It uses the same server
+certificate, session cookies with `HttpOnly`/`SameSite=Strict`/`Secure`, CSRF
+tokens for every state-changing form, and an admin-only role check. Bind it to
+`127.0.0.1` unless you have an external reverse proxy or a trusted network.
+There is no login rate limiting yet.
+
 ## Passwords
 
 - Registration passwords are hashed with PBKDF2-HMAC-SHA256 (200,000
@@ -48,5 +56,5 @@ When using a private CA, distribute `ca.crt` to clients and set
   proxy or renew the mounted certificate.
 - No rate limiting or account lockout yet.
 - No email verification or self-service password reset. An administrator can
-  change a password through the future admin interface.
+  change a password through the HTTPS admin panel.
 - `anonimous` is read-only and cannot be used as a share grantee.

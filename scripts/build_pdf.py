@@ -20,6 +20,7 @@ PAGES = (
     ("Configuration", "configuration/index.html"),
     ("Security", "security/index.html"),
     ("Desktop GUI", "gui/index.html"),
+    ("Server Administration", "server-admin/index.html"),
     ("Docker", "docker/index.html"),
     ("Architecture", "architecture/index.html"),
     ("Protocol", "protocol/index.html"),
