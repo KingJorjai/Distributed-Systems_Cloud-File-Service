@@ -431,3 +431,43 @@ python scripts/demo_failover.py
 1. Revisar y aprobar este roadmap (orden, alcance y política de `docs/ref/`).
 2. Escribir el plan de implementación detallado de M1 con `superpowers:writing-plans`.
 3. Crear la rama/worktree de M1 y ejecutar con TDD.
+
+---
+
+## 10. Actualización 2026-10-23
+
+Decisiones cerradas después de revisar el alcance con el grupo:
+
+- Cliente multiplataforma **Windows x64 + Linux x64**; macOS queda fuera.
+- Instalación **portable + wizard**; sin instaladores firmados, sin auto-update.
+- **TLS obligatorio** en cliente-servidor, réplicas y web admin; sin fallback en claro.
+- Registro abierto con roles `admin`/`user` y contraseñas PBKDF2.
+- GUI de cliente con Tkinter/ttk.
+- Web admin completa con usuarios, shares, settings, estado y step-down de demo.
+- Compartición **entre usuarios distintos** con ACL `ro`/`rw`; sin self-share.
+- `docs/ref` se versiona en Git normal (42 MB, máximo 7,1 MB) y se excluye de MkDocs junto con `docs/superpowers`.
+
+Roadmap vigente:
+
+| Milestone | Contenido | Horas |
+| --- | --- | ---: |
+| M0 | Baseline, Git, CI, referencias | 3 |
+| M1 | Usuarios/shares/settings, auth, TLS, `SYNC`/`STAT`, outbox | 14 |
+| M2 | Reconciliación al arrancar, conflictos, lápidas | 10 |
+| M3 | Réplica pasiva, log, quórum, snapshots, TLS/mTLS | 18 |
+| M4 | Elección, fencing, failover, reincorporación | 10 |
+| M5 | Shares entre usuarios y notificaciones | 14 |
+| M6 | GUI de cliente: wizard, login/registro, ajustes, shares, outbox | 40 |
+| M7 | Web admin completa con HTTPS | 27 |
+| M8 | Memoria, presentación, demo y release | 12 |
+| M9 | Bundles portables Windows/Linux, CI de release y docs de instalación | 12 |
+| **Total** | | **160** |
+
+Con buffer: **175–190 h** (≈58–63 h/miembro). Riesgo principal: calendario.
+Orden de recorte si hiciera falta: web admin completa → extras de GUI →
+reincorporación automática → copias de conflicto. No se recortan TLS, wizard,
+outbox, demo de failover ni memoria.
+
+M0 y M1 están implementados en la rama `feat/m1-foundations`; el plan detallado
+está en `2026-10-20-m0-m1-foundations.md`. El siguiente paso es escribir el plan
+detallado de M2 antes de tocar código.
