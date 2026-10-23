@@ -25,6 +25,18 @@ class FileStat:
     size: int
 
 
+@dataclass(frozen=True)
+class UploadResult:
+    rev: int | None
+    conflict_path: str | None
+
+
+@dataclass(frozen=True)
+class DeleteResult:
+    rev: int | None
+    conflict_path: str | None
+
+
 class ClientSession:
     """Manage one authenticated TLS connection to the file server."""
 
@@ -73,6 +85,14 @@ class ClientSession:
             return encoded
         return "@{}/{}".format(owner, encoded)
 
+    def _parse_mutation(self, response):
+        if not response:
+            return None, None
+        parts = response.split("\t", 1)
+        rev = int(parts[0]) if parts[0] else None
+        conflict = szasar.decode_path(parts[1]) if len(parts) > 1 else None
+        return rev, conflict
+
     def register(self, username, password):
         """Register an open account and leave the connection unauthenticated."""
         encoded = quote(password, safe="")
@@ -113,12 +133,16 @@ class ClientSession:
         rev, digest, size = response.split("\t")
         return FileStat(int(rev), digest, int(size))
 
-    def upload(self, owner, path, data, rev=None, digest=None):
+    def upload(
+        self, owner, path, data, rev=None, digest=None, client_id=None
+    ):
         query = "size={}".format(len(data))
         if rev is not None:
             query += "&rev={}".format(rev)
         if digest is not None:
             query += "&hash={}".format(digest)
+        if client_id is not None:
+            query += "&client={}".format(quote(client_id, safe=""))
         self._command(
             "{}{}?{}".format(
                 szasar.Command.Upload, self._address(owner, path), query
@@ -126,7 +150,7 @@ class ClientSession:
         )
         self.socket.sendall((szasar.Command.Upload2 + "\r\n").encode("ascii"))
         self.socket.sendall(data)
-        self._read_response()
+        return UploadResult(*self._parse_mutation(self._read_response()))
 
     def download(self, owner, path):
         size = int(
@@ -140,9 +164,23 @@ class ClientSession:
         self._read_response()
         return self.reader.read_exact(size)
 
-    def delete(self, owner, path):
-        self._command(
-            "{}{}".format(szasar.Command.Delete, self._address(owner, path))
+    def delete(self, owner, path, rev=None, client_id=None):
+        query = []
+        if rev is not None:
+            query.append("rev={}".format(rev))
+        if client_id is not None:
+            query.append("client={}".format(quote(client_id, safe="")))
+        suffix = "?" + "&".join(query) if query else ""
+        return DeleteResult(
+            *self._parse_mutation(
+                self._command(
+                    "{}{}{}".format(
+                        szasar.Command.Delete,
+                        self._address(owner, path),
+                        suffix,
+                    )
+                )
+            )
         )
 
     def mkdir(self, owner, path):

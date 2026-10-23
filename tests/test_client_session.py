@@ -81,17 +81,36 @@ class ClientSessionTests(unittest.TestCase):
         session = self.make_session()
         self.register(session)
 
-        session.upload("alice", "a.txt", b"hello")
+        uploaded = session.upload("alice", "a.txt", b"hello")
+        self.assertEqual(uploaded.rev, 1)
+        self.assertIsNone(uploaded.conflict_path)
         entries = session.sync()
         self.assertEqual(len(entries), 1)
         self.assertEqual(entries[0].path, "a.txt")
         self.assertEqual(session.stat("alice", "a.txt").size, 5)
         self.assertEqual(session.download("alice", "a.txt"), b"hello")
 
-        session.delete("alice", "a.txt")
+        deleted = session.delete("alice", "a.txt", rev=1)
+        self.assertEqual(deleted.rev, 2)
         self.assertTrue(session.sync()[0].deleted)
         with self.assertRaises(SyncError):
             session.stat("alice", "a.txt")
+
+    def test_conflict_upload_returns_conflict_path(self):
+        first = self.make_session()
+        self.register(first)
+        first.upload("alice", "a.txt", b"server")
+
+        second = self.make_session()
+        second.login("alice", "password-alice")
+        result = second.upload("alice", "a.txt", b"client", rev=0)
+
+        self.assertEqual(result.rev, 2)
+        self.assertIsNotNone(result.conflict_path)
+        self.assertIn("conflict", result.conflict_path)
+        self.assertEqual(
+            second.download("alice", result.conflict_path), b"server"
+        )
 
     def test_users_and_change_password(self):
         session = self.make_session()
