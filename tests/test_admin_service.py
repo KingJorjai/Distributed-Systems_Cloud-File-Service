@@ -1,6 +1,7 @@
 import tempfile
 import threading
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 import trustme
@@ -102,6 +103,13 @@ class AdminServiceTests(unittest.TestCase):
     def test_step_down_requires_configuration(self):
         with self.assertRaises(AdminError):
             self.service.step_down("admin1")
+
+    def test_step_down_when_enabled(self):
+        self.runtime.config = replace(
+            self.runtime.config, allow_admin_failover=True
+        )
+        self.service.step_down("admin1")
+        self.assertFalse(self.runtime.is_primary())
 
 
 if __name__ == "__main__":
