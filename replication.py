@@ -6,6 +6,7 @@ import socket
 import sqlite3
 import ssl
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -452,3 +453,90 @@ class ReplicationServer:
                 "index": message["index"],
             },
         )
+
+
+class NoQuorumError(Exception):
+    """Raised when fewer than a majority of replicas acknowledge an operation."""
+
+
+class Replicator:
+    """Primary-side reliable broadcast and quorum coordinator."""
+
+    def __init__(self, config, log):
+        self.config = config
+        self.log = log
+        self.peers = parse_peers(config.peers)
+        self.quorum = (1 + len(self.peers)) // 2 + 1
+        self._lock = threading.RLock()
+
+    def replicate(self, operation):
+        """Replicate one operation and return its committed log index."""
+        with self._lock:
+            term = self.log.term()
+            index = self.log.next_index()
+            message = {
+                "type": "RB",
+                "term": term,
+                "index": index,
+                "op": operation,
+            }
+            payload = json.dumps(operation, separators=(",", ":"))
+            acknowledged, connections = self._broadcast(message)
+            if 1 + acknowledged < self.quorum:
+                for connection in connections:
+                    try:
+                        connection.send(
+                            {"type": "ABORT", "term": term, "index": index}
+                        )
+                    except (OSError, ReplicationError):
+                        pass
+                    finally:
+                        connection.close()
+                raise NoQuorumError(index)
+            self.log.append(term, index, payload, committed=True)
+            self.log.set_meta("commit_index", index)
+            for connection in connections:
+                try:
+                    connection.send(
+                        {"type": "COMMIT", "term": term, "index": index}
+                    )
+                except (OSError, ReplicationError):
+                    pass
+                finally:
+                    connection.close()
+            return index
+
+    def _broadcast(self, message):
+        acknowledged = 0
+        connections = []
+        if not self.peers:
+            return acknowledged, connections
+        with ThreadPoolExecutor(max_workers=len(self.peers)) as executor:
+            results = list(
+                executor.map(
+                    lambda peer: (peer, self._send_to_peer(peer, message)),
+                    self.peers,
+                )
+            )
+        for _, connection in results:
+            if connection is not None:
+                acknowledged += 1
+                connections.append(connection)
+        return acknowledged, connections
+
+    def _send_to_peer(self, peer, message):
+        for _ in range(2):
+            connection = PeerConnection(self.config, peer)
+            try:
+                connection.connect()
+                connection.send(message)
+                response = connection.recv()
+                if (
+                    response.get("type") == "ACK"
+                    and int(response.get("index", -1)) == int(message["index"])
+                ):
+                    return connection
+            except (OSError, ReplicationError, json.JSONDecodeError):
+                pass
+            connection.close()
+        return None

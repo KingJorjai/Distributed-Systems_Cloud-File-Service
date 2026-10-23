@@ -12,11 +12,13 @@ import trustme
 from config import ServerConfig
 from file_store import FileStore
 from replication import (
+    NoQuorumError,
     Peer,
     PeerConnection,
     ReplicationError,
     ReplicationLog,
     ReplicationServer,
+    Replicator,
     parse_peers,
 )
 
@@ -254,6 +256,130 @@ class ReplicationServerTests(unittest.TestCase):
 
         self.assertIsNone(self.store.stat("alice", "a.txt"))
         self.assertIsNone(self.log.get(1, 1))
+
+
+class ReplicatorTests(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.base = Path(self.directory.name)
+        self.ca = trustme.CA()
+        certificate = self.ca.issue_cert("localhost", "127.0.0.1")
+        self.ca_path = self.base / "ca.crt"
+        self.cert_path = self.base / "server.crt"
+        self.key_path = self.base / "server.key"
+        self.ca.cert_pem.write_to_path(self.ca_path)
+        certificate.cert_chain_pems[0].write_to_path(self.cert_path)
+        certificate.private_key_pem.write_to_path(self.key_path)
+        self.servers = []
+        self.stores = []
+
+    def add_secondary(self, server_id):
+        store = FileStore(self.base / server_id)
+        self.addCleanup(store.close)
+        store.create_user("alice", "password-alice")
+        log = ReplicationLog(self.base / (server_id + ".sqlite3"))
+        self.addCleanup(log.close)
+        config = ServerConfig(
+            host="127.0.0.1",
+            replication_host="127.0.0.1",
+            replication_port=0,
+            files_path=str(self.base / server_id),
+            tls_cert_file=str(self.cert_path),
+            tls_key_file=str(self.key_path),
+            tls_ca_file=str(self.ca_path),
+            server_id=server_id,
+            role="secondary",
+            cluster_token="secret",
+        )
+        server = ReplicationServer(config, store, log)
+        server.start()
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.stop)
+        self.servers.append(server)
+        self.stores.append(store)
+        return server.port
+
+    def primary_config(self, ports):
+        peers = ",".join(
+            "server{}@localhost:{}".format(index + 2, port)
+            for index, port in enumerate(ports)
+        )
+        return ServerConfig(
+            host="127.0.0.1",
+            tls_cert_file=str(self.cert_path),
+            tls_key_file=str(self.key_path),
+            tls_ca_file=str(self.ca_path),
+            server_id="server1",
+            role="primary",
+            peers=peers,
+            cluster_token="secret",
+            replication_timeout=0.5,
+        )
+
+    def operation(self, path, data):
+        digest = hashlib.sha256(data).hexdigest()
+        return {
+            "operations": [
+                {
+                    "kind": "file",
+                    "owner": "alice",
+                    "path": path,
+                    "rev": 1,
+                    "hash": digest,
+                    "size": len(data),
+                    "mtime_ns": 1,
+                    "deleted": False,
+                    "data_b64": base64.b64encode(data).decode("ascii"),
+                }
+            ]
+        }
+
+    def test_primary_commits_with_two_of_three(self):
+        ports = [self.add_secondary("server2"), self.add_secondary("server3")]
+        config = self.primary_config(ports)
+        log = ReplicationLog(self.base / "primary.sqlite3")
+        self.addCleanup(log.close)
+        replicator = Replicator(config, log)
+
+        index = replicator.replicate(self.operation("a.txt", b"hello"))
+
+        self.assertEqual(index, 1)
+        self.assertTrue(log.get(1, 1)["committed"])
+        self.assertTrue(
+            wait_until(
+                lambda: all(
+                    store.stat("alice", "a.txt") is not None
+                    for store in self.stores
+                )
+            )
+        )
+
+    def test_primary_commits_with_one_secondary_down(self):
+        port = self.add_secondary("server2")
+        config = self.primary_config([port, 1])
+        log = ReplicationLog(self.base / "primary.sqlite3")
+        self.addCleanup(log.close)
+        replicator = Replicator(config, log)
+
+        replicator.replicate(self.operation("a.txt", b"hello"))
+
+        self.assertTrue(
+            wait_until(lambda: self.stores[0].stat("alice", "a.txt") is not None)
+        )
+
+    def test_primary_rejects_without_quorum(self):
+        config = self.primary_config([1, 1])
+        log = ReplicationLog(self.base / "primary.sqlite3")
+        self.addCleanup(log.close)
+        replicator = Replicator(config, log)
+
+        with self.assertRaises(NoQuorumError):
+            replicator.replicate(self.operation("a.txt", b"hello"))
+
+        self.assertEqual(log.commit_index(), 0)
+        self.assertIsNone(log.get(1, 1))
 
 
 if __name__ == "__main__":
