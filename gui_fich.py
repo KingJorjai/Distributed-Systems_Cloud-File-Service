@@ -8,6 +8,7 @@ from client_state import default_state_dir
 from config import load_config
 from gui_controller import GuiController
 from single_instance import AlreadyRunningError, InstanceLock
+from version import __version__
 
 
 def main(argv=None):
@@ -18,6 +19,7 @@ def main(argv=None):
         return daemon_main([item for item in argv if item != "--daemon"])
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("--version", action="version", version="cloud-file-client-gui {}".format(__version__))
     parser.add_argument("--config", default=None)
     parser.add_argument("--minimized", action="store_true")
     args = parser.parse_args(argv)

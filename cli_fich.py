@@ -10,6 +10,7 @@ from config import ConfigurationError, load_config, validate_port
 from daemon_client import ensure_daemon
 from error_messages import message as error_message
 from sync_client import SyncWorker
+from version import __version__
 
 running = True
 
@@ -214,6 +215,9 @@ def _foreground(config_path):
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
+    if "--version" in argv:
+        print("cloud-file-client {}".format(__version__))
+        return 0
     if "--daemon" in argv:
         from client_daemon import main as daemon_main
 

@@ -2,6 +2,7 @@
 
 from config import load_config
 from server_runtime import create_server
+from version import __version__
 
 
 def main():
@@ -9,8 +10,8 @@ def main():
     runtime = create_server(config)
     runtime.start()
     print(
-        "Servidor TLS escuchando en el puerto {} (rol {}).".format(
-            runtime.port, config.server.role
+        "Servidor TLS {} escuchando en el puerto {} (rol {}).".format(
+            __version__, runtime.port, config.server.role
         )
     )
     try:

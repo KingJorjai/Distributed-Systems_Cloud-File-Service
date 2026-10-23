@@ -18,6 +18,9 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
 jobs:
   build:
     name: Build ${{ matrix.component }} (${{ matrix.platform }})
@@ -62,6 +65,18 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Verify tag matches version.py
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, sys, version
+          expected = "v" + version.__version__
+          actual = os.environ["RELEASE_TAG"]
+          print("tag:", actual, "version.py:", expected)
+          if actual != expected:
+              sys.exit("Tag and version.py do not match")
+          PY
+
       - name: Install release tooling
         run: python -m pip install -r requirements.txt -r requirements-release.txt
 
@@ -87,7 +102,7 @@ jobs:
             extension=tar.gz
           fi
           source="release/${{ matrix.component }}-${{ matrix.platform }}/cloud-file-${{ matrix.component }}.${extension}"
-          target="release-assets/cloud-file-service-${{ matrix.component }}-${{ matrix.platform }}-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}.${extension}"
+          target="release-assets/cloud-file-service-${{ matrix.component }}-${{ matrix.platform }}-${RELEASE_TAG}-build.${GITHUB_RUN_NUMBER}.${extension}"
           cp "$source" "$target"
 
       - name: Upload bundle
@@ -121,7 +136,7 @@ jobs:
           mkdir compose-package
           cp compose.yaml compose.registry.yaml .env.example config.toml.example compose-package/
           cp docs/docker.md compose-package/README-docker.md
-          zip -r "release-assets/compose-${RELEASE_TAG}.zip" compose-package
+          zip -r "release-assets/compose-${RELEASE_TAG}-build.${GITHUB_RUN_NUMBER}.zip" compose-package
 
       - name: Generate checksums
         working-directory: release-assets

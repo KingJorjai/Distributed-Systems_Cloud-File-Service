@@ -14,6 +14,11 @@ Docker deployment is documented in the [Docker guide](https://kingjorjai.github.
 
 Docker images are published to [GitHub Container Registry](https://github.com/KingJorjai?tab=packages) from `main`.
 
+Tagged releases use `MAJOR.MINOR.PATCH`; the current development release is
+`v0.11.0`. A new minor is added for each milestone, patches are used for fixes,
+and `v1.0.0` is reserved for the final validated delivery. Build numbers stay
+outside the tag. See [Release and Versioning](docs/release.md).
+
 Tagged releases publish self-contained server, CLI client, and GUI client
 bundles for Windows x64 and Linux x64. They include the Python runtime and
 dependencies, so the target machine does not need Python, `pip`, or additional

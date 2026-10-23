@@ -348,7 +348,7 @@ Tareas:
 - [ ] Preparar la presentación de 15 minutos: 3 bloques, uno por miembro, con demo de 3 minutos.
 - [ ] Ensayar la demo dos veces y dejar un guion reproducible (`scripts/demo.sh`).
 - [ ] Generar PDF con `python scripts/build_pdf.py`; actualizar `PAGES` si se añaden páginas.
-- [ ] Tag `v1.0.0` y verificar bundles de cliente y servidor.
+- [ ] Tag `v0.11.0` y verificar bundles de cliente y servidor; `v1.0.0` se reserva para la validación final.
 
 **Criterio de salida:** memoria PDF, presentación ensayada, demo reproducible y release publicado.
 
@@ -422,7 +422,7 @@ python scripts/demo_failover.py
 - `docs/presentation/outline.md` y material de la presentación.
 - `scripts/demo.sh` y `scripts/demo_failover.py`.
 - Documentación MkDocs actualizada.
-- Release `v1.0.0` con bundles de cliente y servidor.
+- Release `v0.11.0` con bundles de cliente y servidor; `v1.0.0` queda para la entrega final validada.
 
 ---
 
@@ -471,5 +471,6 @@ outbox, demo de failover ni memoria.
 M0–M7 están implementados y fusionados. M8 (memoria, presentación Beamer, demo
 local y Docker, PDF y preparación de release) está implementado en la rama
 `feat/m8-delivery`; el plan detallado está en
-`2026-10-23-m8-delivery.md`. Queda crear el tag `v1.0.0` y publicar la release
+`2026-10-23-m8-delivery.md`. Queda crear el tag `v0.11.0` y publicar la release;
+`v1.0.0` se reserva para la validación final.
 con confirmación explícita.
