@@ -28,6 +28,13 @@ ER_MSG = (
     "Error al preparar el fichero para subirlo.",
     "Error al subir el fichero.",
     "Error al borrar el fichero.",
+    "No se puede compartir un fichero con uno mismo.",
+    "El registro está desactivado.",
+    "Datos de registro no válidos.",
+    "El usuario está deshabilitado.",
+    "El usuario ya existe.",
+    "La línea del protocolo es demasiado larga.",
+    "Conflicto de revisión.",
 )
 running = True
 def handler(signum, frame):

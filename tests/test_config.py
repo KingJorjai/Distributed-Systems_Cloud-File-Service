@@ -4,10 +4,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import serv_fich_multithread
 from cli_fich import parse_client_args
 from config import ConfigurationError, load_config, validate_port
-from serv_fich_multithread import is_authenticated
+from file_store import FileStore, InvalidPasswordError
 
 
 class LoadConfigTests(unittest.TestCase):
@@ -66,18 +65,17 @@ class LoadConfigTests(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(ConfigurationError):
                 validate_port(value)
 
-    def test_authentication_requires_non_empty_privileged_password(self):
-        passwords = ("", "configured-secret")
+    def test_bootstrap_user_authentication(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = FileStore(directory)
+            self.addCleanup(store.close)
+            store.ensure_bootstrap_user("sar", "configured-secret", "admin")
 
-        self.assertTrue(is_authenticated(0, "", passwords))
-        self.assertFalse(is_authenticated(1, "", ("", "")))
-        self.assertTrue(is_authenticated(1, "configured-secret", passwords))
-        self.assertFalse(is_authenticated(1, "wrong", passwords))
-
-    def test_server_configuration_is_available_when_imported(self):
-        self.assertEqual(serv_fich_multithread.PORT, 50012)
-        self.assertEqual(serv_fich_multithread.FILES_PATH, "files")
-        self.assertEqual(len(serv_fich_multithread.PASSWORDS), 3)
+            self.assertEqual(
+                store.authenticate("sar", "configured-secret").role, "admin"
+            )
+            with self.assertRaises(InvalidPasswordError):
+                store.authenticate("sar", "wrong")
 
     def test_reads_tls_and_state_settings(self):
         path = self.write_config(

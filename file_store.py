@@ -3,6 +3,7 @@
 import hashlib
 import os
 import re
+import shutil
 import sqlite3
 import tempfile
 import threading
@@ -494,6 +495,32 @@ class FileStore:
             )
             self._connection.commit()
         return FileRecord(owner, normalized, rev, digest, 0, mtime_ns, True)
+
+    def mkdir(self, owner, path):
+        normalized = _normalize_path(path)
+        target = self._file_path(owner, normalized)
+        os.makedirs(target, exist_ok=True)
+
+    def rmdir(self, owner, path):
+        normalized = _normalize_path(path)
+        target = self._file_path(owner, normalized)
+        with self._lock:
+            try:
+                shutil.rmtree(target)
+            except FileNotFoundError:
+                pass
+            except OSError as error:
+                raise StoreError("Could not delete directory.") from error
+            rows = self._connection.execute(
+                "SELECT path, rev FROM files WHERE owner = ? AND (path = ? OR path LIKE ?)",
+                (owner, normalized, normalized + "/%"),
+            ).fetchall()
+            for row_path, revision in rows:
+                self._connection.execute(
+                    "UPDATE files SET rev = ?, deleted = 1, size = 0 WHERE owner = ? AND path = ?",
+                    (revision + 1, owner, row_path),
+                )
+            self._connection.commit()
 
     def manifest(self, user):
         """Return owned and shared files visible to a user."""
