@@ -29,8 +29,12 @@ converts filesystem events into queue entries:
 
 Before an operation is executed, it is written to a SQLite outbox. If the
 client exits or the connection drops, pending operations are retried after
-restart. The worker coalesces repeated events for the same path and waits for
-the file size and modification time to stabilize before uploading.
+restart. At startup the client reconciles the server manifest with the last
+known state and the local filesystem: it uploads new or locally modified files,
+downloads new or remotely modified files, applies tombstones, and preserves
+both versions when local and remote content changed. The watcher starts after
+this reconciliation. The worker coalesces repeated events for the same path and
+waits for the file size and modification time to stabilize before uploading.
 
 `ClientSession` owns the TLS socket, buffered protocol reader, login,
 registration, manifest, upload, download, and password commands. `cli_fich.py`
@@ -50,7 +54,10 @@ client. `FileStore` owns the filesystem and the SQLite database:
 Uploads are received into a temporary file and moved into place with an atomic
 rename. Paths are normalized and checked with symlink-aware resolution so they
 cannot escape the user's storage directory. Deletes leave tombstones so a
-client can propagate them during reconciliation.
+client can propagate them during reconciliation. A stale upload or delete
+preserves the current server version as a conflict copy named
+`<stem> (conflict <client id> <timestamp>)<suffix>` and returns its path to the
+client.
 
 ## Data flow
 

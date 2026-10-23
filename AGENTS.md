@@ -51,18 +51,18 @@ Precedence: CLI args > environment > `config.toml` > defaults. `CONFIG_FILE` sel
 ## Protocol constraints
 
 - Commands are 4-character prefixes from `szasar.Command` concatenated directly with arguments (no spaces), terminated by CRLF; responses start with `OK` or `ER<code>`. Paths are URL-encoded with `szasar.encode_path`/`decode_path`.
-- Upload/download are two-step handshakes: `UPLOfilename?size[&rev=&hash=]` → `OK`, then `UPL2\r\n` + raw bytes; `DOWNfilename` → `OK<size>`, then `DOW2\r\n` → `OK` + raw bytes.
+- Upload/download are two-step handshakes: `UPLOfilename?size[&rev=&hash=&client=]` → `OK`, then `UPL2\r\n` + raw bytes; the final response is `OK<rev>` or `OK<rev>\t<conflict path>`. `DOWNfilename` → `OK<size>`, then `DOW2\r\n` → `OK` + raw bytes.
 - `SYNC` returns `OK<count>`, tab-separated manifest lines, and `END`. `STATpath` returns `OK<rev>\t<hash>\t<size>`.
-- New commands: `REGI`, `CHPW`, `USRS`, `SYNC`, `STAT`. Error codes 14–20 cover sharing, registration, users, long lines, and revision conflicts.
+- New commands: `REGI`, `CHPW`, `USRS`, `SYNC`, `STAT`. `DELEpath?rev=&client=` returns a revision and optional conflict path. Error codes 14–20 cover sharing, registration, users, long lines, and revision conflicts.
 - There is no `LIST` command. Keep protocol changes in sync across `szasar.py`, `server_runtime.py`, `client_session.py`, and `docs/protocol.md`.
 - Preserve `safe_path` traversal/symlink checks and atomic upload (`tempfile` + `os.replace`); uploads are limited by `MAX_FILE_SIZE` and `SPACE_MARGIN`.
 
 ## Behavior boundaries
 
-- Synchronization is client→server only; server-side changes are not pushed back yet. Conflicts/versioning are in `TODO.md` and the roadmap, not implemented.
-- Renames are modeled as delete + upload (recursive for directories). Initial startup uploads every existing local file/folder; full manifest reconciliation is M2.
+- At startup the client reconciles the server manifest with its state and local files, so it can download remote changes and apply tombstones. Server push notifications are still M5; without them, other clients observe changes on their next reconciliation. Conflict copies are implemented; version history and garbage collection are not.
+- Renames are modeled as delete + upload (recursive for directories). Startup reconciliation uploads only new/modified local files and downloads missing/remote-modified files.
 - The client opens two TLS connections per run: the interactive login connection plus `SyncWorker`'s own authenticated connection.
-- Changes are persisted in the client outbox before execution and replayed after restart; uploads still wait for size/mtime to stabilize (roughly 0.7 s).
+- Changes are persisted in the client outbox before execution and replayed after restart. Startup reconciliation handles offline changes before the watcher starts; uploads wait for size/mtime to stabilize (roughly 0.7 s).
 - Sharing schema/ACL exists, but `SHAR`/`UNSH` and notifications arrive in M5.
 
 ## Docs and release

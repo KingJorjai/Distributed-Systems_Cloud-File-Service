@@ -85,6 +85,10 @@ Registration is enabled by default and can be disabled with
 3. Wait briefly for the file to stabilize.
 4. Check the corresponding file under `files/<user>/` on the server.
 
+Restarting the client reconciles both sides. Files created or modified on the
+server are downloaded, tombstones remove local copies, and concurrent edits
+produce conflict copies on both sides.
+
 The anonymous user can download known files but cannot upload, create
 directories, share files, or delete files. File listing is not currently
 implemented by the server.

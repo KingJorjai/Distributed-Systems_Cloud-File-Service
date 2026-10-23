@@ -4,11 +4,15 @@ The current synchronization design intentionally keeps the scope small.
 
 - Synchronization is one-way: client to server. Server-side changes are not
   pushed back to clients yet.
-- Conflicts and version history are not implemented yet. Revision metadata is
-  recorded and stale uploads are rejected with `ER20`, but conflict copies
-  arrive in M2.
-- The event queue is durable on the client, but reconciliation on startup is
-  still limited to uploading local files. Full manifest reconciliation is M2.
+- Conflict copies are implemented for file uploads and deletes. Conflict
+  handling for directory removal is coarse: a stale directory delete removes
+  the remote tree without creating per-file conflict copies.
+- Version history is not implemented. Conflict copies are ordinary files and
+  are not garbage-collected.
+- The client reconciles owned files at startup. Shared files and server push
+  notifications arrive in M5.
+- A local delete is never sent for a file that was never synchronized, so a new
+  local file created and removed while offline leaves no remote trace.
 - The server does not replicate yet; passive replication, quorum, election, and
   failover are M3–M4.
 - Sharing is modelled in the database, but `SHAR`/`UNSH` commands and

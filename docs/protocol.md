@@ -24,11 +24,11 @@ for a private/development CA. Hostname verification is always enabled.
 | `DOWNfilename` | Prepare a file download. |
 | `DOW2` | Request the prepared file bytes. |
 | `UPLOfilename?size` | Prepare an upload (legacy form). |
-| `UPLOfilename?size=<n>&rev=<n>&hash=<hex>` | Prepare an upload with revision metadata. |
+| `UPLOfilename?size=<n>&rev=<n>&hash=<hex>&client=<id>` | Prepare an upload with revision metadata. |
 | `UPL2` | Send the upload bytes after the server accepts them. |
 | `MKDRdirname` | Create a directory. |
 | `RMDRdirname` | Delete a directory and its contents. |
-| `DELEfilename` | Delete a file. |
+| `DELEfilename?rev=<n>&client=<id>` | Delete a file with revision metadata. |
 | `EXIT` | Close the session. |
 
 Commands use the four-character prefixes defined in `szasar.Command`. The
@@ -63,19 +63,44 @@ END\r\n
 
 ```text
 Client                              Server
-  | UPLOfilename?size=5&rev=0&hash=... |
-  |----------------------------------->|
-  |                 OK                |
-  |<-----------------------------------|
-  | UPL2 + CRLF + file bytes           |
-  |----------------------------------->|
-  |                 OK                |
-  |<-----------------------------------|
+  | UPLOfilename?size=5&rev=0&hash=...&client=... |
+  |------------------------------------------------>|
+  |                       OK                       |
+  |<------------------------------------------------|
+  | UPL2 + CRLF + file bytes                        |
+  |------------------------------------------------>|
+  | OK<rev> or OK<rev>\t<encoded conflict path>     |
+  |<------------------------------------------------|
 ```
 
 The server validates authentication, ACL, size, free space, and the target
 path before accepting the bytes. Uploads are written to a temporary file and
 moved into place atomically.
+
+When the base revision is stale, the server keeps the current version as a
+conflict copy and accepts the incoming upload as the official version. The
+response includes the conflict path after a tab. `DELE` follows the same
+pattern: a stale delete preserves the current server version as a conflict copy
+and tombstones the official path.
+
+Conflict copies are named:
+
+```text
+<stem> (conflict <client id> <UTC YYYYmmdd-HHMMSS>)<suffix>
+```
+
+A numeric suffix is added if the name already exists.
+
+## Reconciliation
+
+On startup the client requests `SYNC`, compares the manifest with its local
+state and filesystem, and then:
+
+- uploads only new or locally modified files;
+- downloads new or remotely modified files;
+- propagates local deletes only for paths previously synchronized;
+- deletes local files when the manifest contains a tombstone;
+- preserves both versions when local and remote content changed.
 
 ## Authentication and registration
 

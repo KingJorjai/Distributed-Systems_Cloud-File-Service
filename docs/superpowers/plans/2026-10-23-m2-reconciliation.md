@@ -1,6 +1,6 @@
 # M2 Implementation Plan — Reconciliation and Conflicts
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** On startup, reconcile the local folder with the server manifest, download missing files, propagate local deletes, apply remote tombstones, and preserve both versions on conflicts.
 
@@ -25,82 +25,82 @@
 
 **Files:** `client_state.py`, `tests/test_client_state.py`
 
-- [ ] Add `meta(key, value)` table.
-- [ ] Add stable `client_id` property backed by `uuid.uuid4().hex`.
-- [ ] Add `clear_outbox()`.
-- [ ] Add `delete_file(owner, path)` and `delete_tree(owner, prefix)`.
-- [ ] Add tests for stable id, clearing the outbox, and deleting a state subtree.
-- [ ] Commit: `feat: add stable client identity and state cleanup`.
+- [x] Add `meta(key, value)` table.
+- [x] Add stable `client_id` property backed by `uuid.uuid4().hex`.
+- [x] Add `clear_outbox()`.
+- [x] Add `delete_file(owner, path)` and `delete_tree(owner, prefix)`.
+- [x] Add tests for stable id, clearing the outbox, and deleting a state subtree.
+- [x] Commit: `feat: add stable client identity and state cleanup`.
 
 ### Task 2: FileStore conflict copies
 
 **Files:** `file_store.py`, `tests/test_file_store.py`
 
-- [ ] Add `_conflict_path(owner, path, client_id)`.
-- [ ] Add `put_with_conflict(owner, path, data, expected_rev, client_id)`.
-- [ ] Add `delete_with_conflict(owner, path, expected_rev, client_id)`.
-- [ ] Preserve the current server version as a conflict copy when the revision is stale.
-- [ ] Do not create a conflict for a tombstone or missing file.
-- [ ] Add tests for stale upload, stale delete, tombstone, and unique names.
-- [ ] Commit: `feat: preserve conflict copies for stale mutations`.
+- [x] Add `_conflict_path(owner, path, client_id)`.
+- [x] Add `put_with_conflict(owner, path, data, expected_rev, client_id)`.
+- [x] Add `delete_with_conflict(owner, path, expected_rev, client_id)`.
+- [x] Preserve the current server version as a conflict copy when the revision is stale.
+- [x] Do not create a conflict for a tombstone or missing file.
+- [x] Add tests for stale upload, stale delete, tombstone, and unique names.
+- [x] Commit: `feat: preserve conflict copies for stale mutations`.
 
 ### Task 3: Server mutation responses
 
 **Files:** `server_runtime.py`, `tests/test_server_runtime.py`
 
-- [ ] Parse `client` in `UPLO` and `rev`/`client` in `DELE`.
-- [ ] Use `put_with_conflict` and `delete_with_conflict`.
-- [ ] Return `OK<rev>` or `OK<rev>\t<encoded conflict path>`.
-- [ ] Keep legacy requests without revisions working.
-- [ ] Add integration tests for stale upload and delete.
-- [ ] Commit: `feat: return revision and conflict paths from mutations`.
+- [x] Parse `client` in `UPLO` and `rev`/`client` in `DELE`.
+- [x] Use `put_with_conflict` and `delete_with_conflict`.
+- [x] Return `OK<rev>` or `OK<rev>\t<encoded conflict path>`.
+- [x] Keep legacy requests without revisions working.
+- [x] Add integration tests for stale upload and delete.
+- [x] Commit: `feat: return revision and conflict paths from mutations`.
 
 ### Task 4: ClientSession typed results
 
 **Files:** `client_session.py`, `tests/test_client_session.py`
 
-- [ ] Add `UploadResult` and `DeleteResult` dataclasses.
-- [ ] Parse optional revision and conflict path from responses.
-- [ ] Add `client_id` to `upload`, and `rev`/`client_id` to `delete`.
-- [ ] Add tests.
-- [ ] Commit: `feat: return typed upload and delete results`.
+- [x] Add `UploadResult` and `DeleteResult` dataclasses.
+- [x] Parse optional revision and conflict path from responses.
+- [x] Add `client_id` to `upload`, and `rev`/`client_id` to `delete`.
+- [x] Add tests.
+- [x] Commit: `feat: return typed upload and delete results`.
 
 ### Task 5: SyncWorker reconciliation
 
 **Files:** `sync_client.py`, `tests/test_reconcile.py`, `tests/test_client_session.py`
 
-- [ ] `start()` connects, logs in, reconciles, then starts the observer and worker.
-- [ ] Build local, remote, and state maps.
-- [ ] Apply the reconciliation decision table.
-- [ ] Download remote files atomically and ignore their watcher events.
-- [ ] Upload local files with the state revision; handle conflict copies.
-- [ ] Delete local files on remote tombstones; delete remote files for local deletions.
-- [ ] Do not propagate deletes for never-synced files.
-- [ ] Use `state.delete_tree` for directory deletions.
-- [ ] Clear the outbox only after a successful reconciliation.
-- [ ] Add reconciliation tests.
-- [ ] Commit: `feat: reconcile local and remote state on startup`.
+- [x] `start()` connects, logs in, reconciles, then starts the observer and worker.
+- [x] Build local, remote, and state maps.
+- [x] Apply the reconciliation decision table.
+- [x] Download remote files atomically and ignore their watcher events.
+- [x] Upload local files with the state revision; handle conflict copies.
+- [x] Delete local files on remote tombstones; delete remote files for local deletions.
+- [x] Do not propagate deletes for never-synced files.
+- [x] Use `state.delete_tree` for directory deletions.
+- [x] Clear the outbox only after a successful reconciliation.
+- [x] Add reconciliation tests.
+- [x] Commit: `feat: reconcile local and remote state on startup`.
 
 ### Task 6: Docs and acceptance
 
 **Files:** `docs/protocol.md`, `docs/architecture.md`, `docs/limitations.md`, `AGENTS.md`, roadmap, this plan.
 
-- [ ] Document revisions, conflict responses, naming, and reconciliation.
-- [ ] Run full tests, Ruff, and strict docs.
-- [ ] Verify `site/ref` and `site/superpowers` are absent.
-- [ ] Commit: `docs: document reconciliation and conflict copies`.
+- [x] Document revisions, conflict responses, naming, and reconciliation.
+- [x] Run full tests, Ruff, and strict docs.
+- [x] Verify `site/ref` and `site/superpowers` are absent.
+- [x] Commit: `docs: document reconciliation and conflict copies`.
 
 ## Acceptance
 
-- [ ] Startup uploads only local files when the server is empty.
-- [ ] Startup downloads remote files missing locally.
-- [ ] Equal hashes cause no transfer.
-- [ ] Concurrent local/remote changes preserve both versions.
-- [ ] Local deletion propagates.
-- [ ] Remote deletion removes the local copy.
-- [ ] Tombstones do not resurrect files.
-- [ ] Restart after a successful upload does not duplicate a conflict.
-- [ ] Deleting a never-synced local file sends no `DELE`.
-- [ ] `python -m unittest discover -s tests -v` passes.
-- [ ] `python -m ruff check .` passes.
-- [ ] `mkdocs build --strict` passes.
+- [x] Startup uploads only local files when the server is empty.
+- [x] Startup downloads remote files missing locally.
+- [x] Equal hashes cause no transfer.
+- [x] Concurrent local/remote changes preserve both versions.
+- [x] Local deletion propagates.
+- [x] Remote deletion removes the local copy.
+- [x] Tombstones do not resurrect files.
+- [x] Restart after a successful upload does not duplicate a conflict.
+- [x] Deleting a never-synced local file sends no `DELE`.
+- [x] `python -m unittest discover -s tests -v` passes.
+- [x] `python -m ruff check .` passes.
+- [x] `mkdocs build --strict` passes.
