@@ -77,6 +77,10 @@ nav:
       - Architecture: architecture.md
       - Protocol: protocol.md
       - Limitations: limitations.md
+  - Project:
+      - Final Report: report.md
+      - Demo: demo.md
+      - Presentation: presentation/outline.md
   - API Reference:
       - Sync Client: api/sync-client.md
       - Server: api/server.md

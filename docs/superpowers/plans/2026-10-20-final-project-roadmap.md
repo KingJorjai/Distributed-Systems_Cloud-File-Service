@@ -468,8 +468,8 @@ Orden de recorte si hiciera falta: web admin completa → extras de GUI →
 reincorporación automática → copias de conflicto. No se recortan TLS, wizard,
 outbox, demo de failover ni memoria.
 
-M0–M6 están implementados y fusionados. M7 (panel HTTPS de administración,
-usuarios, shares, settings, estado y step-down de demo) está implementado en la
-rama `feat/m7-admin`; el plan detallado está en
-`2026-10-24-m7-server-admin.md`. El siguiente paso es M8: memoria, presentación,
-demo y release.
+M0–M7 están implementados y fusionados. M8 (memoria, presentación Beamer, demo
+local y Docker, PDF y preparación de release) está implementado en la rama
+`feat/m8-delivery`; el plan detallado está en
+`2026-10-23-m8-delivery.md`. Queda crear el tag `v1.0.0` y publicar la release
+con confirmación explícita.

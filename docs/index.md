@@ -32,5 +32,8 @@ The client watches a local folder with [`watchdog`](https://python-watchdog.read
 | [Quick Start](quick-start.md) | Install and run the service. |
 | [Configuration](configuration.md) | Ports, folders, users, and limits. |
 | [Architecture](architecture.md) | Watcher, queue, network worker, and server. |
-| [Protocol](protocol.md) | TCP commands and transfer flow. |
+| [Protocol](protocol.md) | TCP commands, replication, and sharing. |
+| [Final Report](report.md) | Problem, architecture, decisions, tests, and pending work. |
+| [Demo](demo.md) | Local and Docker failover demonstrations. |
+| [Presentation](presentation/outline.md) | 15-minute talk outline and timing. |
 | [API Reference](api/sync-client.md) | Python classes and functions generated from docstrings. |

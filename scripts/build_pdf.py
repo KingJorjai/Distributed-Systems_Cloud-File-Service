@@ -24,6 +24,8 @@ PAGES = (
     ("Docker", "docker/index.html"),
     ("Architecture", "architecture/index.html"),
     ("Protocol", "protocol/index.html"),
+    ("Final Report", "report/index.html"),
+    ("Demo", "demo/index.html"),
     ("Limitations", "limitations/index.html"),
     ("Protocol Helpers API", "api/protocol/index.html"),
 )

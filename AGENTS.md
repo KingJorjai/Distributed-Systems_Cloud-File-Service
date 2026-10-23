@@ -85,6 +85,9 @@ Precedence: CLI args > environment > `config.toml` > defaults. `CONFIG_FILE` sel
 
 ## Docs and release
 
+- Final report: `docs/report.md`; demo: `docs/demo.md`; Beamer slides: `docs/presentation/slides.tex`; local/Docker demos: `scripts/demo_failover.py` and `scripts/demo_docker.sh`.
+- Build slides with `scripts/build_slides.sh` (two `pdflatex` passes, output `site/presentation.pdf`).
+
 ```sh
 mkdocs build --strict                 # outputs site/
 python scripts/build_pdf.py           # needs Chromium + mermaid-cli@11.4.1

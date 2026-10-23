@@ -8,7 +8,7 @@ Automatic file synchronization from a local folder to a TLS server, with a deskt
 
 Watch the repository locally with `watchdog`, then send file changes to the server over TCP.
 
-Read the full documentation at [kingjorjai.github.io/Distributed-Systems_Cloud-File-Service](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/).
+Read the full documentation at [kingjorjai.github.io/Distributed-Systems_Cloud-File-Service](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/). The [final report](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/report/) and the [reproducible demo](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/demo/) are part of it.
 
 Docker deployment is documented in the [Docker guide](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/docker/).
 
@@ -38,7 +38,9 @@ python scripts/build_pdf.py
 ```
 
 The PDF is written to `site/cloud-file-service.pdf`. Its review date is generated
-automatically each time the command runs.
+automatically each time the command runs. If several Node installations are
+present, set `MERMAID_CLI_ROOT` to the global `node_modules` directory that
+contains `@mermaid-js/mermaid-cli`.
 
 ## Quick start
 
