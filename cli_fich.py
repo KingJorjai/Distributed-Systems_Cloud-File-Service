@@ -1,37 +1,16 @@
 #!/usr/bin/env python3
 
+import json
 import signal
 import sys
 import time
-from dataclasses import replace
 
 from client_session import ClientSession, NoServerError, SyncError
 from config import ConfigurationError, load_config, validate_port
+from daemon_client import ensure_daemon
+from error_messages import message as error_message
 from sync_client import SyncWorker
 
-ER_MSG = (
-    "Correcto.",
-    "Comando desconocido o inesperado.",
-    "Usuario desconocido.",
-    "Clave de paso o password incorrecto.",
-    "Error al crear la lista de ficheros.",
-    "El fichero no existe.",
-    "Error al bajar el fichero.",
-    "Un usuario anonimo no tiene permisos para esta operacion.",
-    "El fichero es demasiado grande.",
-    "Error al preparar el fichero para subirlo.",
-    "Error al subir el fichero.",
-    "Error al borrar el fichero.",
-    "No hay quórum suficiente para confirmar la operación.",
-    "Este servidor no es el primario.",
-    "No se puede compartir un fichero con uno mismo.",
-    "El registro está desactivado.",
-    "Datos de registro no válidos.",
-    "El usuario está deshabilitado.",
-    "El usuario ya existe.",
-    "La línea del protocolo es demasiado larga.",
-    "Conflicto de revisión.",
-)
 running = True
 
 
@@ -41,17 +20,14 @@ def handler(signum, frame):
     running = False
 
 
-def iserror(message):
-    """Print the protocol error message and return whether a response failed."""
-    if message.startswith("ER"):
-        code = int(message[2:])
-        print(ER_MSG[code])
+def iserror(text):
+    if text.startswith("ER"):
+        print(error_message(text[2:]))
         return True
     return False
 
 
 def int2bytes(n):
-    """Format a byte count using a human-readable binary unit."""
     if n < 1 << 10:
         return str(n) + " B  "
     if n < 1 << 20:
@@ -62,15 +38,13 @@ def int2bytes(n):
 
 
 def parse_client_args(argv, config):
-    """Parse ``[servidor [puerto [carpeta-local]]]`` CLI arguments."""
+    """Parse ``[servidor [puerto [carpeta-local]]]`` legacy arguments."""
     server = config.server
     port = config.port
     local_path = config.local_path
-
     if len(argv) > 4:
         print("Uso: {} [<servidor> [<puerto> [<carpeta-local>]]]".format(argv[0]))
         raise SystemExit(2)
-
     if len(argv) >= 2:
         server = argv[1]
     if len(argv) >= 3:
@@ -84,40 +58,182 @@ def parse_client_args(argv, config):
     return server, port, local_path
 
 
-def main():
-    config = load_config().client
-    server, port, local_path = parse_client_args(sys.argv, config)
-    config = replace(config, server=server, port=port, local_path=local_path)
+def _print_response(response):
+    if response.get("ok"):
+        data = response.get("data")
+        if data is not None:
+            print(json.dumps(data, indent=2, ensure_ascii=False))
+        return 0
+    error = response.get("error", "error")
+    if isinstance(error, str) and error.startswith("ER"):
+        print(error_message(error[2:]))
+    else:
+        print(response.get("message", error))
+    return 1
 
+
+def _parse_options(argv):
+    config_path = None
+    foreground = False
+    remaining = []
+    index = 0
+    while index < len(argv):
+        item = argv[index]
+        if item == "--foreground":
+            foreground = True
+        elif item == "--config" and index + 1 < len(argv):
+            index += 1
+            config_path = argv[index]
+        elif item.startswith("--config="):
+            config_path = item.split("=", 1)[1]
+        else:
+            remaining.append(item)
+        index += 1
+    return config_path, foreground, remaining
+
+
+def _prompt_login(client):
+    username = input("Usuario: ").strip()
+    password = input("Contraseña: ")
+    return client.request(
+        {"action": "login", "username": username, "password": password}
+    )
+
+
+def _interactive(client):
+    print("Conectado al daemon. Comandos: status, shares, share, unshare, pause, resume, logout, shutdown, quit.")
+    response = _prompt_login(client)
+    _print_response(response)
+    if not response.get("ok"):
+        return 0
+
+    while True:
+        try:
+            command = input("cloudfs> ").strip()
+        except EOFError:
+            return 0
+        if not command:
+            continue
+        words = command.split()
+        result = _run_command(client, words)
+        if words[0] in {"quit", "shutdown"}:
+            return result
+
+
+def _run_command(client, command):
+    action = command[0]
+    if action == "status":
+        return _print_response(client.request({"action": "status"}))
+    if action == "login":
+        username = command[1] if len(command) > 1 else input("Usuario: ").strip()
+        password = (
+            command[2] if len(command) > 2 else input("Contraseña: ")
+        )
+        return _print_response(
+            client.request(
+                {"action": "login", "username": username, "password": password}
+            )
+        )
+    if action == "logout":
+        return _print_response(client.request({"action": "logout"}))
+    if action == "pause":
+        return _print_response(client.request({"action": "stop"}))
+    if action == "resume":
+        return _print_response(client.request({"action": "start"}))
+    if action == "shares":
+        return _print_response(client.request({"action": "shares"}))
+    if action == "users":
+        return _print_response(client.request({"action": "users"}))
+    if action == "share" and len(command) == 4:
+        return _print_response(
+            client.request(
+                {
+                    "action": "share",
+                    "path": command[1],
+                    "grantee": command[2],
+                    "access": command[3],
+                }
+            )
+        )
+    if action == "unshare" and len(command) == 3:
+        return _print_response(
+            client.request(
+                {
+                    "action": "unshare",
+                    "path": command[1],
+                    "grantee": command[2],
+                }
+            )
+        )
+    if action == "password":
+        old = command[1] if len(command) > 1 else input("Contraseña actual: ")
+        new = command[2] if len(command) > 2 else input("Contraseña nueva: ")
+        return _print_response(
+            client.request(
+                {
+                    "action": "password",
+                    "old_password": old,
+                    "new_password": new,
+                }
+            )
+        )
+    if action in {"shutdown", "quit"}:
+        if action == "shutdown":
+            _print_response(client.request({"action": "shutdown"}))
+        return 0
+    print("Comando desconocido.")
+    return 2
+
+
+def _foreground(config_path):
+    config = load_config(config_path).client
     session = ClientSession(config)
     while True:
-        user = input("Introduce el nombre de usuario: ")
+        username = input("Introduce el nombre de usuario: ")
         password = input("Introduce la contraseña: ")
         try:
-            session.connect_and_login(user, password)
+            session.connect_and_login(username, password)
         except (OSError, EOFError, SyncError, NoServerError) as error:
-            if isinstance(error, SyncError) and error.code < len(ER_MSG):
-                print(ER_MSG[error.code])
+            if isinstance(error, SyncError):
+                print(error_message(error.code))
             else:
                 print("No se ha podido iniciar sesión: {}".format(error))
             session.close()
             continue
         break
-
     session.close()
-    sync_worker = SyncWorker(local_path, config, user, password)
-    try:
-        sync_worker.start()
-    except (OSError, EOFError, SyncError, NoServerError) as error:
-        print("No se ha podido iniciar la sincronización automática: {}".format(error))
-        return
-
+    worker = SyncWorker(config.local_path, config, username, password)
+    worker.start()
     signal.signal(signal.SIGINT, handler)
-    print("\nLogged in")
+    print("Logged in")
     while running:
         time.sleep(1)
-    sync_worker.stop()
+    worker.stop()
+    return 0
+
+
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if "--daemon" in argv:
+        from client_daemon import main as daemon_main
+
+        return daemon_main([item for item in argv if item != "--daemon"])
+
+    config_path, foreground, command = _parse_options(argv)
+    if foreground:
+        return _foreground(config_path)
+    try:
+        client = ensure_daemon(config_path)
+    except TimeoutError as error:
+        print(error)
+        return 1
+    try:
+        if not command:
+            return _interactive(client)
+        return _run_command(client, command)
+    finally:
+        client.close()
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
