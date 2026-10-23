@@ -295,8 +295,11 @@ class ProtocolIntegrationTests(RuntimeTestCase):
                     tls_key_file=str(Path(directory) / "missing.key"),
                 )
                 runtime = ServerRuntime(config, store)
-                with self.assertRaises(FileNotFoundError):
-                    runtime.start()
+                try:
+                    with self.assertRaises(FileNotFoundError):
+                        runtime.start()
+                finally:
+                    runtime.stop()
             finally:
                 store.close()
 
