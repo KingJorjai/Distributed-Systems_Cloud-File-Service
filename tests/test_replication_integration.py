@@ -37,6 +37,7 @@ class ReplicationIntegrationTests(unittest.TestCase):
         certificate.cert_chain_pems[0].write_to_path(self.cert_path)
         certificate.private_key_pem.write_to_path(self.key_path)
         self.stores = []
+        self.runtimes = []
 
     def make_config(self, server_id, role, port=0, replication_port=0, peers=""):
         return ServerConfig(
@@ -70,6 +71,7 @@ class ReplicationIntegrationTests(unittest.TestCase):
         self.addCleanup(runtime.stop)
         self.addCleanup(store.close)
         self.stores.append(store)
+        self.runtimes.append(runtime)
         return runtime
 
     def start_cluster(self):
@@ -92,6 +94,14 @@ class ReplicationIntegrationTests(unittest.TestCase):
             tls_ca_file=str(self.ca_path),
             tls_server_name="localhost",
             state_dir=str(self.base / "state"),
+            peers=",".join(
+                ["localhost:{}".format(port)]
+                + [
+                    "localhost:{}".format(runtime.port)
+                    for runtime in self.runtimes
+                    if runtime.port != port
+                ]
+            ),
         )
 
     def connect(self, runtime):
@@ -107,7 +117,19 @@ class ReplicationIntegrationTests(unittest.TestCase):
         client.login("alice", "password-alice")
 
         for index in range(20):
-            client.upload("alice", "file-{}.txt".format(index), b"data")
+            for attempt in range(3):
+                try:
+                    client.upload("alice", "file-{}.txt".format(index), b"data")
+                    break
+                except SyncError as error:
+                    if error.code != 13 or attempt == 2:
+                        raise
+                    client.close()
+                    client = ClientSession(self.client_config(primary.port))
+                    self.addCleanup(client.close)
+                    client.connect_and_login("alice", "password-alice")
+            else:
+                self.fail("No primary available for file-{}".format(index))
 
         self.assertTrue(
             wait_until(

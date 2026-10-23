@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw
 
 try:
     import pystray
-except ImportError:
+except Exception:
     pystray = None
 
 
