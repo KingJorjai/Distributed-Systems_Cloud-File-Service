@@ -2,12 +2,11 @@ import tempfile
 import threading
 import time
 import unittest
-from dataclasses import replace
 from pathlib import Path
 
 import trustme
 
-from config import ClientConfig, ServerConfig, load_config, save_client_config
+from config import ClientConfig, ServerConfig, save_client_config
 from daemon_service import DaemonService
 from file_store import FileStore
 from ipc import IpcClient, ipc_address, ipc_key
