@@ -244,6 +244,22 @@ class ReplicationServerTests(unittest.TestCase):
         self.assertEqual(self.store.get("alice", "a.txt")[0], b"one")
         self.assertEqual(self.store.get("alice", "b.txt")[0], b"two")
 
+    def test_snapshot_replaces_secondary_state(self):
+        source = FileStore(self.base / "source")
+        self.addCleanup(source.close)
+        source.create_user("alice", "password-alice")
+        source.put("alice", "snapshot.txt", b"snapshot")
+        snapshot = source.export_snapshot()
+        connection = self.peer()
+        self.addCleanup(connection.close)
+
+        connection.send(
+            {"type": "SNAP", "term": 1, "index": 5, "snapshot": snapshot}
+        )
+        self.assertEqual(connection.recv()["type"], "SNAP_OK")
+
+        self.assertEqual(self.store.state_hash(), source.state_hash())
+
     def test_abort_removes_uncommitted_entry(self):
         connection = self.peer()
         self.addCleanup(connection.close)
