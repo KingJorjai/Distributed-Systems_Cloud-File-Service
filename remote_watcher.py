@@ -23,8 +23,6 @@ class RemoteWatcher:
 
     def stop(self):
         self.stop_event.set()
-        if self.session is not None:
-            self.session.close()
         self.thread.join(timeout=5)
 
     def _run(self):
