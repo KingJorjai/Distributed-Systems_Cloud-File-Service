@@ -1,7 +1,6 @@
 """Multithreaded TLS server runtime and client session state machine."""
 
 import hashlib
-import os
 import shutil
 import socket
 import ssl
@@ -13,13 +12,11 @@ from auth import validate_password, validate_username
 from file_store import (
     AccessDeniedError,
     ConflictError,
-    FileStore,
     InvalidPathError,
     NotFoundError,
     UserDisabledError,
     UserExistsError,
     UserNotFoundError,
-    safe_path,
 )
 from tls import server_context
 

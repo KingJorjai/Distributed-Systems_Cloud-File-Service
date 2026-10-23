@@ -1,5 +1,6 @@
 import queue
 import socket
+import ssl
 import threading
 import time
 from pathlib import Path
@@ -7,91 +8,8 @@ from pathlib import Path
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-import szasar
-
-
-class SyncError(Exception):
-    """Raised when the server rejects a synchronization request."""
-
-    pass
-
-# TODO Generales
-# 1. Implementar DB del cliente (fichero | rev | hash)
-# 2. Cambios a upload (Estan comentados mas abajo)
-class SyncConnection:
-    """Manage the TCP connection used by the automatic synchronizer."""
-
-    def __init__(self, server, port, user, password):
-        """Initialize a connection configuration.
-
-        Args:
-            server: Server hostname or IP address.
-            port: Server TCP port.
-            user: Username used for authentication.
-            password: Password used for authentication.
-        """
-        self.server = server
-        self.port = port
-        self.user = user
-        self.password = password
-        self.socket = None
-
-    def connect(self):
-        """Open the socket and authenticate with the server."""
-        self.socket = socket.create_connection((self.server, self.port), timeout=10)
-        self._command(szasar.Command.User + self.user)
-        self._command(szasar.Command.Password + self.password)
-
-    def close(self):
-        """Close the connection, notifying the server when possible."""
-        if self.socket is not None:
-            try:
-                self._command(szasar.Command.Exit)
-            except (OSError, EOFError, SyncError):
-                pass
-            self.socket.close()
-            self.socket = None
-    # Modificaciones TODO a upload
-    # 1. Enviar el rev del fichero al servidor
-    # 2. Esperar respuesta
-    # 3. En caso de conflicto
-    #   3.1 Almacenar el nombre del fichero en conflicto y, al final descargarlo
-    # 4. Mandar hash del fichero
-    # 5. Esperar respuesta
-    # 6. Si da permiso el servidor subir archivo
-    # 7. Si ha habido conflicto descargar fichero en conflicto
-    def upload(self, filename, data):
-        """Upload file data to the authenticated user's server directory."""
-        self._command("{}{}?{}".format(szasar.Command.Upload, filename, len(data)))
-        self.socket.sendall((szasar.Command.Upload2 + "\r\n").encode("ascii"))
-        self.socket.sendall(data)
-        self._read_response()
-
-    def delete(self, filename):
-        """Delete a file from the authenticated user's server directory."""
-        self._command(szasar.Command.Delete + filename)
-
-    def mkdir(self, dirname):
-        """Create a directory in the authenticated user's server directory."""
-        self._command(szasar.Command.MakeDir + dirname)
-
-    def rmdir(self, dirname):
-        """Delete a directory and its contents from the server directory."""
-        self._command(szasar.Command.RemoveDir + dirname)
-
-    def _command(self, command):
-        """Send a line-based protocol command and validate its response."""
-        self.socket.sendall((command + "\r\n").encode("ascii"))
-        self._read_response()
-
-    def _read_response(self):
-        """Read one server response and raise for errors."""
-        response = szasar.recvline(self.socket).decode("ascii")
-        if response.startswith("ER"):
-            raise SyncError(response)
-        if not response.startswith("OK"):
-            raise SyncError("Respuesta inesperada: {}".format(response))
-        return response
+from client_session import ClientSession, SyncError
+from client_state import ClientState
 
 
 class ChangeHandler(FileSystemEventHandler):
@@ -153,10 +71,16 @@ class ChangeHandler(FileSystemEventHandler):
 class SyncWorker:
     """Watch a local folder and synchronize its changes with the server."""
 
-    def __init__(self, root, server, port, user, password):
-        """Initialize the watcher, event queue, and network worker."""
+    def __init__(self, root, config, username, password):
+        """Initialize the watcher, persistent state, and network worker."""
         self.root = Path(root).resolve()
-        self.connection = SyncConnection(server, port, user, password)
+        self.config = config
+        self.username = username
+        self.password = password
+        self.state = ClientState(
+            username, config.server, config.port, self.root, config.state_dir
+        )
+        self.session = ClientSession(config)
         self.changes = queue.Queue()
         self.ignored = {}
         self.ignored_lock = threading.Lock()
@@ -170,7 +94,8 @@ class SyncWorker:
     def start(self):
         """Start watching the folder and queue existing files for upload."""
         self.root.mkdir(parents=True, exist_ok=True)
-        self.connection.connect()
+        self.session.connect()
+        self.session.login(self.username, self.password)
         self.observer.schedule(self.handler, str(self.root), recursive=True)
         self.observer.start()
         paths = sorted(self.root.rglob("*"))
@@ -188,7 +113,8 @@ class SyncWorker:
         self.observer.stop()
         self.observer.join(timeout=5)
         self.worker.join(timeout=5)
-        self.connection.close()
+        self.session.close()
+        self.state.close()
 
     def ignore(self, filename):
         """Temporarily ignore events caused by a manual download."""
@@ -209,30 +135,50 @@ class SyncWorker:
     def _run(self):
         """Consume queued changes and retry transient network failures."""
         while not self.stop_event.is_set():
+            pending = self.state.pending()
+            if pending:
+                change = pending[0]
+                action = change["action"]
+                filename = change["path"]
+                change_id = change["id"]
+            else:
+                try:
+                    action, filename = self.changes.get(timeout=0.2)
+                except queue.Empty:
+                    continue
+                time.sleep(0.5)
+                action, filename = self._latest_for(filename, action)
+                change_id = self.state.enqueue(action, self.username, filename)
+
             try:
-                action, filename = self.changes.get(timeout=0.2)
-            except queue.Empty:
-                continue
-            time.sleep(0.5)
-            action, filename = self._latest_for(filename, action)
-            try:
-                if action == "upload":
-                    self._upload_when_stable(filename)
-                elif action == "mkdir":
-                    self.connection.mkdir(filename)
-                elif action == "rmdir":
-                    self.connection.rmdir(filename)
-                else:
-                    self.connection.delete(filename)
-            except (OSError, EOFError, socket.timeout, SyncError):
+                self._perform(action, filename)
+            except (OSError, EOFError, socket.timeout, ssl.SSLError, SyncError):
                 if not self.stop_event.is_set():
-                    self.connection.close()
-                    try:
-                        self.connection.connect()
-                    except (OSError, EOFError, socket.timeout, SyncError):
-                        pass
-                    self.changes.put((action, filename))
+                    self._reconnect()
                     time.sleep(1)
+            else:
+                self.state.ack(change_id)
+
+    def _reconnect(self):
+        try:
+            self.session.close()
+        except (OSError, EOFError, ssl.SSLError, SyncError):
+            pass
+        try:
+            self.session.connect()
+            self.session.login(self.username, self.password)
+        except (OSError, EOFError, ssl.SSLError, SyncError):
+            pass
+
+    def _perform(self, action, filename):
+        if action == "upload":
+            self._upload_when_stable(filename)
+        elif action == "mkdir":
+            self.session.mkdir(self.username, filename)
+        elif action == "rmdir":
+            self.session.rmdir(self.username, filename)
+        else:
+            self.session.delete(self.username, filename)
 
     def _latest_for(self, filename, action):
         """Coalesce queued changes for one filename into its latest action."""
@@ -260,4 +206,4 @@ class SyncWorker:
         if (first.st_size, first.st_mtime_ns) != (second.st_size, second.st_mtime_ns):
             self.changes.put(("upload", filename))
             return
-        self.connection.upload(filename, path.read_bytes())
+        self.session.upload(self.username, filename, path.read_bytes())

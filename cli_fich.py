@@ -1,20 +1,14 @@
 #!/usr/bin/env python3
 
 import signal
-import socket
 import sys
 import time
+from dataclasses import replace
 
-import szasar
+from client_session import ClientSession, SyncError
 from config import ConfigurationError, load_config, validate_port
-from sync_client import SyncError, SyncWorker
+from sync_client import SyncWorker
 
-# TODO Generales
-# 1. Eliminar el comando de listar, ya no es necesario ✔️
-# 2. Cambios a upload (Estan comentados mas abajo)
-# 3. Eliminar el menu, ya no es necesario. Solo dejar logearse ✔️
-# 4. Mensaje Update para que el servidor informe al cliente de cambios en el servidor
-#   4.1 El Cliente mira los cambios y elimina ficheros o descarga ficheros (nuevos o modificados)
 ER_MSG = (
     "Correcto.",
     "Comando desconocido o inesperado.",
@@ -37,13 +31,12 @@ ER_MSG = (
     "Conflicto de revisión.",
 )
 running = True
+
+
 def handler(signum, frame):
     global running
     print("\nCtrl+C received — shutting down gracefully")
     running = False
-
-
-
 
 
 def iserror(message):
@@ -52,20 +45,18 @@ def iserror(message):
         code = int(message[2:])
         print(ER_MSG[code])
         return True
-    else:
-        return False
+    return False
 
 
 def int2bytes(n):
     """Format a byte count using a human-readable binary unit."""
     if n < 1 << 10:
         return str(n) + " B  "
-    elif n < 1 << 20:
+    if n < 1 << 20:
         return str(round(n / (1 << 10))) + " KiB"
-    elif n < 1 << 30:
+    if n < 1 << 30:
         return str(round(n / (1 << 20))) + " MiB"
-    else:
-        return str(round(n / (1 << 30))) + " GiB"
+    return str(round(n / (1 << 30))) + " GiB"
 
 
 def parse_client_args(argv, config):
@@ -91,37 +82,41 @@ def parse_client_args(argv, config):
     return server, port, local_path
 
 
-if __name__ == "__main__":
+def main():
     config = load_config().client
     server, port, local_path = parse_client_args(sys.argv, config)
+    config = replace(config, server=server, port=port, local_path=local_path)
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((server, port))
-
+    session = ClientSession(config)
     while True:
         user = input("Introduce el nombre de usuario: ")
-        message = "{}{}\r\n".format(szasar.Command.User, user)
-        s.sendall(message.encode("ascii"))
-        message = szasar.recvline(s).decode("ascii")
-        if iserror(message):
-            continue
-
         password = input("Introduce la contraseña: ")
-        message = "{}{}\r\n".format(szasar.Command.Password, password)
-        s.sendall(message.encode("ascii"))
-        message = szasar.recvline(s).decode("ascii")
-        if not iserror(message):
-            break
+        try:
+            session.connect()
+            session.login(user, password)
+        except (OSError, EOFError, SyncError) as error:
+            if isinstance(error, SyncError) and error.code < len(ER_MSG):
+                print(ER_MSG[error.code])
+            else:
+                print("No se ha podido iniciar sesión: {}".format(error))
+            session.close()
+            continue
+        break
 
-    sync_worker = SyncWorker(local_path, server, port, user, password)
+    session.close()
+    sync_worker = SyncWorker(local_path, config, user, password)
     try:
         sync_worker.start()
-    except (OSError, EOFError, socket.timeout, SyncError) as error:
+    except (OSError, EOFError, SyncError) as error:
         print("No se ha podido iniciar la sincronización automática: {}".format(error))
-        sync_worker = None
+        return
 
     signal.signal(signal.SIGINT, handler)
     print("\nLogged in")
     while running:
         time.sleep(1)
-    s.close()
+    sync_worker.stop()
+
+
+if __name__ == "__main__":
+    main()
