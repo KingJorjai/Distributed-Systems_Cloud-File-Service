@@ -274,6 +274,35 @@ class ClientSession:
             "{}{}".format(szasar.Command.RemoveDir, self._address(owner, path))
         )
 
+    def shares(self):
+        count = int(self._command(szasar.Command.Shares))
+        shares = []
+        for _ in range(count):
+            owner, path, access = self.reader.readline().decode("ascii").split("\t")
+            shares.append((owner, szasar.decode_path(path), access))
+        if self.reader.readline() != b"END":
+            raise SyncError(1, "Share list terminator missing.")
+        return shares
+
+    def share(self, path, grantee, access):
+        self._command(
+            "{}{}?{}?{}".format(
+                szasar.Command.Share,
+                szasar.encode_path(path),
+                grantee,
+                access,
+            )
+        )
+
+    def unshare(self, path, grantee):
+        self._command(
+            "{}{}?{}".format(
+                szasar.Command.Unshare,
+                szasar.encode_path(path),
+                grantee,
+            )
+        )
+
     def users(self):
         count = int(self._command(szasar.Command.Users))
         names = [self.reader.readline().decode("ascii") for _ in range(count)]

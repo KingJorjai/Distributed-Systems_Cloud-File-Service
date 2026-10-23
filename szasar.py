@@ -31,6 +31,7 @@ class Command:
         Prim,
         Share,
         Unshare,
+        Shares,
     ) = (
         "USER",
         "PASS",
@@ -50,6 +51,7 @@ class Command:
         "PRIM",
         "SHAR",
         "UNSH",
+        "SHRS",
     )
 
 

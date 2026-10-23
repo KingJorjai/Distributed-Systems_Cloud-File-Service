@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS files (
     hash    TEXT NOT NULL,
     size    INTEGER NOT NULL,
     deleted INTEGER NOT NULL DEFAULT 0,
+    access  TEXT NOT NULL DEFAULT 'rw',
     PRIMARY KEY (owner, path)
 );
 
@@ -65,6 +66,14 @@ class ClientState:
             str(self.db_path), check_same_thread=False
         )
         self._connection.executescript(SCHEMA)
+        columns = [
+            row[1]
+            for row in self._connection.execute("PRAGMA table_info(files)")
+        ]
+        if "access" not in columns:
+            self._connection.execute(
+                "ALTER TABLE files ADD COLUMN access TEXT NOT NULL DEFAULT 'rw'"
+            )
         self._connection.commit()
 
     @property
@@ -91,11 +100,11 @@ class ClientState:
     def set_file(self, entry):
         with self._lock:
             self._connection.execute(
-                "INSERT INTO files(owner, path, rev, hash, size, deleted) "
-                "VALUES (?, ?, ?, ?, ?, ?) "
+                "INSERT INTO files(owner, path, rev, hash, size, deleted, access) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?) "
                 "ON CONFLICT(owner, path) DO UPDATE SET "
                 "rev = excluded.rev, hash = excluded.hash, size = excluded.size, "
-                "deleted = excluded.deleted",
+                "deleted = excluded.deleted, access = excluded.access",
                 (
                     entry.owner,
                     entry.path,
@@ -103,6 +112,7 @@ class ClientState:
                     entry.digest,
                     entry.size,
                     1 if entry.deleted else 0,
+                    getattr(entry, "access", "rw"),
                 ),
             )
             self._connection.commit()
@@ -110,7 +120,7 @@ class ClientState:
     def get_file(self, owner, path):
         with self._lock:
             row = self._connection.execute(
-                "SELECT owner, path, rev, hash, size, deleted "
+                "SELECT owner, path, rev, hash, size, deleted, access "
                 "FROM files WHERE owner = ? AND path = ?",
                 (owner, path),
             ).fetchone()
@@ -123,12 +133,13 @@ class ClientState:
             "digest": row[3],
             "size": row[4],
             "deleted": bool(row[5]),
+            "access": row[6],
         }
 
     def list_files(self):
         with self._lock:
             rows = self._connection.execute(
-                "SELECT owner, path, rev, hash, size, deleted FROM files"
+                "SELECT owner, path, rev, hash, size, deleted, access FROM files"
             ).fetchall()
         return [
             {
@@ -138,6 +149,7 @@ class ClientState:
                 "digest": row[3],
                 "size": row[4],
                 "deleted": bool(row[5]),
+                "access": row[6],
             }
             for row in rows
         ]

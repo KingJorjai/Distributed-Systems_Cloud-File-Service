@@ -1,5 +1,6 @@
 import tempfile
 import threading
+import time
 import unittest
 from pathlib import Path
 
@@ -11,6 +12,15 @@ from config import ClientConfig, ServerConfig
 from file_store import FileStore, ManifestEntry
 from server_runtime import ServerRuntime
 from sync_client import SyncWorker
+
+
+def wait_until(predicate, timeout=5):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate():
+            return True
+        time.sleep(0.05)
+    return False
 
 
 class ReconcileTests(unittest.TestCase):
@@ -68,16 +78,27 @@ class ReconcileTests(unittest.TestCase):
     def register_user(self):
         session = self.session()
         session.register("alice", "password-alice")
+        session.register("bob", "password-bob")
 
     def login_session(self):
         session = self.session()
         session.login("alice", "password-alice")
         return session
 
-    def start_worker(self):
-        worker = SyncWorker(
-            self.client_root, self.config, "alice", "password-alice"
-        )
+    def start_worker(self, username="alice"):
+        password = "password-alice" if username == "alice" else "password-bob"
+        root = self.client_root if username == "alice" else self.base / "bob_files"
+        config = self.config
+        if username != "alice":
+            config = ClientConfig(
+                server=self.config.server,
+                port=self.config.port,
+                local_path=str(root),
+                tls_ca_file=self.config.tls_ca_file,
+                tls_server_name=self.config.tls_server_name,
+                state_dir=self.config.state_dir,
+            )
+        worker = SyncWorker(root, config, username, password)
         worker.start()
         self.addCleanup(worker.stop)
         return worker
@@ -276,9 +297,59 @@ class ReconcileTests(unittest.TestCase):
             self.client_root, self.config, "alice", "password-alice"
         )
         self.addCleanup(worker.state.close)
-        worker._remove_local_file("never-synced.txt")
+        worker._remove_local_file("alice", "never-synced.txt")
 
         self.assertIsNone(self.store.stat("alice", "never-synced.txt"))
+
+    def test_shared_rw_download_and_upload(self):
+        alice = self.login_session()
+        alice.upload("alice", "docs/a.txt", b"a")
+        alice.share("docs", "bob", "rw")
+        bob = self.start_worker("bob")
+        path = self.base / "bob_files" / "shared" / "alice" / "docs" / "a.txt"
+        self.assertTrue(wait_until(path.exists))
+        self.assertEqual(path.read_bytes(), b"a")
+        time.sleep(2.1)
+
+        path.write_bytes(b"b")
+        self.assertTrue(
+            wait_until(
+                lambda: self.store.stat("alice", "docs/a.txt") is not None
+                and self.store.get("alice", "docs/a.txt")[0] == b"b"
+            )
+        )
+        bob.stop()
+
+    def test_shared_ro_local_edit_is_preserved(self):
+        alice = self.login_session()
+        alice.upload("alice", "docs/a.txt", b"a")
+        alice.share("docs", "bob", "ro")
+        bob = self.start_worker("bob")
+        path = self.base / "bob_files" / "shared" / "alice" / "docs" / "a.txt"
+        self.assertTrue(wait_until(path.exists))
+        bob.stop()
+        path.write_bytes(b"local-edit")
+
+        self.start_worker("bob")
+
+        self.assertEqual(path.read_bytes(), b"a")
+        conflicts = list(path.parent.glob("*local conflict*"))
+        self.assertEqual(len(conflicts), 1)
+        self.assertEqual(conflicts[0].read_bytes(), b"local-edit")
+
+    def test_revoked_share_removes_local_copy(self):
+        alice = self.login_session()
+        alice.upload("alice", "docs/a.txt", b"a")
+        alice.share("docs", "bob", "rw")
+        bob = self.start_worker("bob")
+        path = self.base / "bob_files" / "shared" / "alice" / "docs" / "a.txt"
+        self.assertTrue(wait_until(path.exists))
+        bob.stop()
+        alice.unshare("docs", "bob")
+
+        self.start_worker("bob")
+
+        self.assertFalse(path.exists())
 
     def test_paths_with_spaces_are_reconciled(self):
         self.write_local("dir/a b.txt", b"space")

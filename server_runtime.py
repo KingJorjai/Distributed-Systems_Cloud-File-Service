@@ -334,6 +334,22 @@ def session(sock, runtime):
             else:
                 sendOK(sock)
 
+        elif message.startswith(szasar.Command.Shares):
+            if state != State.Main:
+                sendER(sock)
+                continue
+            shares = store.list_shares(grantee=user)
+            sendOK(sock, len(shares))
+            for share in shares:
+                sock.sendall(
+                    "{}\t{}\t{}\r\n".format(
+                        share.owner,
+                        szasar.encode_path(share.path),
+                        share.access,
+                    ).encode("ascii")
+                )
+            sock.sendall(b"END\r\n")
+
         elif message.startswith(szasar.Command.ChangePassword):
             if state != State.Main:
                 sendER(sock)

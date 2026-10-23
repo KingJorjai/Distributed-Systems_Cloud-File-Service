@@ -1,6 +1,7 @@
 import hashlib
 import os
 import queue
+import shutil
 import socket
 import ssl
 import threading
@@ -94,11 +95,13 @@ class SyncWorker:
         )
         self.observer = Observer()
         self.handler = ChangeHandler(self.root, self.changes, self._is_ignored)
+        self.share_accesses = {}
 
     def start(self):
         """Reconcile once with the server, then watch for new changes."""
         self.root.mkdir(parents=True, exist_ok=True)
         self.session.connect_and_login(self.username, self.password)
+        self._load_shares()
         self.reconcile()
         self.observer.schedule(self.handler, str(self.root), recursive=True)
         self.observer.start()
@@ -131,39 +134,79 @@ class SyncWorker:
                 return False
             return True
 
+    def _local_path(self, owner, path):
+        if owner == self.username:
+            return self.root / path
+        return self.root / "shared" / owner / path
+
+    def _owner_path(self, local_relative):
+        parts = Path(local_relative).parts
+        if len(parts) >= 3 and parts[0] == "shared":
+            return parts[1], "/".join(parts[2:])
+        return self.username, local_relative
+
+    def _load_shares(self):
+        self.share_accesses = {
+            (owner, path): access
+            for owner, path, access in self.session.shares()
+        }
+
+    def _share_access(self, owner, path):
+        if owner == self.username:
+            return "rw"
+        best = None
+        best_length = -1
+        for (share_owner, share_path), access in self.share_accesses.items():
+            if share_owner == owner and (
+                path == share_path or path.startswith(share_path + "/")
+            ):
+                if len(share_path) > best_length:
+                    best = access
+                    best_length = len(share_path)
+        return best
+
     def _local_files(self):
         result = {}
         for path in self.root.rglob("*"):
             if not path.is_file() or path.name.startswith(".download-"):
                 continue
             relative = path.relative_to(self.root).as_posix()
+            owner, file_path = self._owner_path(relative)
             data = path.read_bytes()
-            result[relative] = {
+            result[(owner, file_path)] = {
                 "digest": hashlib.sha256(data).hexdigest(),
                 "size": len(data),
+                "local": relative,
             }
         return result
 
     def reconcile(self):
         """Apply the manifest, local files, and last known state."""
+        self._load_shares()
         remote = {
-            entry.path: entry
-            for entry in self.session.sync()
-            if entry.owner == self.username
+            (entry.owner, entry.path): entry for entry in self.session.sync()
         }
         local = self._local_files()
         state = {
-            entry["path"]: entry
+            (entry["owner"], entry["path"]): entry
             for entry in self.state.list_files()
-            if entry["owner"] == self.username
         }
-        for path in sorted(set(remote) | set(local) | set(state)):
+        for key in sorted(set(remote) | set(local) | set(state)):
+            owner, path = key
             self._reconcile_path(
-                path, remote.get(path), local.get(path), state.get(path)
+                owner, path, remote.get(key), local.get(key), state.get(key)
             )
         self.state.clear_outbox()
 
-    def _reconcile_path(self, path, remote_entry, local_entry, state_entry):
+    def _reconcile_path(self, owner, path, remote_entry, local_entry, state_entry):
+        access = self._share_access(owner, path)
+        if access is None and owner == self.username:
+            access = "rw"
+        if access is None and remote_entry is not None:
+            access = remote_entry.access
+        if access is None:
+            access = "ro"
+
         if (
             remote_entry is not None
             and local_entry is not None
@@ -175,9 +218,17 @@ class SyncWorker:
         if remote_entry is not None and not remote_entry.deleted:
             if local_entry is not None:
                 if state_entry is None:
-                    self._upload(path, 0)
+                    if access == "ro":
+                        self._preserve_local_conflict(owner, path)
+                        self._download(remote_entry)
+                    else:
+                        self._upload(owner, path, 0)
                 elif local_entry["digest"] != state_entry["digest"]:
-                    self._upload(path, state_entry["rev"])
+                    if access == "ro":
+                        self._preserve_local_conflict(owner, path)
+                        self._download(remote_entry)
+                    else:
+                        self._upload(owner, path, state_entry["rev"])
                 elif remote_entry.rev != state_entry["rev"]:
                     self._download(remote_entry)
                 else:
@@ -186,119 +237,144 @@ class SyncWorker:
 
             if state_entry is None or state_entry["deleted"]:
                 self._download(remote_entry)
+            elif access == "ro":
+                self._download(remote_entry)
             else:
-                self._delete_remote(path, state_entry)
+                self._delete_remote(owner, path, state_entry)
             return
 
         if remote_entry is not None and remote_entry.deleted:
             if local_entry is not None:
                 if state_entry is None or state_entry["deleted"]:
-                    expected = state_entry["rev"] if state_entry else 0
-                    self._upload(path, expected)
+                    if access == "ro":
+                        self._delete_local(owner, path, remote_entry)
+                    else:
+                        expected = state_entry["rev"] if state_entry else 0
+                        self._upload(owner, path, expected)
                 elif local_entry["digest"] == state_entry["digest"]:
-                    self._delete_local(path, remote_entry)
+                    self._delete_local(owner, path, remote_entry)
+                elif access == "ro":
+                    self._preserve_local_conflict(owner, path)
+                    self._delete_local(owner, path, remote_entry)
                 else:
-                    self._upload(path, state_entry["rev"])
+                    self._upload(owner, path, state_entry["rev"])
             else:
                 self.state.set_file(remote_entry)
             return
 
         if local_entry is not None:
-            expected = state_entry["rev"] if state_entry else 0
-            self._upload(path, expected)
+            if owner != self.username and access is None:
+                self._local_path(owner, path).unlink(missing_ok=True)
+                self.state.delete_file(owner, path)
+            elif owner != self.username and access == "ro":
+                self._local_path(owner, path).unlink(missing_ok=True)
+                self.state.delete_file(owner, path)
+            else:
+                expected = state_entry["rev"] if state_entry else 0
+                self._upload(owner, path, expected)
         elif state_entry is not None:
-            self.state.delete_file(self.username, path)
+            self.state.delete_file(owner, path)
 
-    def _upload(self, path, expected_rev):
-        data = (self.root / path).read_bytes()
+    def _upload(self, owner, path, expected_rev):
+        data = self._local_path(owner, path).read_bytes()
         digest = hashlib.sha256(data).hexdigest()
         result = self.session.upload(
-            self.username,
+            owner,
             path,
             data,
             rev=expected_rev,
             digest=digest,
             client_id=self.state.client_id,
         )
-        self._apply_upload_result(path, digest, len(data), result)
+        self._apply_upload_result(owner, path, digest, len(data), result)
 
-    def _apply_upload_result(self, path, digest, size, result):
-        state_entry = self.state.get_file(self.username, path)
+    def _apply_upload_result(self, owner, path, digest, size, result):
+        state_entry = self.state.get_file(owner, path)
         revision = result.rev
         if revision is None:
             revision = state_entry["rev"] + 1 if state_entry else 1
+        access = self._share_access(owner, path) or "rw"
         self.state.set_file(
             ManifestEntry(
-                owner=self.username,
+                owner=owner,
                 path=path,
                 rev=revision,
                 digest=digest,
                 size=size,
                 deleted=False,
-                access="rw",
+                access=access,
             )
         )
         if result.conflict_path is not None:
-            self._save_conflict(result.conflict_path)
+            owner_of_conflict = owner
+            self._save_conflict(owner_of_conflict, result.conflict_path)
 
-    def _save_conflict(self, conflict_path):
-        data = self.session.download(self.username, conflict_path)
-        target = self.root / conflict_path
+    def _save_conflict(self, owner, conflict_path):
+        data = self.session.download(owner, conflict_path)
+        target = self._local_path(owner, conflict_path)
         if target.exists() and target.read_bytes() != data:
-            target = self._local_conflict_path(conflict_path)
+            target = self._local_conflict_path(owner, conflict_path)
         target.parent.mkdir(parents=True, exist_ok=True)
         temporary = target.with_name(".download-" + target.name)
         temporary.write_bytes(data)
         os.replace(temporary, target)
-        self.ignore(target.relative_to(self.root).as_posix())
-        if target.relative_to(self.root).as_posix() != conflict_path:
-            return
-        try:
-            remote = self.session.stat(self.username, conflict_path)
-        except SyncError:
-            return
-        self.state.set_file(
-            ManifestEntry(
-                owner=self.username,
-                path=conflict_path,
-                rev=remote.rev,
-                digest=remote.digest,
-                size=remote.size,
-                deleted=False,
-                access="rw",
+        local_relative = target.relative_to(self.root).as_posix()
+        self.ignore(local_relative)
+        if target == self._local_path(owner, conflict_path):
+            try:
+                remote = self.session.stat(owner, conflict_path)
+            except SyncError:
+                return
+            self.state.set_file(
+                ManifestEntry(
+                    owner=owner,
+                    path=conflict_path,
+                    rev=remote.rev,
+                    digest=remote.digest,
+                    size=remote.size,
+                    deleted=False,
+                    access=self._share_access(owner, conflict_path) or "rw",
+                )
             )
-        )
 
-    def _local_conflict_path(self, path):
-        candidate = Path(path)
+    def _local_conflict_path(self, owner, path):
+        target = self._local_path(owner, path)
         stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
         client = self.state.client_id[:8]
         name = "{} (local conflict {} {}){}".format(
-            candidate.stem, client, stamp, candidate.suffix
+            target.stem, client, stamp, target.suffix
         )
-        result = candidate.with_name(name)
+        result = target.with_name(name)
         counter = 1
-        while (self.root / result).exists():
+        while result.exists():
             name = "{} (local conflict {} {}-{}){}".format(
-                candidate.stem, client, stamp, counter, candidate.suffix
+                target.stem, client, stamp, counter, target.suffix
             )
-            result = candidate.with_name(name)
+            result = target.with_name(name)
             counter += 1
         return result
 
+    def _preserve_local_conflict(self, owner, path):
+        target = self._local_path(owner, path)
+        if not target.is_file():
+            return
+        alternate = self._local_conflict_path(owner, path)
+        shutil.copy2(target, alternate)
+        self.ignore(alternate.relative_to(self.root).as_posix())
+
     def _download(self, entry):
-        data = self.session.download(self.username, entry.path)
-        target = self.root / entry.path
+        data = self.session.download(entry.owner, entry.path)
+        target = self._local_path(entry.owner, entry.path)
         target.parent.mkdir(parents=True, exist_ok=True)
         temporary = target.with_name(".download-" + target.name)
         temporary.write_bytes(data)
         os.replace(temporary, target)
         self.state.set_file(entry)
-        self.ignore(entry.path)
+        self.ignore(target.relative_to(self.root).as_posix())
 
-    def _delete_remote(self, path, state_entry):
+    def _delete_remote(self, owner, path, state_entry):
         result = self.session.delete(
-            self.username,
+            owner,
             path,
             rev=state_entry["rev"],
             client_id=self.state.client_id,
@@ -308,30 +384,33 @@ class SyncWorker:
             revision = state_entry["rev"] + 1
         self.state.set_file(
             ManifestEntry(
-                owner=self.username,
+                owner=owner,
                 path=path,
                 rev=revision,
                 digest=hashlib.sha256(b"").hexdigest(),
                 size=0,
                 deleted=True,
-                access="rw",
+                access=state_entry.get("access", "rw"),
             )
         )
         if result.conflict_path is not None:
-            self._save_conflict(result.conflict_path)
+            self._save_conflict(owner, result.conflict_path)
 
-    def _delete_local(self, path, remote_entry):
-        target = self.root / path
+    def _delete_local(self, owner, path, remote_entry):
+        target = self._local_path(owner, path)
         try:
             target.unlink()
         except FileNotFoundError:
             pass
         self.state.set_file(remote_entry)
-        self.ignore(path)
+        self.ignore(target.relative_to(self.root).as_posix())
         self._remove_empty_parents(target.parent)
 
     def _remove_empty_parents(self, directory):
+        shared_root = self.root / "shared"
         while directory != self.root and self.root in directory.parents:
+            if directory == shared_root or directory.parent == shared_root:
+                return
             try:
                 directory.rmdir()
             except OSError:
@@ -345,19 +424,21 @@ class SyncWorker:
             if pending:
                 change = pending[0]
                 action = change["action"]
-                filename = change["path"]
+                owner = change["owner"]
+                path = change["path"]
                 change_id = change["id"]
             else:
                 try:
-                    action, filename = self.changes.get(timeout=0.2)
+                    action, local_relative = self.changes.get(timeout=0.2)
                 except queue.Empty:
                     continue
                 time.sleep(0.5)
-                action, filename = self._latest_for(filename, action)
-                change_id = self.state.enqueue(action, self.username, filename)
+                action, local_relative = self._latest_for(local_relative, action)
+                owner, path = self._owner_path(local_relative)
+                change_id = self.state.enqueue(action, owner, path)
 
             try:
-                self._perform(action, filename)
+                self._perform(action, owner, path)
             except (OSError, EOFError, socket.timeout, ssl.SSLError, SyncError):
                 if not self.stop_event.is_set():
                     self._reconnect()
@@ -376,34 +457,43 @@ class SyncWorker:
         except (OSError, EOFError, ssl.SSLError, SyncError, NoServerError):
             pass
 
-    def _perform(self, action, filename):
+    def _perform(self, action, owner, path):
+        state_entry = self.state.get_file(owner, path)
+        access = self._share_access(owner, path)
+        if access is None and state_entry is not None:
+            access = state_entry.get("access")
+        if access is None:
+            access = "rw" if owner == self.username else "ro"
         if action == "upload":
-            self._upload_when_stable(filename)
+            if access != "ro":
+                self._upload_when_stable(owner, path)
         elif action == "mkdir":
-            self.session.mkdir(self.username, filename)
+            if access != "ro":
+                self.session.mkdir(owner, path)
         elif action == "rmdir":
-            self._remove_remote_tree(filename)
+            if access != "ro":
+                self._remove_remote_tree(owner, path)
         else:
-            self._remove_local_file(filename)
+            if access != "ro":
+                self._remove_local_file(owner, path)
 
-    def _remove_remote_tree(self, filename):
-        prefix = filename.rstrip("/")
+    def _remove_remote_tree(self, owner, prefix):
         matches = [
             entry
             for entry in self.state.list_files()
-            if entry["owner"] == self.username
+            if entry["owner"] == owner
             and (entry["path"] == prefix or entry["path"].startswith(prefix + "/"))
         ]
         if not matches:
             return
-        self.session.rmdir(self.username, prefix)
-        self.state.delete_tree(self.username, prefix)
+        self.session.rmdir(owner, prefix)
+        self.state.delete_tree(owner, prefix)
 
-    def _remove_local_file(self, filename):
-        state_entry = self.state.get_file(self.username, filename)
+    def _remove_local_file(self, owner, path):
+        state_entry = self.state.get_file(owner, path)
         if state_entry is None or state_entry["deleted"]:
             return
-        self._delete_remote(filename, state_entry)
+        self._delete_remote(owner, path, state_entry)
 
     def _latest_for(self, filename, action):
         """Coalesce queued changes for one filename into its latest action."""
@@ -420,20 +510,20 @@ class SyncWorker:
                 self.changes.put(change)
         return action, filename
 
-    def _upload_when_stable(self, filename):
+    def _upload_when_stable(self, owner, path):
         """Upload a file only after two stable filesystem observations."""
-        path = self.root / filename
-        if not path.is_file():
+        local_path = self._local_path(owner, path)
+        if not local_path.is_file():
             return
-        first = path.stat()
+        first = local_path.stat()
         time.sleep(0.2)
-        second = path.stat()
+        second = local_path.stat()
         if (first.st_size, first.st_mtime_ns) != (second.st_size, second.st_mtime_ns):
-            self.changes.put(("upload", filename))
+            self.changes.put(("upload", local_path.relative_to(self.root).as_posix()))
             return
-        data = path.read_bytes()
+        data = local_path.read_bytes()
         digest = hashlib.sha256(data).hexdigest()
-        state_entry = self.state.get_file(self.username, filename)
+        state_entry = self.state.get_file(owner, path)
         if (
             state_entry is not None
             and not state_entry["deleted"]
@@ -442,11 +532,11 @@ class SyncWorker:
             return
         expected_rev = state_entry["rev"] if state_entry else 0
         result = self.session.upload(
-            self.username,
-            filename,
+            owner,
+            path,
             data,
             rev=expected_rev,
             digest=digest,
             client_id=self.state.client_id,
         )
-        self._apply_upload_result(filename, digest, len(data), result)
+        self._apply_upload_result(owner, path, digest, len(data), result)
