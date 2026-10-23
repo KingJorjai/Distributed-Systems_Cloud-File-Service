@@ -183,6 +183,65 @@ class FileStoreTests(unittest.TestCase):
         with self.assertRaises(UserExistsError):
             self.store.create_user("alice", "another-password")
 
+    def test_plan_put_does_not_change_state(self):
+        self.store.create_user("carol", "password-carol")
+        operations, record, conflict = self.store.plan_put_with_conflict(
+            "carol", "a.txt", b"hello", expected_rev=0, client_id="client-1"
+        )
+
+        self.assertIsNone(self.store.stat("carol", "a.txt"))
+        self.store.apply_operation({"operations": operations})
+        self.assertEqual(self.store.stat("carol", "a.txt").rev, record.rev)
+        self.assertIsNone(conflict)
+
+    def test_apply_operation_uses_given_revision(self):
+        self.store.create_user("carol", "password-carol")
+        self.store.apply_operation(
+            {
+                "operations": [
+                    {
+                        "kind": "file",
+                        "owner": "carol",
+                        "path": "a.txt",
+                        "rev": 7,
+                        "hash": "abc",
+                        "size": 3,
+                        "mtime_ns": 123,
+                        "deleted": False,
+                        "data_b64": "YWJj",
+                    }
+                ]
+            }
+        )
+
+        self.assertEqual(self.store.stat("carol", "a.txt").rev, 7)
+
+    def test_state_hash_changes_on_mutation(self):
+        self.store.create_user("carol", "password-carol")
+        before = self.store.state_hash()
+        operations, _, _ = self.store.plan_put_with_conflict(
+            "carol", "a.txt", b"hello"
+        )
+        self.store.apply_operation({"operations": operations})
+
+        self.assertNotEqual(self.store.state_hash(), before)
+
+    def test_snapshot_round_trip(self):
+        self.store.create_user("carol", "password-carol")
+        self.store.put("alice", "a.txt", b"hello")
+        self.store.create_share("alice", "a.txt", "bob", "ro")
+        self.store.set_setting("registration_enabled", "false")
+        snapshot = self.store.export_snapshot()
+
+        with tempfile.TemporaryDirectory() as directory:
+            restored = FileStore(Path(directory) / "files")
+            self.addCleanup(restored.close)
+            restored.import_snapshot(snapshot)
+
+            self.assertEqual(restored.state_hash(), self.store.state_hash())
+            self.assertEqual(restored.get("alice", "a.txt")[0], b"hello")
+            self.assertEqual(restored.get_setting("registration_enabled"), "false")
+
     def test_settings_round_trip(self):
         self.assertIsNone(self.store.get_setting("registration_enabled"))
         self.store.set_setting("registration_enabled", "false")

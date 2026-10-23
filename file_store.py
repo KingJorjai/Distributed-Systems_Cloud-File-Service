@@ -1,6 +1,8 @@
 """SQLite metadata and filesystem storage for the file service."""
 
+import base64
 import hashlib
+import json
 import os
 import re
 import shutil
@@ -464,48 +466,347 @@ class FileStore:
                 return conflict
             counter += 1
 
+    def _file_operation(
+        self, owner, path, data, rev, digest, size, mtime_ns, deleted=False
+    ):
+        operation = {
+            "kind": "file",
+            "owner": owner,
+            "path": path,
+            "rev": rev,
+            "hash": digest,
+            "size": size,
+            "mtime_ns": mtime_ns,
+            "deleted": deleted,
+        }
+        if not deleted:
+            operation["data_b64"] = base64.b64encode(data).decode("ascii")
+        return operation
+
+    def plan_put_with_conflict(
+        self, owner, path, data, expected_rev=None, client_id=None
+    ):
+        """Plan a put and an optional conflict copy without changing state."""
+        normalized = _normalize_path(path)
+        with self._lock:
+            current = self.stat(owner, normalized)
+            current_rev = current.rev if current is not None else 0
+            operations = []
+            conflict_record = None
+            if (
+                expected_rev is not None
+                and expected_rev != current_rev
+                and current is not None
+                and not current.deleted
+            ):
+                current_data, _ = self.get(owner, normalized)
+                conflict_path = self._conflict_path(owner, normalized, client_id)
+                conflict_digest = hashlib.sha256(current_data).hexdigest()
+                conflict_mtime = time.time_ns()
+                operations.append(
+                    self._file_operation(
+                        owner,
+                        conflict_path,
+                        current_data,
+                        1,
+                        conflict_digest,
+                        len(current_data),
+                        conflict_mtime,
+                    )
+                )
+                conflict_record = FileRecord(
+                    owner,
+                    conflict_path,
+                    1,
+                    conflict_digest,
+                    len(current_data),
+                    conflict_mtime,
+                    False,
+                )
+            digest = hashlib.sha256(data).hexdigest()
+            mtime_ns = time.time_ns()
+            rev = current_rev + 1
+            operations.append(
+                self._file_operation(
+                    owner,
+                    normalized,
+                    data,
+                    rev,
+                    digest,
+                    len(data),
+                    mtime_ns,
+                )
+            )
+            record = FileRecord(
+                owner, normalized, rev, digest, len(data), mtime_ns, False
+            )
+            return operations, record, conflict_record
+
+    def plan_delete_with_conflict(
+        self, owner, path, expected_rev=None, client_id=None
+    ):
+        """Plan a tombstone and an optional conflict copy without changing state."""
+        normalized = _normalize_path(path)
+        with self._lock:
+            current = self.stat(owner, normalized)
+            current_rev = current.rev if current is not None else 0
+            operations = []
+            conflict_record = None
+            if (
+                expected_rev is not None
+                and expected_rev != current_rev
+                and current is not None
+                and not current.deleted
+            ):
+                current_data, _ = self.get(owner, normalized)
+                conflict_path = self._conflict_path(owner, normalized, client_id)
+                conflict_digest = hashlib.sha256(current_data).hexdigest()
+                conflict_mtime = time.time_ns()
+                operations.append(
+                    self._file_operation(
+                        owner,
+                        conflict_path,
+                        current_data,
+                        1,
+                        conflict_digest,
+                        len(current_data),
+                        conflict_mtime,
+                    )
+                )
+                conflict_record = FileRecord(
+                    owner,
+                    conflict_path,
+                    1,
+                    conflict_digest,
+                    len(current_data),
+                    conflict_mtime,
+                    False,
+                )
+            digest = hashlib.sha256(b"").hexdigest()
+            mtime_ns = time.time_ns()
+            rev = current_rev + 1
+            operations.append(
+                self._file_operation(
+                    owner, normalized, b"", rev, digest, 0, mtime_ns, True
+                )
+            )
+            tombstone = FileRecord(
+                owner, normalized, rev, digest, 0, mtime_ns, True
+            )
+            return operations, tombstone, conflict_record
+
+    def plan_mkdir(self, owner, path):
+        return [{"kind": "mkdir", "owner": owner, "path": _normalize_path(path)}]
+
+    def plan_rmdir(self, owner, path):
+        normalized = _normalize_path(path)
+        operations = []
+        with self._lock:
+            rows = self._connection.execute(
+                "SELECT owner, path, rev FROM files "
+                "WHERE owner = ? AND (path = ? OR path LIKE ?)",
+                (owner, normalized, normalized + "/%"),
+            ).fetchall()
+        for row_owner, row_path, revision in rows:
+            operations.append(
+                self._file_operation(
+                    row_owner,
+                    row_path,
+                    b"",
+                    revision + 1,
+                    hashlib.sha256(b"").hexdigest(),
+                    0,
+                    time.time_ns(),
+                    True,
+                )
+            )
+        operations.append({"kind": "rmdir", "owner": owner, "path": normalized})
+        return operations
+
+    def plan_user_create(
+        self, username, password, role="user", disabled=False, allow_reserved=False
+    ):
+        if not allow_reserved and not validate_username(username):
+            raise StoreError("Invalid username.")
+        if not allow_reserved and not validate_password(password):
+            raise StoreError("Password must be at least 8 characters.")
+        if role not in {"admin", "user"}:
+            raise StoreError("Invalid role.")
+        if self.get_user(username) is not None:
+            raise UserExistsError(username)
+        digest, salt, iterations = hash_password(password)
+        return {
+            "kind": "user",
+            "username": username,
+            "password_hash": digest,
+            "salt": salt,
+            "iterations": iterations,
+            "role": role,
+            "disabled": bool(disabled),
+            "created_at": _now(),
+        }
+
+    def plan_user_password(self, username, password):
+        if not validate_password(password):
+            raise StoreError("Password must be at least 8 characters.")
+        if self.get_user(username) is None:
+            raise UserNotFoundError(username)
+        digest, salt, iterations = hash_password(password)
+        return {
+            "kind": "password",
+            "username": username,
+            "password_hash": digest,
+            "salt": salt,
+            "iterations": iterations,
+        }
+
+    def _apply_file(self, operation):
+        owner = operation["owner"]
+        path = _normalize_path(operation["path"])
+        target = self._file_path(owner, path)
+        rev = int(operation["rev"])
+        digest = operation["hash"]
+        size = int(operation["size"])
+        mtime_ns = int(operation["mtime_ns"])
+        deleted = bool(operation["deleted"])
+        if deleted:
+            try:
+                os.remove(target)
+            except FileNotFoundError:
+                pass
+        else:
+            data = base64.b64decode(operation["data_b64"])
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            descriptor, temporary = tempfile.mkstemp(
+                prefix=".upload-", dir=os.path.dirname(target)
+            )
+            try:
+                with os.fdopen(descriptor, "wb") as temporary_file:
+                    temporary_file.write(data)
+                os.replace(temporary, target)
+            except OSError:
+                try:
+                    os.unlink(temporary)
+                except OSError:
+                    pass
+                raise
+        self._connection.execute(
+            "INSERT INTO files(owner, path, rev, hash, size, mtime_ns, deleted) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(owner, path) DO UPDATE SET "
+            "rev = excluded.rev, hash = excluded.hash, size = excluded.size, "
+            "mtime_ns = excluded.mtime_ns, deleted = excluded.deleted",
+            (owner, path, rev, digest, size, mtime_ns, 1 if deleted else 0),
+        )
+
+    def _apply_user(self, operation):
+        self._connection.execute(
+            "INSERT INTO users(username, password_hash, salt, iterations, role, disabled, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(username) DO UPDATE SET "
+            "password_hash = excluded.password_hash, salt = excluded.salt, "
+            "iterations = excluded.iterations, role = excluded.role, "
+            "disabled = excluded.disabled, created_at = excluded.created_at",
+            (
+                operation["username"],
+                operation["password_hash"],
+                operation["salt"],
+                operation["iterations"],
+                operation["role"],
+                1 if operation["disabled"] else 0,
+                operation["created_at"],
+            ),
+        )
+
+    def _apply_password(self, operation):
+        cursor = self._connection.execute(
+            "UPDATE users SET password_hash = ?, salt = ?, iterations = ? "
+            "WHERE username = ?",
+            (
+                operation["password_hash"],
+                operation["salt"],
+                operation["iterations"],
+                operation["username"],
+            ),
+        )
+        if cursor.rowcount == 0:
+            raise UserNotFoundError(operation["username"])
+
+    def _apply_share(self, operation):
+        if operation.get("action") == "revoke":
+            self._connection.execute(
+                "DELETE FROM shares WHERE owner = ? AND path = ? AND grantee = ?",
+                (operation["owner"], operation["path"], operation["grantee"]),
+            )
+        else:
+            self._connection.execute(
+                "INSERT OR REPLACE INTO shares(owner, path, grantee, access, created_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (
+                    operation["owner"],
+                    operation["path"],
+                    operation["grantee"],
+                    operation["access"],
+                    operation["created_at"],
+                ),
+            )
+
+    def _apply_setting(self, operation):
+        self._connection.execute(
+            "INSERT INTO settings(key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (operation["key"], operation["value"]),
+        )
+
+    def _apply_rmdir(self, operation):
+        target = self._file_path(operation["owner"], operation["path"])
+        try:
+            shutil.rmtree(target)
+        except FileNotFoundError:
+            pass
+
+    def apply_operation(self, operation):
+        """Apply one deterministic operation payload."""
+        with self._lock:
+            for item in operation.get("operations", []):
+                kind = item["kind"]
+                if kind == "file":
+                    self._apply_file(item)
+                elif kind == "user":
+                    self._apply_user(item)
+                elif kind == "password":
+                    self._apply_password(item)
+                elif kind == "share":
+                    self._apply_share(item)
+                elif kind == "setting":
+                    self._apply_setting(item)
+                elif kind == "mkdir":
+                    self.mkdir(item["owner"], item["path"])
+                elif kind == "rmdir":
+                    self._apply_rmdir(item)
+                else:
+                    raise StoreError("Unknown operation kind: {}".format(kind))
+            self._connection.commit()
+
     def put_with_conflict(
         self, owner, path, data, expected_rev=None, client_id=None
     ):
         """Store bytes, preserving the current version if the revision is stale."""
-        normalized = _normalize_path(path)
-        current = self.stat(owner, normalized)
-        current_rev = current.rev if current is not None else 0
-        if expected_rev is not None and expected_rev != current_rev:
-            conflict = None
-            if current is not None and not current.deleted:
-                current_data, _ = self.get(owner, normalized)
-                conflict = self.put(
-                    owner,
-                    self._conflict_path(owner, normalized, client_id),
-                    current_data,
-                )
-            record = self.put(
-                owner, normalized, data, expected_rev=current_rev
-            )
-            return record, conflict
-        return self.put(
-            owner, normalized, data, expected_rev=expected_rev
-        ), None
+        operations, record, conflict = self.plan_put_with_conflict(
+            owner, path, data, expected_rev=expected_rev, client_id=client_id
+        )
+        self.apply_operation({"operations": operations})
+        return record, conflict
 
     def delete_with_conflict(
         self, owner, path, expected_rev=None, client_id=None
     ):
         """Delete a file, preserving the current version if the revision is stale."""
-        normalized = _normalize_path(path)
-        current = self.stat(owner, normalized)
-        current_rev = current.rev if current is not None else 0
-        if expected_rev is not None and expected_rev != current_rev:
-            conflict = None
-            if current is not None and not current.deleted:
-                current_data, _ = self.get(owner, normalized)
-                conflict = self.put(
-                    owner,
-                    self._conflict_path(owner, normalized, client_id),
-                    current_data,
-                )
-            return self.delete(owner, normalized), conflict
-        return self.delete(owner, normalized), None
+        operations, tombstone, conflict = self.plan_delete_with_conflict(
+            owner, path, expected_rev=expected_rev, client_id=client_id
+        )
+        self.apply_operation({"operations": operations})
+        return tombstone, conflict
 
     def get(self, owner, path):
         """Return ``(bytes, FileRecord)`` for an existing file."""
@@ -657,6 +958,147 @@ class FileStore:
                         (owner, path, digest, len(data), mtime_ns),
                     )
                     self._connection.commit()
+
+    def state_hash(self):
+        """Return a stable hash of replicated metadata for convergence tests."""
+        with self._lock:
+            users = self._connection.execute(
+                "SELECT username, password_hash, salt, iterations, role, disabled "
+                "FROM users ORDER BY username"
+            ).fetchall()
+            files = self._connection.execute(
+                "SELECT owner, path, rev, hash, size, mtime_ns, deleted "
+                "FROM files ORDER BY owner, path"
+            ).fetchall()
+            shares = self._connection.execute(
+                "SELECT owner, path, grantee, access, created_at "
+                "FROM shares ORDER BY owner, path, grantee"
+            ).fetchall()
+            settings = self._connection.execute(
+                "SELECT key, value FROM settings ORDER BY key"
+            ).fetchall()
+        payload = json.dumps(
+            {
+                "users": users,
+                "files": files,
+                "shares": shares,
+                "settings": settings,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    def export_snapshot(self):
+        """Export metadata and file data for a new or rejoining replica."""
+        with self._lock:
+            users = self._connection.execute(
+                "SELECT username, password_hash, salt, iterations, role, disabled, created_at "
+                "FROM users ORDER BY username"
+            ).fetchall()
+            files = self._connection.execute(
+                "SELECT owner, path, rev, hash, size, mtime_ns, deleted "
+                "FROM files ORDER BY owner, path"
+            ).fetchall()
+            shares = self._connection.execute(
+                "SELECT owner, path, grantee, access, created_at "
+                "FROM shares ORDER BY owner, path, grantee"
+            ).fetchall()
+            settings = self._connection.execute(
+                "SELECT key, value FROM settings ORDER BY key"
+            ).fetchall()
+        file_entries = []
+        for owner, path, rev, digest, size, mtime_ns, deleted in files:
+            entry = {
+                "owner": owner,
+                "path": path,
+                "rev": rev,
+                "hash": digest,
+                "size": size,
+                "mtime_ns": mtime_ns,
+                "deleted": bool(deleted),
+            }
+            if not deleted:
+                data, _ = self.get(owner, path)
+                entry["data_b64"] = base64.b64encode(data).decode("ascii")
+            file_entries.append(entry)
+        return {
+            "users": [
+                {
+                    "username": row[0],
+                    "password_hash": row[1],
+                    "salt": row[2],
+                    "iterations": row[3],
+                    "role": row[4],
+                    "disabled": bool(row[5]),
+                    "created_at": row[6],
+                }
+                for row in users
+            ],
+            "files": file_entries,
+            "shares": [
+                {
+                    "owner": row[0],
+                    "path": row[1],
+                    "grantee": row[2],
+                    "access": row[3],
+                    "created_at": row[4],
+                }
+                for row in shares
+            ],
+            "settings": [{"key": row[0], "value": row[1]} for row in settings],
+        }
+
+    def import_snapshot(self, snapshot):
+        """Replace local state with a snapshot exported by another replica."""
+        with self._lock:
+            self._connection.execute("DELETE FROM files")
+            self._connection.execute("DELETE FROM shares")
+            self._connection.execute("DELETE FROM settings")
+            self._connection.execute("DELETE FROM users")
+            self._connection.commit()
+            for child in Path(self.root).iterdir():
+                if child.is_dir() and not child.name.startswith("."):
+                    shutil.rmtree(child)
+            for user in snapshot.get("users", []):
+                self._apply_user(
+                    {
+                        "username": user["username"],
+                        "password_hash": user["password_hash"],
+                        "salt": user["salt"],
+                        "iterations": user["iterations"],
+                        "role": user["role"],
+                        "disabled": user["disabled"],
+                        "created_at": user["created_at"],
+                    }
+                )
+            for entry in snapshot.get("files", []):
+                self._apply_file(
+                    {
+                        "owner": entry["owner"],
+                        "path": entry["path"],
+                        "rev": entry["rev"],
+                        "hash": entry["hash"],
+                        "size": entry["size"],
+                        "mtime_ns": entry["mtime_ns"],
+                        "deleted": entry["deleted"],
+                        "data_b64": entry.get("data_b64", ""),
+                    }
+                )
+            for share in snapshot.get("shares", []):
+                self._apply_share(
+                    {
+                        "action": "create",
+                        "owner": share["owner"],
+                        "path": share["path"],
+                        "grantee": share["grantee"],
+                        "access": share["access"],
+                        "created_at": share["created_at"],
+                    }
+                )
+            for setting in snapshot.get("settings", []):
+                self._apply_setting(setting)
+            self._connection.commit()
 
     def get_setting(self, key, default=None):
         with self._lock:
