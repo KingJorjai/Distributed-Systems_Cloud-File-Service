@@ -362,6 +362,9 @@ def session(sock, runtime):
             if state != State.Main:
                 sendER(sock)
                 continue
+            if not runtime.is_primary():
+                sendER(sock, 13)
+                continue
             if user == "anonimous":
                 sendER(sock, 7)
                 continue
