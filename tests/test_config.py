@@ -79,6 +79,42 @@ class LoadConfigTests(unittest.TestCase):
         self.assertEqual(serv_fich_multithread.FILES_PATH, "files")
         self.assertEqual(len(serv_fich_multithread.PASSWORDS), 3)
 
+    def test_reads_tls_and_state_settings(self):
+        path = self.write_config(
+            '[client]\n'
+            'tls_ca_file = "ca.crt"\n'
+            'tls_server_name = "cloud.example"\n'
+            'state_dir = "/tmp/cloudfs-state"\n'
+            '\n[server]\n'
+            'host = "127.0.0.1"\n'
+            'tls_cert_file = "server.crt"\n'
+            'tls_key_file = "server.key"\n'
+            'tls_ca_file = "ca.crt"\n'
+            'registration_enabled = false\n'
+        )
+
+        with patch.dict(os.environ, {}, clear=True):
+            config = load_config(path)
+
+        self.assertEqual(config.client.tls_ca_file, "ca.crt")
+        self.assertEqual(config.client.tls_server_name, "cloud.example")
+        self.assertEqual(config.client.state_dir, "/tmp/cloudfs-state")
+        self.assertEqual(config.server.host, "127.0.0.1")
+        self.assertFalse(config.server.registration_enabled)
+
+    def test_tls_env_overrides_toml(self):
+        path = self.write_config('[server]\ntls_cert_file = "old.crt"\n')
+
+        with patch.dict(os.environ, {"TLS_CERT_FILE": "new.crt"}, clear=False):
+            self.assertEqual(load_config(path).server.tls_cert_file, "new.crt")
+
+    def test_rejects_invalid_registration_boolean(self):
+        path = self.write_config('[server]\nregistration_enabled = "sometimes"\n')
+
+        with patch.dict(os.environ, {}, clear=True):
+            with self.assertRaises(ConfigurationError):
+                load_config(path)
+
 
 class ParseClientArgsTests(unittest.TestCase):
     def write_config(self, content):

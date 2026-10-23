@@ -21,12 +21,20 @@ class ClientConfig:
     server: str = "localhost"
     port: int = 50012
     local_path: str = "client_files"
+    tls_ca_file: str = ""
+    tls_server_name: str = ""
+    state_dir: str = ""
 
 
 @dataclass(frozen=True)
 class ServerConfig:
+    host: str = ""
     port: int = 50012
     files_path: str = "files"
+    tls_cert_file: str = "certs/server.crt"
+    tls_key_file: str = "certs/server.key"
+    tls_ca_file: str = "certs/ca.crt"
+    registration_enabled: bool = True
     max_file_size: int = 10 * 1 << 20
     space_margin: int = 50 * 1 << 20
 
@@ -80,6 +88,18 @@ def validate_port(value) -> int:
     return port
 
 
+def _boolean(value, name: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        lowered = value.lower()
+        if lowered in {"1", "true", "yes", "on"}:
+            return True
+        if lowered in {"0", "false", "no", "off"}:
+            return False
+    raise ConfigurationError(f"{name} must be a boolean")
+
+
 def load_config(path: str | os.PathLike[str] | None = None) -> AppConfig:
     """Load configuration using environment variables as the highest override."""
     config_path = Path(path or os.environ.get("CONFIG_FILE", DEFAULT_CONFIG_FILE))
@@ -101,11 +121,42 @@ def load_config(path: str | os.PathLike[str] | None = None) -> AppConfig:
                     data, "client", "local_path", "CLIENT_LOCAL_PATH", "client_files"
                 )
             ),
+            tls_ca_file=str(
+                _value(data, "client", "tls_ca_file", "CLIENT_TLS_CA_FILE", "")
+            ),
+            tls_server_name=str(
+                _value(
+                    data, "client", "tls_server_name", "CLIENT_TLS_SERVER_NAME", ""
+                )
+            ),
+            state_dir=str(
+                _value(data, "client", "state_dir", "CLIENT_STATE_DIR", "")
+            ),
         ),
         server=ServerConfig(
+            host=str(_value(data, "server", "host", "SERVER_HOST", "")),
             port=server_port,
             files_path=str(
                 _value(data, "server", "files_path", "SERVER_FILES_PATH", "files")
+            ),
+            tls_cert_file=str(
+                _value(data, "server", "tls_cert_file", "TLS_CERT_FILE", "certs/server.crt")
+            ),
+            tls_key_file=str(
+                _value(data, "server", "tls_key_file", "TLS_KEY_FILE", "certs/server.key")
+            ),
+            tls_ca_file=str(
+                _value(data, "server", "tls_ca_file", "TLS_CA_FILE", "certs/ca.crt")
+            ),
+            registration_enabled=_boolean(
+                _value(
+                    data,
+                    "server",
+                    "registration_enabled",
+                    "ALLOW_REGISTRATION",
+                    True,
+                ),
+                "ALLOW_REGISTRATION",
             ),
             max_file_size=_integer(
                 _value(data, "server", "max_file_size", "MAX_FILE_SIZE", 10 * 1 << 20),
