@@ -106,6 +106,41 @@ class LoadConfigTests(unittest.TestCase):
         with patch.dict(os.environ, {"TLS_CERT_FILE": "new.crt"}, clear=False):
             self.assertEqual(load_config(path).server.tls_cert_file, "new.crt")
 
+    def test_reads_replication_settings(self):
+        path = self.write_config(
+            '[server]\n'
+            'server_id = "server1"\n'
+            'role = "primary"\n'
+            'peers = "server2@host2:60012,server3@host3:60012"\n'
+            'primary = "server1@host1:60012"\n'
+            'replication_host = "127.0.0.1"\n'
+            'replication_port = 61012\n'
+            'cluster_token = "secret"\n'
+            'term = 3\n'
+            'replication_timeout = 1.5\n'
+        )
+        with patch.dict(os.environ, {}, clear=True):
+            config = load_config(path)
+
+        self.assertEqual(config.server.server_id, "server1")
+        self.assertEqual(config.server.role, "primary")
+        self.assertIn("server2@host2", config.server.peers)
+        self.assertEqual(config.server.replication_port, 61012)
+        self.assertEqual(config.server.term, 3)
+        self.assertEqual(config.server.replication_timeout, 1.5)
+
+    def test_rejects_invalid_role(self):
+        path = self.write_config('[server]\nrole = "leader"\n')
+        with patch.dict(os.environ, {}, clear=True):
+            with self.assertRaises(ConfigurationError):
+                load_config(path)
+
+    def test_rejects_invalid_replication_port(self):
+        path = self.write_config('[server]\nreplication_port = 0\n')
+        with patch.dict(os.environ, {}, clear=True):
+            with self.assertRaises(ConfigurationError):
+                load_config(path)
+
     def test_rejects_invalid_registration_boolean(self):
         path = self.write_config('[server]\nregistration_enabled = "sometimes"\n')
 

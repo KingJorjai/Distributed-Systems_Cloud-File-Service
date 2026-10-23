@@ -35,6 +35,15 @@ class ServerConfig:
     tls_key_file: str = "certs/server.key"
     tls_ca_file: str = "certs/ca.crt"
     registration_enabled: bool = True
+    server_id: str = "server1"
+    role: str = "primary"
+    peers: str = ""
+    primary: str = ""
+    replication_host: str = ""
+    replication_port: int = 60012
+    cluster_token: str = ""
+    term: int = 1
+    replication_timeout: float = 2.0
     max_file_size: int = 10 * 1 << 20
     space_margin: int = 50 * 1 << 20
 
@@ -88,6 +97,18 @@ def validate_port(value) -> int:
     return port
 
 
+def _number(value, name: str) -> float:
+    if isinstance(value, bool):
+        raise ConfigurationError(f"{name} must be a number")
+    try:
+        result = float(value)
+    except (TypeError, ValueError) as error:
+        raise ConfigurationError(f"{name} must be a number") from error
+    if result <= 0:
+        raise ConfigurationError(f"{name} must be greater than zero")
+    return result
+
+
 def _boolean(value, name: str) -> bool:
     if isinstance(value, bool):
         return value
@@ -111,6 +132,18 @@ def load_config(path: str | os.PathLike[str] | None = None) -> AppConfig:
     server_port = validate_port(
         _value(data, "server", "port", "SERVER_PORT", 50012)
     )
+    replication_port = validate_port(
+        _value(
+            data,
+            "server",
+            "replication_port",
+            "SERVER_REPLICATION_PORT",
+            60012,
+        )
+    )
+    role = str(_value(data, "server", "role", "SERVER_ROLE", "primary"))
+    if role not in {"primary", "secondary"}:
+        raise ConfigurationError("SERVER_ROLE must be 'primary' or 'secondary'")
 
     return AppConfig(
         client=ClientConfig(
@@ -157,6 +190,40 @@ def load_config(path: str | os.PathLike[str] | None = None) -> AppConfig:
                     True,
                 ),
                 "ALLOW_REGISTRATION",
+            ),
+            server_id=str(
+                _value(data, "server", "server_id", "SERVER_ID", "server1")
+            ),
+            role=role,
+            peers=str(_value(data, "server", "peers", "SERVER_PEERS", "")),
+            primary=str(
+                _value(data, "server", "primary", "SERVER_PRIMARY", "")
+            ),
+            replication_host=str(
+                _value(
+                    data,
+                    "server",
+                    "replication_host",
+                    "SERVER_REPLICATION_HOST",
+                    "",
+                )
+            ),
+            replication_port=replication_port,
+            cluster_token=str(
+                _value(data, "server", "cluster_token", "CLUSTER_TOKEN", "")
+            ),
+            term=_integer(
+                _value(data, "server", "term", "SERVER_TERM", 1), "SERVER_TERM"
+            ),
+            replication_timeout=_number(
+                _value(
+                    data,
+                    "server",
+                    "replication_timeout",
+                    "REPLICATION_TIMEOUT",
+                    2.0,
+                ),
+                "REPLICATION_TIMEOUT",
             ),
             max_file_size=_integer(
                 _value(data, "server", "max_file_size", "MAX_FILE_SIZE", 10 * 1 << 20),
