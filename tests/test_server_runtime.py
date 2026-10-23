@@ -286,17 +286,19 @@ class ProtocolIntegrationTests(RuntimeTestCase):
     def test_refuses_to_start_without_certificate(self):
         with tempfile.TemporaryDirectory() as directory:
             store = FileStore(Path(directory) / "files")
-            self.addCleanup(store.close)
-            config = ServerConfig(
-                host="127.0.0.1",
-                port=0,
-                files_path=str(Path(directory) / "files"),
-                tls_cert_file=str(Path(directory) / "missing.crt"),
-                tls_key_file=str(Path(directory) / "missing.key"),
-            )
-            runtime = ServerRuntime(config, store)
-            with self.assertRaises(FileNotFoundError):
-                runtime.start()
+            try:
+                config = ServerConfig(
+                    host="127.0.0.1",
+                    port=0,
+                    files_path=str(Path(directory) / "files"),
+                    tls_cert_file=str(Path(directory) / "missing.crt"),
+                    tls_key_file=str(Path(directory) / "missing.key"),
+                )
+                runtime = ServerRuntime(config, store)
+                with self.assertRaises(FileNotFoundError):
+                    runtime.start()
+            finally:
+                store.close()
 
 
 if __name__ == "__main__":

@@ -19,10 +19,11 @@ class Role:
 class ClusterNode:
     """Own the dynamic role, term, heartbeat loop, and election state."""
 
-    def __init__(self, config, store, log):
+    def __init__(self, config, store, log, snapshot_lock=None):
         self.config = config
         self.store = store
         self.log = log
+        self.snapshot_lock = snapshot_lock or threading.RLock()
         self.peers = parse_peers(config.peers)
         self.quorum = (1 + len(self.peers)) // 2 + 1
         self.location = "{}:{}".format(
@@ -191,22 +192,27 @@ class ClusterNode:
                 return
             if response.get("type") == "HB_OK" and response_term == term:
                 acknowledged += 1
-                if int(response.get("commit_index", 0)) < self.log.commit_index():
+                if int(response.get("last_index", 0)) < self.log.commit_index():
                     self._send_snapshot(peer, response_term)
         if 1 + acknowledged < self.quorum:
             self._become_follower()
 
     def _send_snapshot(self, peer, term):
-        response = self._send(
-            peer,
-            {
-                "type": "SNAP",
-                "term": term,
-                "leader": self.config.server_id,
-                "index": self.log.commit_index(),
-                "snapshot": self.store.export_snapshot(),
-            },
-        )
+        with self.snapshot_lock:
+            index = int(
+                self.log.get_meta("last_applied", self.log.commit_index())
+            )
+            snapshot = self.store.export_snapshot()
+            response = self._send(
+                peer,
+                {
+                    "type": "SNAP",
+                    "term": term,
+                    "leader": self.config.server_id,
+                    "index": index,
+                    "snapshot": snapshot,
+                },
+            )
         if response is not None and int(response.get("term", 0)) > self.log.term():
             self.log.advance_term(int(response["term"]))
             self._become_follower()

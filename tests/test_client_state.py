@@ -91,8 +91,9 @@ class ClientStateTests(unittest.TestCase):
         self.assertEqual(other.pending(), [])
 
     def test_default_state_dir_uses_env(self):
-        with patch.dict(os.environ, {"XDG_STATE_HOME": "/tmp/cloudfs-state"}):
-            self.assertEqual(default_state_dir(), Path("/tmp/cloudfs-state/cloudfs"))
+        variable = "LOCALAPPDATA" if os.name == "nt" else "XDG_STATE_HOME"
+        with patch.dict(os.environ, {variable: str(self.base / "state")}):
+            self.assertEqual(default_state_dir(), self.base / "state" / "cloudfs")
 
 
 if __name__ == "__main__":

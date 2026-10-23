@@ -74,14 +74,16 @@ class LoadConfigTests(unittest.TestCase):
     def test_bootstrap_user_authentication(self):
         with tempfile.TemporaryDirectory() as directory:
             store = FileStore(directory)
-            self.addCleanup(store.close)
-            store.ensure_bootstrap_user("sar", "configured-secret", "admin")
+            try:
+                store.ensure_bootstrap_user("sar", "configured-secret", "admin")
 
-            self.assertEqual(
-                store.authenticate("sar", "configured-secret").role, "admin"
-            )
-            with self.assertRaises(InvalidPasswordError):
-                store.authenticate("sar", "wrong")
+                self.assertEqual(
+                    store.authenticate("sar", "configured-secret").role, "admin"
+                )
+                with self.assertRaises(InvalidPasswordError):
+                    store.authenticate("sar", "wrong")
+            finally:
+                store.close()
 
     def test_reads_tls_and_state_settings(self):
         path = self.write_config(

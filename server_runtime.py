@@ -621,7 +621,10 @@ class ServerRuntime:
             Path(config.files_path) / ".replication.sqlite3",
             term=config.term,
         )
-        self.cluster = ClusterNode(config, store, self.log)
+        self._operations_lock = threading.RLock()
+        self.cluster = ClusterNode(
+            config, store, self.log, snapshot_lock=self._operations_lock
+        )
         self.notification_hub = NotificationHub(store)
         self.admin_service = AdminService(self)
         self.admin_server = None
@@ -731,14 +734,18 @@ class ServerRuntime:
 
     def commit_operation(self, operation, origin_client_id=None):
         """Commit a deterministic operation through replication and local apply."""
-        if not self.is_primary():
-            raise NotPrimaryError("This server is not the primary.")
-        if self.replicator is not None:
-            self.replicator.replicate(operation)
-        self.store.apply_operation(operation)
-        self.notification_hub.publish_operation(
-            operation, origin_client_id=origin_client_id
-        )
+        with self._operations_lock:
+            if not self.is_primary():
+                raise NotPrimaryError("This server is not the primary.")
+            index = None
+            if self.replicator is not None:
+                index = self.replicator.replicate(operation)
+            self.store.apply_operation(operation)
+            if index is not None:
+                self.log.set_meta("last_applied", index)
+            self.notification_hub.publish_operation(
+                operation, origin_client_id=origin_client_id
+            )
 
     def require_primary(self):
         if not self.is_primary():

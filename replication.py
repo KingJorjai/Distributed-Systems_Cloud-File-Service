@@ -332,6 +332,7 @@ class ReplicationServer:
         self._stop = threading.Event()
         self._connections = set()
         self._lock = threading.Lock()
+        self._apply_lock = threading.Lock()
         self.port = None
 
     def start(self):
@@ -494,25 +495,29 @@ class ReplicationServer:
             return
         if self.cluster is not None:
             self.cluster.observe_leader(term, message.get("leader"))
-        last_applied = int(self.log.get_meta("last_applied", "0"))
-        try:
-            for current in range(last_applied + 1, index + 1):
-                entry = self.log.get(term, current)
-                if entry is None:
-                    raise ReplicationError(
-                        "Missing entry {} for commit.".format(current)
-                    )
-                self.store.apply_operation(entry["payload"])
-                self.log.mark_committed(term, current)
-                self.log.set_meta("last_applied", current)
-        except ReplicationError as error:
-            self._send(connection, {"type": "ERROR", "message": str(error)})
-            return
-        self.log.set_meta("commit_index", index)
-        self._send(
-            connection,
-            {"type": "COMMITTED", "term": term, "index": index},
-        )
+        with self._apply_lock:
+            last_applied = int(self.log.get_meta("last_applied", "0"))
+            try:
+                for current in range(last_applied + 1, index + 1):
+                    entry = self.log.get(term, current)
+                    if entry is None:
+                        raise ReplicationError(
+                            "Missing entry {} for commit.".format(current)
+                        )
+                    self.store.apply_operation(entry["payload"])
+                    self.log.mark_committed(term, current)
+                    self.log.set_meta("last_applied", current)
+            except Exception as error:
+                self._send(
+                    connection,
+                    {"type": "ERROR", "message": str(error)},
+                )
+                return
+            self.log.set_meta("commit_index", index)
+            self._send(
+                connection,
+                {"type": "COMMITTED", "term": term, "index": index},
+            )
 
     def _handle_abort(self, connection, message):
         term = int(message["term"])
@@ -534,8 +539,11 @@ class ReplicationServer:
             return
         if self.cluster is not None:
             self.cluster.observe_leader(term, message.get("leader"))
-        self.store.import_snapshot(message["snapshot"])
-        self.log.reset_to(term, index)
+        with self._apply_lock:
+            last_applied = int(self.log.get_meta("last_applied", "0"))
+            if index > last_applied:
+                self.store.import_snapshot(message["snapshot"])
+                self.log.reset_to(term, index)
         self._send(
             connection,
             {"type": "SNAP_OK", "term": term, "index": index},

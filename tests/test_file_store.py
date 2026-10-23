@@ -235,27 +235,31 @@ class FileStoreTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             restored = FileStore(Path(directory) / "files")
-            self.addCleanup(restored.close)
-            restored.import_snapshot(snapshot)
+            try:
+                restored.import_snapshot(snapshot)
 
-            self.assertEqual(restored.state_hash(), self.store.state_hash())
-            self.assertEqual(restored.get("alice", "a.txt")[0], b"hello")
-            self.assertEqual(restored.get_setting("registration_enabled"), "false")
+                self.assertEqual(restored.state_hash(), self.store.state_hash())
+                self.assertEqual(restored.get("alice", "a.txt")[0], b"hello")
+                self.assertEqual(restored.get_setting("registration_enabled"), "false")
+            finally:
+                restored.close()
 
     def test_bootstrap_salt_is_deterministic(self):
         with tempfile.TemporaryDirectory() as directory:
             first = FileStore(Path(directory) / "first")
             other = FileStore(Path(directory) / "other")
-            self.addCleanup(first.close)
-            self.addCleanup(other.close)
-            first.ensure_bootstrap_user(
-                "sar", "secret-password", "admin", salt=b"0" * 16
-            )
-            other.ensure_bootstrap_user(
-                "sar", "secret-password", "admin", salt=b"0" * 16
-            )
+            try:
+                first.ensure_bootstrap_user(
+                    "sar", "secret-password", "admin", salt=b"0" * 16
+                )
+                other.ensure_bootstrap_user(
+                    "sar", "secret-password", "admin", salt=b"0" * 16
+                )
 
-            self.assertEqual(first.state_hash(), other.state_hash())
+                self.assertEqual(first.state_hash(), other.state_hash())
+            finally:
+                first.close()
+                other.close()
 
     def test_plan_share_create_and_revoke(self):
         self.store.put("alice", "docs/a.txt", b"a")

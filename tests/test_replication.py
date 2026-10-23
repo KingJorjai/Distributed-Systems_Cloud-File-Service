@@ -278,6 +278,34 @@ class ReplicationServerTests(unittest.TestCase):
 
         self.assertEqual(self.store.state_hash(), source.state_hash())
 
+    def test_stale_snapshot_does_not_replace_newer_state(self):
+        connection = self.peer()
+        self.addCleanup(connection.close)
+        connection.send(
+            {
+                "type": "RB",
+                "term": 1,
+                "index": 1,
+                "op": self.operation("a.txt", b"hello"),
+            }
+        )
+        self.assertEqual(connection.recv()["type"], "ACK")
+        connection.send({"type": "COMMIT", "term": 1, "index": 1})
+        self.assertEqual(connection.recv()["type"], "COMMITTED")
+
+        connection.send(
+            {
+                "type": "SNAP",
+                "term": 1,
+                "index": 1,
+                "snapshot": {"users": [], "files": [], "shares": [], "settings": []},
+            }
+        )
+        self.assertEqual(connection.recv()["type"], "SNAP_OK")
+
+        self.assertIsNotNone(self.store.get_user("alice"))
+        self.assertEqual(self.store.get("alice", "a.txt")[0], b"hello")
+
     def test_abort_removes_uncommitted_entry(self):
         connection = self.peer()
         self.addCleanup(connection.close)
