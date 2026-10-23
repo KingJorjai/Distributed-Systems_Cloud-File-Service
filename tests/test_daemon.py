@@ -71,6 +71,7 @@ class DaemonTests(unittest.TestCase):
         self.client = IpcClient(
             ipc_address(Path(client.state_dir)),
             ipc_key(Path(client.state_dir)),
+            timeout=30,
         )
         self.addCleanup(self.client.close)
 
@@ -112,6 +113,7 @@ class DaemonTests(unittest.TestCase):
         other = IpcClient(
             ipc_address(Path(self.service.state_dir)),
             ipc_key(Path(self.service.state_dir)),
+            timeout=30,
         )
         self.addCleanup(other.close)
         other.request(
