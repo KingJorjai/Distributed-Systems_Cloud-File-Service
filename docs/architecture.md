@@ -89,6 +89,39 @@ If a majority is not available, the primary sends `ABORT`, does not apply the
 operation, and returns `ER12`. Secondaries reject client mutations with `ER13`;
 reads and login are served from their local replicated state.
 
+## Election and failover
+
+Every node runs a `ClusterNode`. The leader sends `HB` heartbeats every
+`HEARTBEAT_INTERVAL`; a follower that sees no heartbeat for
+`FAILURE_TIMEOUT` starts an election. A candidate increments the term, votes for
+itself, and requests votes from its peers. A voter grants its vote only when the
+candidate's `(last_term, last_index)` is at least as recent as its own. A
+majority elects the new leader, which announces itself with `COORD`.
+
+Any higher term fences the old leader: it becomes a follower, clears its vote,
+and rejects client mutations on the next command. A leader that cannot reach a
+majority of `HB_OK` also steps down.
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant P as Old primary
+    participant S2 as Secondary 2
+    participant S3 as Secondary 3
+    P--xS2: heartbeat stops
+    S2->>S3: VOTE(term+1)
+    S3-->>S2: VOTE_OK
+    S2->>S2: become leader
+    S2->>S3: COORD
+    C->>S3: PRIM
+    S3-->>C: OK server2:50012
+    C->>S2: reconnect + login
+```
+
+When a restarted node is behind, the leader compares `commit_index` during
+heartbeats and sends `SNAP`. The rejoining node imports the snapshot and resets
+its log to the snapshot term/index.
+
 ## Data flow
 
 ```mermaid

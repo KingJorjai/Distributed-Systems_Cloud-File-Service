@@ -13,13 +13,15 @@ The current synchronization design intentionally keeps the scope small.
   notifications arrive in M5.
 - A local delete is never sent for a file that was never synchronized, so a new
   local file created and removed while offline leaves no remote trace.
-- Passive replication and quorum are implemented. Automatic primary election,
-  failover, and client redirection are M4.
-- A new or restarted secondary does not automatically request a snapshot yet;
-  snapshot export/import exists but automatic rejoin is M4.
+- Passive replication, quorum, heartbeats, election, client redirection, and
+  automatic snapshot rejoin are implemented.
 - Secondary reads may lag behind the primary.
-- If the primary loses quorum, uncommitted proposals are aborted; a secondary
-  that was unreachable may retain an uncommitted proposal until rejoin.
+- Snapshots are transferred as one JSON message and are limited by the 64 MiB
+  replication line limit; a very large file store needs chunked snapshots.
+- The cluster tolerates crash-stop failures, not Byzantine nodes or arbitrary
+  network partitions. A leader that cannot obtain a majority steps down.
+- A node that was unreachable during an aborted proposal may retain an
+  uncommitted entry until the next heartbeat/snapshot.
 - Sharing is modelled in the database, but `SHAR`/`UNSH` commands and
   notifications arrive in M5.
 - The client is supported on Windows x64 and Linux x64. macOS is out of scope.

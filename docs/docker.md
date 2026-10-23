@@ -124,7 +124,8 @@ the internal client port. The replication port is fixed to `60012` in
 
 Each server has its own volume: `files/server1`, `files/server2`, and
 `files/server3`. The primary replicates mutations to the secondaries and waits
-for a 2/3 quorum before confirming them.
+for a 2/3 quorum before confirming them. `server2` and `server3` list all peers
+so they can elect a new primary if `server1` stops.
 
 ## Start the client
 
@@ -134,11 +135,34 @@ Run the client interactively from a second terminal:
 docker compose run --rm client
 ```
 
-The client connects to `server1` and watches `/data`, which is mapped to the
-host's `client_files/` directory. Authenticate with one of the passwords
-configured in `.env`, then create or modify a file in `client_files/` on the
-host. It should appear under `files/server1/<user>/` and be replicated to
-`server2` and `server3`.
+The client uses `server1`, `server2`, and `server3` as seeds. It asks `PRIM` for
+the current primary and redirects if necessary. It watches `/data`, which is
+mapped to the host's `client_files/` directory. Authenticate with one of the
+passwords configured in `.env`, then create or modify a file in
+`client_files/` on the host. It should appear under the primary's
+`files/<server>/<user>/` directory and be replicated to the other servers.
+
+## Demo failover
+
+Keep the client container running or start it again. Stop the primary:
+
+```sh
+docker compose stop server1
+```
+
+Within a few seconds one of `server2`/`server3` becomes the new primary. Future
+client commands use `PRIM` to redirect to it. Upload another file and confirm
+that it appears in the new primary's data directory and in the other running
+server.
+
+Restart the old primary:
+
+```sh
+docker compose start server1
+```
+
+It rejoins as a follower, receives a snapshot from the current primary, and its
+`files/server1` volume converges to the new state.
 
 ## Stop the services
 

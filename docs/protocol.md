@@ -19,6 +19,7 @@ for a private/development CA. Hostname verification is always enabled.
 | `REGIusername?password` | Register a new account. The password is URL-encoded. |
 | `CHPWold?new` | Change the current user's password. Both values are URL-encoded. |
 | `USRS` | List enabled users that can be selected as share grantees. |
+| `PRIM` | Return the current primary client endpoint, or `ER13`. |
 | `SYNC` | Return the current manifest of owned and shared files. |
 | `STATpath` | Return `rev`, hash, and size for one owned path. |
 | `DOWNfilename` | Prepare a file download. |
@@ -149,18 +150,26 @@ Secondaries apply committed entries in order and reply `COMMITTED`. If quorum is
 not reached, the primary sends `ABORT` and truncates the proposal.
 
 ```text
-HELLO    {id, role, term, last_index, commit_index, token}
-HELLO_OK {id, term, last_index, commit_index}
-RB       {term, index, operation}
+HELLO    {id, role, term, last_term, last_index, commit_index, token}
+HELLO_OK {id, role, term, last_term, last_index, commit_index}
+HB       {term, leader, client_host, client_port, last_index, commit_index}
+HB_OK    {term, id, last_index, commit_index}
+VOTE     {term, candidate, last_term, last_index}
+VOTE_OK  {term, id, granted}
+COORD    {term, leader, client_host, client_port}
+COORD_OK {term}
+RB       {term, index, leader, operation}
 ACK      {term, index, id, status}
-COMMIT   {term, index}
+COMMIT   {term, index, leader}
 COMMITTED{term, index}
 ABORT    {term, index}
-SNAP     {term, index, snapshot}
+SNAP     {term, index, leader, snapshot}
 ```
 
-`SNAP` replaces the local state during replica recovery. Automatic rejoin and
-snapshot transfer on reconnect are M4.
+`SNAP` replaces the local state during replica recovery. The leader sends it
+automatically when a peer's `commit_index` lags behind. `PRIM` lets a client ask
+any server for the current primary's client endpoint; a server without a known
+leader returns `ER13`.
 
 ## Client state
 

@@ -10,7 +10,7 @@ RUN python -m pip install --no-cache-dir -r requirements.txt
 
 COPY config.py config.toml.example ./
 RUN cp config.toml.example config.toml
-COPY auth.py file_store.py replication.py server_runtime.py serv_fich_multithread.py szasar.py tls.py ./
+COPY auth.py election.py file_store.py replication.py server_runtime.py serv_fich_multithread.py szasar.py tls.py ./
 RUN mkdir -p /app/files /app/certs \
     && useradd --create-home --uid 10001 appuser \
     && chown -R appuser:appuser /app

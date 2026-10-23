@@ -468,7 +468,8 @@ Orden de recorte si hiciera falta: web admin completa → extras de GUI →
 reincorporación automática → copias de conflicto. No se recortan TLS, wizard,
 outbox, demo de failover ni memoria.
 
-M0, M1 y M2 están implementados y fusionados. M3 (réplica pasiva, log durable,
-quórum y TLS/mTLS) está implementado en la rama `feat/m3-replication`; el plan
-detallado está en `2026-10-23-m3-replication.md`. El siguiente paso es el plan
-detallado de M4 (detección de fallos, elección, failover y reincorporación).
+M0–M3 están implementados y fusionados. M4 (heartbeats, elección, fencing,
+failover, `PRIM` y reincorporación automática) está implementado en la rama
+`feat/m4-election`; el plan detallado está en `2026-10-23-m4-election.md`. El
+siguiente paso es el plan detallado de M5 (shares entre usuarios y
+notificaciones).

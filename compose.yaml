@@ -17,6 +17,7 @@ services:
       SERVER_PEERS: "server2@server2:60012,server3@server3:60012"
       SERVER_REPLICATION_PORT: "60012"
       CLUSTER_TOKEN: "${CLUSTER_TOKEN:-change-me}"
+      SERVER_CLIENT_ADDRESSES: "server1@server1:${SERVER_INTERNAL_PORT:-50012},server2@server2:${SERVER_INTERNAL_PORT:-50012},server3@server3:${SERVER_INTERNAL_PORT:-50012}"
       TLS_CERT_FILE: /app/certs/server.crt
       TLS_KEY_FILE: /app/certs/server.key
       TLS_CA_FILE: /app/certs/ca.crt
@@ -27,11 +28,6 @@ services:
       - "${SERVER1_DATA_PATH:-./files/server1}:/app/files"
       - "${CERTS_PATH:-./certs}:/app/certs:ro"
       - "${APP_CONFIG_FILE:-./config.toml.example}:/app/config.toml:ro"
-    depends_on:
-      server2:
-        condition: service_healthy
-      server3:
-        condition: service_healthy
     restart: unless-stopped
 
   server2:
@@ -48,9 +44,10 @@ services:
       SERVER_ID: server2
       SERVER_ROLE: secondary
       SERVER_PRIMARY: "server1@server1:60012"
-      SERVER_PEERS: "server3@server3:60012"
+      SERVER_PEERS: "server1@server1:60012,server3@server3:60012"
       SERVER_REPLICATION_PORT: "60012"
       CLUSTER_TOKEN: "${CLUSTER_TOKEN:-change-me}"
+      SERVER_CLIENT_ADDRESSES: "server1@server1:${SERVER_INTERNAL_PORT:-50012},server2@server2:${SERVER_INTERNAL_PORT:-50012},server3@server3:${SERVER_INTERNAL_PORT:-50012}"
       TLS_CERT_FILE: /app/certs/server.crt
       TLS_KEY_FILE: /app/certs/server.key
       TLS_CA_FILE: /app/certs/ca.crt
@@ -77,9 +74,10 @@ services:
       SERVER_ID: server3
       SERVER_ROLE: secondary
       SERVER_PRIMARY: "server1@server1:60012"
-      SERVER_PEERS: "server2@server2:60012"
+      SERVER_PEERS: "server1@server1:60012,server2@server2:60012"
       SERVER_REPLICATION_PORT: "60012"
       CLUSTER_TOKEN: "${CLUSTER_TOKEN:-change-me}"
+      SERVER_CLIENT_ADDRESSES: "server1@server1:${SERVER_INTERNAL_PORT:-50012},server2@server2:${SERVER_INTERNAL_PORT:-50012},server3@server3:${SERVER_INTERNAL_PORT:-50012}"
       TLS_CERT_FILE: /app/certs/server.crt
       TLS_KEY_FILE: /app/certs/server.key
       TLS_CA_FILE: /app/certs/ca.crt
@@ -101,14 +99,15 @@ services:
     command: ["server1", "${SERVER_INTERNAL_PORT:-50012}", "/data"]
     depends_on:
       server1:
-        condition: service_healthy
+        condition: service_started
     environment:
       CONFIG_FILE: /app/config.toml
       CLIENT_SERVER: server1
       CLIENT_PORT: "${SERVER_INTERNAL_PORT:-50012}"
       CLIENT_LOCAL_PATH: /data
+      CLIENT_PEERS: "server1:${SERVER_INTERNAL_PORT:-50012},server2:${SERVER_INTERNAL_PORT:-50012},server3:${SERVER_INTERNAL_PORT:-50012}"
       CLIENT_TLS_CA_FILE: /app/certs/ca.crt
-      CLIENT_TLS_SERVER_NAME: server1
+      CLIENT_TLS_SERVER_NAME: ""
       PYTHONUNBUFFERED: "1"
     stdin_open: true
     tty: true

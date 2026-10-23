@@ -49,7 +49,12 @@ python cli_fich.py [server [port [local_folder]]]
 | `local_folder` | `client.local_path` | Folder watched by the automatic synchronizer. |
 
 Environment variables: `CLIENT_SERVER`, `CLIENT_PORT`, `CLIENT_LOCAL_PATH`,
-`CLIENT_TLS_CA_FILE`, `CLIENT_TLS_SERVER_NAME`, and `CLIENT_STATE_DIR`.
+`CLIENT_PEERS`, `CLIENT_TLS_CA_FILE`, `CLIENT_TLS_SERVER_NAME`, and
+`CLIENT_STATE_DIR`.
+
+`CLIENT_PEERS` is a comma-separated `host:port` list used as bootstrap seeds.
+The client asks `PRIM` for the current primary and redirects if necessary. Leave
+`CLIENT_TLS_SERVER_NAME` empty when the endpoints use different hostnames.
 
 - `CLIENT_TLS_CA_FILE` empty means “use the operating system CA store”. Set it
   to the generated `ca.crt` when using a development certificate.
@@ -76,9 +81,13 @@ Environment variables: `CLIENT_SERVER`, `CLIENT_PORT`, `CLIENT_LOCAL_PATH`,
 | `SERVER_PRIMARY` | empty | Primary address used by a secondary. |
 | `SERVER_REPLICATION_HOST` | same as host | Replication listener address. |
 | `SERVER_REPLICATION_PORT` | `60012` | Replication listener port. |
+| `SERVER_CLIENT_ADDRESSES` | empty | `id@host:port,...` client endpoints used by `PRIM`. |
 | `CLUSTER_TOKEN` | empty | Shared cluster handshake token. |
 | `SERVER_TERM` | `1` | Initial replication term. |
 | `REPLICATION_TIMEOUT` | `2.0` | Per-peer ACK timeout in seconds. |
+| `HEARTBEAT_INTERVAL` | `0.5` | Leader heartbeat interval in seconds. |
+| `FAILURE_TIMEOUT` | `2.0` | Time without heartbeat before election. |
+| `ELECTION_TIMEOUT` | `1.0` | Base election retry interval. |
 | `MAX_FILE_SIZE` | 10 MiB | Maximum upload size. |
 | `SPACE_MARGIN` | 50 MiB | Required free-space margin. |
 
@@ -91,6 +100,7 @@ Primary:
 server_id = "server1"
 role = "primary"
 peers = "server2@server2:60012,server3@server3:60012"
+client_addresses = "server1@server1:50012,server2@server2:50012,server3@server3:50012"
 cluster_token = "change-me"
 ```
 
@@ -100,14 +110,17 @@ Secondary:
 [server]
 server_id = "server2"
 role = "secondary"
-primary = "server1@server1:60012"
+peers = "server1@server1:60012,server3@server3:60012"
+client_addresses = "server1@server1:50012,server2@server2:50012,server3@server3:50012"
 cluster_token = "change-me"
 ```
 
 The replication listener requires mutual TLS. The server certificate and key are
 also used as the client certificate when connecting to peers; the cluster CA is
 `TLS_CA_FILE`. An empty `SERVER_PEERS` keeps a primary in standalone mode with
-quorum 1.
+quorum 1. In a three-server cluster, every node lists the other two nodes in
+`SERVER_PEERS`; `SERVER_CLIENT_ADDRESSES` lets `PRIM` return the current primary
+client endpoint after a failover.
 
 The server refuses to start without a valid certificate and key. There is no
 plaintext mode.
