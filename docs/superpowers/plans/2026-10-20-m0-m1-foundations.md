@@ -168,17 +168,17 @@ successful operations, and replays pending changes on startup.
 
 ## M1e — Acceptance
 
-- [ ] `python -m unittest discover -s tests -v`
-- [ ] `python -m ruff check .`
-- [ ] `mkdocs build --strict`
-- [ ] `test ! -d site/ref`
-- [ ] `test ! -d site/superpowers`
-- [ ] Register/login over TLS.
-- [ ] `SYNC` and `STAT` return correct metadata.
-- [ ] Outbox survives client restart.
-- [ ] Plaintext client is rejected.
-- [ ] Path traversal and symlink escape are rejected.
-- [ ] Dev certificate script works.
+- [x] `python -m unittest discover -s tests -v`
+- [x] `python -m ruff check .`
+- [x] `mkdocs build --strict`
+- [x] `test ! -d site/ref`
+- [x] `test ! -d site/superpowers`
+- [x] Register/login over TLS.
+- [x] `SYNC` and `STAT` return correct metadata.
+- [x] Outbox survives client restart.
+- [x] Plaintext client is rejected.
+- [x] Path traversal and symlink escape are rejected.
+- [x] Dev certificate script works.
 
 ## Execution rules
 
