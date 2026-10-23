@@ -21,6 +21,22 @@ COMPONENTS = {
         "executable": "cloud-file-client",
         "readme": "README-client.txt",
         "data_directory": "client_files",
+        "hidden_imports": ["client_daemon", "daemon_service"],
+    },
+    "client-gui": {
+        "entrypoint": "gui_fich.py",
+        "executable": "cloud-file-client-gui",
+        "readme": "README-client-gui.txt",
+        "data_directory": "client_files",
+        "windowed": True,
+        "hidden_imports": [
+            "client_daemon",
+            "daemon_service",
+            "gui_app",
+            "tray",
+            "PIL",
+            "pystray",
+        ],
     },
 }
 
@@ -32,6 +48,13 @@ def build_bundle(component: str, output_directory: Path, archive_format: str) ->
     staging_directory = output_directory / settings["executable"]
     work_directory.mkdir(parents=True, exist_ok=True)
     dist_directory.mkdir(parents=True, exist_ok=True)
+
+    extra_binaries = []
+    if settings.get("windowed") and sys.platform.startswith("linux"):
+        lib_directory = Path(sys.base_prefix) / "lib"
+        for pattern in ("libtcl*.so*", "libtk*.so*"):
+            for library in sorted(lib_directory.glob(pattern)):
+                extra_binaries.extend(["--add-binary", "{}:.".format(library)])
 
     subprocess.run(
         [
@@ -51,6 +74,13 @@ def build_bundle(component: str, output_directory: Path, archive_format: str) ->
             str(work_directory),
             "--specpath",
             str(output_directory),
+            *[
+                item
+                for module in settings.get("hidden_imports", [])
+                for item in ("--hidden-import", module)
+            ],
+            *(["--windowed"] if settings.get("windowed") else []),
+            *extra_binaries,
             str(ROOT / settings["entrypoint"]),
         ],
         check=True,
