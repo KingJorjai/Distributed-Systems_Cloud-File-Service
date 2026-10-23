@@ -1,0 +1,214 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  
+<!-- Mirrored from https://egela.ehu.eus/pluginfile.php/12991494/mod_resource/content/73/html/P04.html by HTTrack Website Copier/3.x [XR&CO], Tue, 20 Oct 2026 10:50:51 GMT -->
+<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=UTF-8" /><!-- /Added by HTTrack -->
+<head>
+    <meta charset="utf-8" />
+    <title>Part 4. Other problems of distributed coordination &#8212; Distributed Systems</title>
+    <link rel="stylesheet" href="_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Implementing our cloud service" href="Project.html" />
+    <link rel="prev" title="Part 3. Replicate to increase reliability" href="P03.html" /> 
+  </head><body>
+    <div class="header-wrapper" role="banner">
+      <div class="header">
+          <p class="logo"><a href="index.html">
+            <img class="logo" src="_static/Logo.jpg" alt="Logo"/>
+          </a></p>
+        <div class="headertitle"><a
+          href="index.html">Distributed Systems</a></div>
+        <div class="rel" role="navigation" aria-label="related navigation">
+          <a href="P03.html" title="Part 3. Replicate to increase reliability"
+             accesskey="P">previous</a> |
+          <a href="Project.html" title="Implementing our cloud service"
+             accesskey="N">next</a> |
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <a class="reference external image-reference" href="http://www.ehu.eus/es/web/informatika-fakultatea"><img alt="_images/Logo_Header.jpg" src="_images/Logo_Header.jpg" style="width: 720px;" /></a>
+<div class="section" id="part-4-other-problems-of-distributed-coordination">
+<h1><strong>Part 4. Other problems of distributed coordination</strong><a class="headerlink" href="#part-4-other-problems-of-distributed-coordination" title="Permalink to this headline">¶</a></h1>
+<p>In Part 3 we have developed the mechanisms that allow us to provide fault tolerance to our cloud file service. We have left other problems not strictly linked to our project, but that we should know.</p>
+<div class="section" id="activity-4-1-exclusive-access-to-our-shared-files">
+<h2>Activity 4.1. Exclusive access to our shared files<a class="headerlink" href="#activity-4-1-exclusive-access-to-our-shared-files" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="estimated-dedication-1-5-hours">
+<h3><em>Estimated dedication: 1,5 hours</em><a class="headerlink" href="#estimated-dedication-1-5-hours" title="Permalink to this headline">¶</a></h3>
+<p>Remember that Dropbox does not provide exclusive access to files, so that two users who share a document must coordinate explicitly to update it if they do not want to have the risk of obtaining divergent versions. We now propose that our cloud file service improves Dropbox by introducing exclusive access. The idea is that, when a user is going to generate a new version of a document, they are offered the possibility of blocking their access to other users (or they are temporarily denied access if others are modifying it).</p>
+</div>
+<div class="section" id="what-is-there-to-be-done">
+<h3>What is there to be done<a class="headerlink" href="#what-is-there-to-be-done" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Consider the exclusive access protocol that we must design. From the point of view of client processes, it is based on (1) access request, (2) use, and (3) release of the shared resource. Try to design in the group a simple (centralized) protocol for managing exclusive access.</p></li>
+<li><p>Starting from the proposed centralized protocol, is it possible to derive a distributed protocol? Discuss it in the group. Basically, no node acts as a server.</p></li>
+<li><p>We will define alternative protocols, which you can review in the <a class="reference external" href="Resources/Notes/Topic3.pdf">Notes of Topic 3</a> (Section 3.2).</p></li>
+<li><p>Compare the protocols proposed from the point of view of (1) fault tolerance, and (2) scalability. For this second aspect, consider the number of messages exchanged as a parameter of the complexity of the protocol.</p></li>
+<li><p>Although we will not integrate this solution into our cloud file service, discuss in the group the solution that you would apply.</p></li>
+</ol>
+</div>
+<div class="section" id="results">
+<h3>Results<a class="headerlink" href="#results" title="Permalink to this headline">¶</a></h3>
+<p>This activity is evaluated in a subsequent test.</p>
+<a class="reference external image-reference" href="P04.html"><img alt="_images/up.jpg" src="_images/up.jpg" style="width: 720px;" /></a>
+</div>
+</div>
+<div class="section" id="activity-4-2-agree-distributed-transactions">
+<h2>Activity 4.2. Agree distributed transactions<a class="headerlink" href="#activity-4-2-agree-distributed-transactions" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="estimated-dedication-1-hour">
+<h3><em>Estimated dedication: 1 hour</em><a class="headerlink" href="#estimated-dedication-1-hour" title="Permalink to this headline">¶</a></h3>
+<p>We have seen how group communication serves to solve problems of distributed agreement, as is the case of consistency in a replicated system. There are other problems of distributed agreement of great practical importance, such as the agreement of distributed transactions in the world of databases. An illustrative example is how to make a bank transfer, which involves the withdrawal of an account and the deposit in another of the same amount, when both accounts are managed by different servers.</p>
+<p>In this activity we are going to study how it is decided if a transaction that is executed between several servers has been successful, and then the system state must be consistently updated, or not, and in that case the previous state must be preserved.</p>
+</div>
+<div class="section" id="id1">
+<h3>What is there to be done<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>The teacher will propose a distributed transaction execution model and raise the problem of how to decide if a distributed transaction is <em>commited</em> or should be <em>aborted</em>. It will propose a <strong>protocol of atomic commitment</strong> that will be analyzed from the point of view of its correctness. You can consult Section 3.6 of the <a class="reference external" href="Resources/Notes/Topic3.pdf">Notes of Topic 3</a>.</p></li>
+</ol>
+</div>
+<div class="section" id="id3">
+<h3>Results<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
+<p>This activity is evaluated in a subsequent test.</p>
+<a class="reference external image-reference" href="P04.html"><img alt="_images/up.jpg" src="_images/up.jpg" style="width: 720px;" /></a>
+</div>
+</div>
+<div class="section" id="activity-4-3-the-consensus-problem">
+<h2>Activity 4.3. The Consensus problem<a class="headerlink" href="#activity-4-3-the-consensus-problem" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id4">
+<h3><em>Estimated dedication: 1,5 hours</em><a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h3>
+<p>Many of the problems we have analyzed during the course have in common the need to reach an <strong>agreement</strong> among a set of distributed processes. We now consider whether it is possible to synthesize these problems in a prototype problem. This problem would be characterized by a set of primitives and properties that must be met by the algorithms that solve it.</p>
+<p>In distributed systems this problem has been widely studied and is known as <strong>the Consensus problem</strong>. A scenario of the problem, in conditions that cannot be resolved, can be found <a class="reference external" href="Resources/P04/Consensus.html">in this parable</a>.</p>
+<p>The universality of the consensus problem allows that, if the consensus is resolved by a generic algorithm, it is enough to express any problem of distributed agreement according to the consensus primitives and apply the generic algorithm to solve the particular problem. In addition, the limits within which consensus can be resolved establish the resolution limits for the rest of the equivalent problems.</p>
+<p>In this activity we will model the problem of consensus and explore the limits of its resolution. We will also see how some known distributed agreement problems can be expressed in terms of consensus.</p>
+</div>
+<div class="section" id="id5">
+<h3>What is there to be done<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Analyze the story of Alice and Bob’s date. Try to answer the following questions: Why is it an irresolvable problem (in the deterministic sense)? Would the use of the telephone instead of email help solve the problem? Answer these questions in the group.</p></li>
+<li><p>The teacher will propose a model of the consensus problem and show the fundamental results that have been obtained in terms of resolvability, in particular the impossibility result of Fischer, Lynch and Paterson. He will also show how consensus can be approached from a practical point of view. The teacher will raise the equivalence between any of the distributed agreement problems we know and the consensus, and show how to express it in terms of the consensus problem. You can consult Section 3.7 of the <a class="reference external" href="Resources/Notes/Topic3.pdf">Notes of Topic 3</a>.</p></li>
+</ol>
+</div>
+<div class="section" id="id7">
+<h3>Results<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h3>
+<p>This activity is evaluated in a subsequent test.</p>
+<a class="reference external image-reference" href="P04.html"><img alt="_images/up.jpg" src="_images/up.jpg" style="width: 720px;" /></a>
+</div>
+</div>
+<div class="section" id="activity-4-4-money-without-a-central-bank-and-voting-without-a-notary">
+<h2>Activity 4.4. Money without a central bank and voting without a notary<a class="headerlink" href="#activity-4-4-money-without-a-central-bank-and-voting-without-a-notary" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="estimated-dedication-3-hours">
+<h3><em>Estimated dedication: 3 hours</em><a class="headerlink" href="#estimated-dedication-3-hours" title="Permalink to this headline">¶</a></h3>
+<p>You have undoubtedly heard about Bitcoin and cryptocurrencies. The fact that they exist is a proof that distributed decentralized solutions are possible in previously unthinkable areas. You may also have heard about <em>Blockchain</em>, the encrypted block chain infrastructure that supports Bitcoin. Blockchains are applying many areas beyond financial.</p>
+<p>Systems like blockchain are the answer to the growing distrust of centralized solutions. Many experts warn about the dangers of leaving our data in the hands of information giants, such as Google or Facebook, and the facts seem to prove them right. Are decentralized systems an alternative? We will check it with a particular problem that we will describe below.</p>
+<p>After working as a team for months, we will propose a vote on who has been the best member in the group. It is about each participant scoring from 1 to 5 to each of their peers. The member who accumulates the most points will be proclaimed as the best.</p>
+<p>Since this is a sensitive issue, we want to keep each participant’s votes secret. We know that one way to do this is to have an agent or service that acts as a “notary” to collect and add the votes. We can use one of the many tools offered on the Internet to conduct surveys, but is there an alternative that allows us to do it without the notary?</p>
+</div>
+<div class="section" id="id8">
+<h3>What is there to be done<a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>We usually rely on centralized solutions to manage situations that require certifying the validity of the information. These systems can issue certificates or authenticate users. An example of the latter is Kerberos. The teacher will present the Kerberos approach as an example of a centralized system to rely on. You can consult <a class="reference external" href="Resources/Notes/Topic5.pdf">this presentation</a>.</p></li>
+<li><p>Unlike centralized systems such as Kerberos, solutions such as Blockchain rely on decentralized encryption and the resolution of a distributed agreement problem. The teacher will present a brief introduction to Blockchain-based solutions and their relationship to the problem of consensus.</p></li>
+<li><p>Although we could use block chains to solve our vote without a notary, we will propose a simpler decentralized technique. The teacher will formalize the problem of <strong>Secure Multiparty Computation</strong> (SMC) and illustrate it with an example. In the same presentation you have consulted before you can find the approach and the example.</p></li>
+<li><p>It is time to apply the decentralized approach to voting in your group. First, define the specific procedure to apply to secret distributed voting, with its associated parameters. Try the approach with an example of voting among you. The mechanism for exchanging information between group members can be email or any messaging application. Prepare a brief report that includes (a) a reasoned explanation of the adaptations you have made and the parameters adopted, and (b) the description of the test example performed.</p></li>
+</ol>
+</div>
+<div class="section" id="id9">
+<h3>Results<a class="headerlink" href="#id9" title="Permalink to this headline">¶</a></h3>
+<p>The report is evaluated with a weight of 2% of the total grade.</p>
+<p>In addition, the activity is evaluated in a subsequent test.</p>
+</div>
+</div>
+<div class="section" id="activity-e4-individual-evaluation-test">
+<h2>Activity E4. Individual evaluation test<a class="headerlink" href="#activity-e4-individual-evaluation-test" title="Permalink to this headline">¶</a></h2>
+<p>Corresponds to the activities of Part 4.</p>
+<p>Weight: 8% of the total grade.</p>
+<p>Duration: 45 minutes.</p>
+<p>Date: To be determined.</p>
+<a class="reference external image-reference" href="P04.html"><img alt="_images/up.jpg" src="_images/up.jpg" style="width: 720px;" /></a>
+<a class="reference external image-reference" href="http://es.creativecommons.org/blog/licencias/"><img alt="_images/Licencia.jpg" src="_images/Licencia.jpg" style="width: 720px;" /></a>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table of Contents</h3>
+          <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="Guide.html"><strong>Course guide</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="P01.html"><strong>Part 1. Distributed systems: from the network to the cloud</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="P02.html"><strong>Part 2. Order events</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="P03.html"><strong>Part 3. Replicate to increase reliability</strong></a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><strong>Part 4. Other problems of distributed coordination</strong></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#activity-4-1-exclusive-access-to-our-shared-files">Activity 4.1. Exclusive access to our shared files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#activity-4-2-agree-distributed-transactions">Activity 4.2. Agree distributed transactions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#activity-4-3-the-consensus-problem">Activity 4.3. The Consensus problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#activity-4-4-money-without-a-central-bank-and-voting-without-a-notary">Activity 4.4. Money without a central bank and voting without a notary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#activity-e4-individual-evaluation-test">Activity E4. Individual evaluation test</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="Project.html"><strong>Implementing our cloud service</strong></a></li>
+</ul>
+
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="https://egela.ehu.eus/pluginfile.php/12991494/mod_resource/content/73/html/search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+            </form>
+          </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <div role="navigation" aria-label="related navigaton">
+            <a href="P03.html" title="Part 3. Replicate to increase reliability"
+              >previous</a> |
+            <a href="Project.html" title="Implementing our cloud service"
+              >next</a> |
+            <a href="genindex.html" title="General Index"
+              >index</a>
+          </div>
+          <div role="note" aria-label="source link">
+          </div>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer" role="contentinfo">
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.2.0.
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+
+<!-- Mirrored from https://egela.ehu.eus/pluginfile.php/12991494/mod_resource/content/73/html/P04.html by HTTrack Website Copier/3.x [XR&CO], Tue, 20 Oct 2026 10:50:51 GMT -->
+</html>

@@ -1,0 +1,219 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  
+<!-- Mirrored from https://egela.ehu.eus/pluginfile.php/12991494/mod_resource/content/73/html/P01.html by HTTrack Website Copier/3.x [XR&CO], Tue, 20 Oct 2026 10:50:50 GMT -->
+<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=UTF-8" /><!-- /Added by HTTrack -->
+<head>
+    <meta charset="utf-8" />
+    <title>Part 1. Distributed systems: from the network to the cloud &#8212; Distributed Systems</title>
+    <link rel="stylesheet" href="_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Part 2. Order events" href="P02.html" />
+    <link rel="prev" title="Course guide" href="Guide.html" /> 
+  </head><body>
+    <div class="header-wrapper" role="banner">
+      <div class="header">
+          <p class="logo"><a href="index.html">
+            <img class="logo" src="_static/Logo.jpg" alt="Logo"/>
+          </a></p>
+        <div class="headertitle"><a
+          href="index.html">Distributed Systems</a></div>
+        <div class="rel" role="navigation" aria-label="related navigation">
+          <a href="Guide.html" title="Course guide"
+             accesskey="P">previous</a> |
+          <a href="P02.html" title="Part 2. Order events"
+             accesskey="N">next</a> |
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <a class="reference external image-reference" href="http://www.ehu.eus/es/web/informatika-fakultatea"><img alt="_images/Logo_Header.jpg" src="_images/Logo_Header.jpg" style="width: 720px;" /></a>
+<div class="section" id="part-1-distributed-systems-from-the-network-to-the-cloud">
+<h1><strong>Part 1. Distributed systems: from the network to the cloud</strong><a class="headerlink" href="#part-1-distributed-systems-from-the-network-to-the-cloud" title="Permalink to this headline">¶</a></h1>
+<p>Years ago, the question <em>where do you have such a document?</em> had the answer: <em>on my PC, and just in case I keep a copy on a pendrive/CD/floppy/…</em> (the latter depends on the epoch we did the question).
+Later, computers and devices of all kinds and low cost proliferated, interconnected directly or through the Internet. One no longer only had a PC, but also a laptop and a mobile phone. And we had to take care that this document (or email, or note in the calendar), was available in its latest version wherever we needed it. Tools emerged that allowed <em>to synchronize</em> the versions of the document, but these were rather typical of computer scientists and geeks. In the subject <em>Servicios y Aplicaciones en Red</em> (<em>SAR/SZA</em>), which you would probably study last year, you studied examples that fit this scheme.</p>
+<p>Today, the ideas about information support are different. We have <em>the cloud</em> to store our documents, messages, calendars, music or photographs. The question <em>where do you have such a document?</em> is now answered quite differently, perhaps: <em>in my Dropbox storage</em> or <em>in my Google Drive storage</em>. Maybe even the question is meaningless…</p>
+<p>Clearly, Google Drive, Dropbox and other cloud services are making our lives easier, and we are probably not aware of the complexity behind the magic of the cloud. Within the scope of what we will call <em>Distributed Systems</em>, there are many concepts, technologies and models that have had to be developed so that today we can enjoy these services. As computer engineers we must be able to understand and manage them.</p>
+<p>What do we need to learn to understand how one of these services is designed and built? Will we be able to build our own file service in the cloud?</p>
+<p>The following activities are aimed at finding a positive answer to these questions.</p>
+<div class="section" id="activity-1-1-the-potential-of-distributed-systems">
+<h2>Activity 1.1. The potential of distributed systems<a class="headerlink" href="#activity-1-1-the-potential-of-distributed-systems" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="estimated-dedication-4-hours">
+<h3><em>Estimated dedication: 4 hours</em><a class="headerlink" href="#estimated-dedication-4-hours" title="Permalink to this headline">¶</a></h3>
+<p>Beyond the commercial products we use in everyday life, distributed systems are helping to solve problems that would be unapproachable with centralized systems. What are the characteristics and properties that allow them to face these problems successfully?</p>
+<p>We will analyze a real case of application of distributed systems, such as information processing in the LHC (Large Hadron Collider). This example will serve to illustrate the properties of distributed systems and their fields of application.</p>
+</div>
+<div class="section" id="what-is-there-to-be-done">
+<h3>What is there to be done<a class="headerlink" href="#what-is-there-to-be-done" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>The teacher will provide a copy of a paper written by J.M. Hernández and G. Merino: <em>Una red global de computación para el LHC</em>, Investigación y Ciencia, March 2014. Read it carefully (details about particle physics are only relevant to understand the magnitude of the problem). Write down the most important ideas.</p></li>
+<li><p>From a self-assessment test that the teacher will provide, analyze the extent to which you have understood the problem and the solution.</p></li>
+<li><p>In class we will solve the doubts. Also, the teacher will complete the spectrum of fields of application of distributed systems and outline the relevant properties of systems such as the one presented in the article. The <a class="reference external" href="Resources/Notes/Topic1.pdf">Notes of Topic 1</a> (sections 1.2 and 1.3) will serve as a guide.</p></li>
+</ol>
+</div>
+<div class="section" id="results">
+<h3>Results<a class="headerlink" href="#results" title="Permalink to this headline">¶</a></h3>
+<p>The activity is evaluated in a subsequent test.</p>
+<a class="reference external image-reference" href="P01.html"><img alt="_images/up.jpg" src="_images/up.jpg" style="width: 720px;" /></a>
+</div>
+</div>
+<div class="section" id="activity-1-2-a-network-file-system">
+<h2>Activity 1.2. A network file system<a class="headerlink" href="#activity-1-2-a-network-file-system" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id1">
+<h3><em>Estimated dedication: 4 hours</em><a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<p>The cloud is a concept that hides great complexity. It basically involves the abstraction of the distribution of hardware and software resources and the underlying network. But let’s go step by step. We are now in a position to consider the construction of a <em>network file service</em>. Obviously its properties will be much more limited than those of an ideal distributed system (a cloud file service), but we will already have a first form of resource distribution.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In the subject SAR/SZA you could study the architecture and functionality of a network file system. This is a good basis to reflect on the properties of such systems.</p>
+</div>
+</div>
+<div class="section" id="id2">
+<h3>What is there to be done<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Recover the material of the SAR/SZA subject, which will be a basis for developing the subject’s project. Start up the network file service of that subject (if you did not take it, talk to the Distributed Systems teacher to provide you with the code). Discuss <strong>in the group</strong> the characteristics of a basic network file service like this. Write down the basic ideas that summarize (a) the support it uses, primarily communications protocols, and (b) the functionality it provides.</p></li>
+<li><p>In class we will discuss some questions about the design of a distributed file system like this, its scope and its limitations. This type of service is one of the first distributed systems that were developed, back in the 1980s. The teacher will make a brief historical introduction based on the <a class="reference external" href="Resources/Notes/Topic1.pdf">Notes of Topic 1</a> (Section 1.1). He will also introduce the specific properties that a network file service should meet. The <a class="reference external" href="Resources/Notes/Topic4.pdf">Notes of Topic 4</a> will serve as the basis.</p></li>
+<li><p>Prepare a <strong>group report</strong> that reasonably collects (a) what properties of those defined for a distributed file system meets the service of the SAR/SZA subject, and (b) what properties it lacks in relation to a cloud system as defined in Activity 1.2.</p></li>
+</ol>
+</div>
+<div class="section" id="id4">
+<h3>Results<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h3>
+<p>The report is evaluated with a weight of 2% of the total grade.</p>
+<p>In addition, the activity is evaluated in a subsequent test.</p>
+</div>
+</div>
+<div class="section" id="activity-1-3-the-importance-of-rules">
+<h2>Activity 1.3. The importance of rules<a class="headerlink" href="#activity-1-3-the-importance-of-rules" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="estimated-dedication-2-hours">
+<h3><em>Estimated dedication: 2 hours</em><a class="headerlink" href="#estimated-dedication-2-hours" title="Permalink to this headline">¶</a></h3>
+<p>Applications and services like the one we are going to develop are only possible due to the general adoption of common specifications and protocols.</p>
+<p>In this activity we will explore what <strong>standards</strong>, both at the level of networks and communications as well as the operating system, languages, etc., have been imposed to make a cloud file service a reality.</p>
+</div>
+<div class="section" id="id5">
+<h3>What is there to be done<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Taking as reference products such as Dropbox or Google Drive, and your experience with network services and applications, discuss <strong>in the group</strong> what <em>standards</em> do you think have been key in the development of distributed systems. Make a list and justify the reasons.</p></li>
+<li><p>The teacher will collect the proposals to discuss them in class and introduce some concepts about standards, which you can consult in the <a class="reference external" href="Resources/Notes/Topic1.pdf">Notes of Topic 1</a> (sections 1.5, 1.6 and 1.7).</p></li>
+</ol>
+</div>
+<div class="section" id="id7">
+<h3>Results<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h3>
+<p>The activity is evaluated in a subsequent test.</p>
+<a class="reference external image-reference" href="P01.html"><img alt="_images/up.jpg" src="_images/up.jpg" style="width: 720px;" /></a>
+</div>
+</div>
+<div class="section" id="activity-1-4-our-cloud-file-service">
+<h2>Activity 1.4. Our cloud file service<a class="headerlink" href="#activity-1-4-our-cloud-file-service" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id8">
+<h3><em>Estimated dedication: 4 hours</em><a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h3>
+<p>We are already able to start with the design of a file service in the cloud. Later we will adjust the specifications. An idea of the operation of the service that we intend is offered by repositories such as Dropbox or <a class="reference external" href="http://www.ehu.eus/ehusfera/hpc/2016/01/08/ehubox-el-almacenamiento-en-la-nuve-de-la-upvehu/comment-page-1/">EHUbox</a>. These services, in addition to a web interface, use clients that capture notifications from the local file system. The latter makes access to files backed up in the cloud completely transparent. The user performs his operations (create, read, modify or delete files) on the local system, and the client is responsible for managing the copy in the cloud consistently and reliably.</p>
+<p>We will leave for later fault tolerance and consistency management (for shared files). Now we will focus on implementing some aspects of transparency property in the client.</p>
+</div>
+<div class="section" id="id9">
+<h3>What is there to be done<a class="headerlink" href="#id9" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Discuss <strong>in the group</strong> what <strong>mechanisms</strong> we should introduce in the implementation of our network file system to convert it into a cloud file system, so that it meets the properties that we have defined for distributed systems. Make a list of these mechanisms and give it to the teacher.</p></li>
+<li><p>In class we will discuss your contributions. We will now consider some of the mechanisms that we must introduce to achieve transparency in the client, and we will see what other aspects we will leave for later. In particular, the teacher will present the notifications interface of the file system in Linux, <code class="docutils literal notranslate"><span class="pre">inotify</span></code>, which we will test by downloading this <a class="reference external" href="Resources/prueba_inotify.c.html">C code to capture notifications</a>.</p></li>
+<li><p>Now you must integrate the notification service into the client of the network file service. The goal is to get a client that is capable of transparently generating messages for the file server, so that it maintains an updated copy of the client’s directory, in the same style as a Dropbox type service. Previously, in class we will discuss how to do it with minimal programming effort. Here you can find a <a class="reference external" href="Resources/P01/DescriptionA1-4.html">more detailed description</a> of what is intended.</p></li>
+</ol>
+</div>
+<div class="section" id="id10">
+<h3>Results<a class="headerlink" href="#id10" title="Permalink to this headline">¶</a></h3>
+<p>You have to show the teacher the implementation and demonstrate how it works.</p>
+<p>The result is evaluated with a weight of 3% of the total grade.</p>
+<a class="reference external image-reference" href="P01.html"><img alt="_images/up.jpg" src="_images/up.jpg" style="width: 720px;" /></a>
+</div>
+</div>
+<div class="section" id="activity-e1-individual-evaluation-test">
+<h2>Activity E1. Individual evaluation test<a class="headerlink" href="#activity-e1-individual-evaluation-test" title="Permalink to this headline">¶</a></h2>
+<p>Corresponds to the activities of Part 1.</p>
+<p>Weight: 10% of the total grade.</p>
+<p>Duration: 1 hour.</p>
+<p>Date: To be determined.</p>
+<a class="reference external image-reference" href="P01.html"><img alt="_images/up.jpg" src="_images/up.jpg" style="width: 720px;" /></a>
+<a class="reference external image-reference" href="http://es.creativecommons.org/blog/licencias/"><img alt="_images/Licencia.jpg" src="_images/Licencia.jpg" style="width: 720px;" /></a>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table of Contents</h3>
+          <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="Guide.html"><strong>Course guide</strong></a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><strong>Part 1. Distributed systems: from the network to the cloud</strong></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#activity-1-1-the-potential-of-distributed-systems">Activity 1.1. The potential of distributed systems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#activity-1-2-a-network-file-system">Activity 1.2. A network file system</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#activity-1-3-the-importance-of-rules">Activity 1.3. The importance of rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#activity-1-4-our-cloud-file-service">Activity 1.4. Our cloud file service</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#activity-e1-individual-evaluation-test">Activity E1. Individual evaluation test</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="P02.html"><strong>Part 2. Order events</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="P03.html"><strong>Part 3. Replicate to increase reliability</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="P04.html"><strong>Part 4. Other problems of distributed coordination</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="Project.html"><strong>Implementing our cloud service</strong></a></li>
+</ul>
+
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="https://egela.ehu.eus/pluginfile.php/12991494/mod_resource/content/73/html/search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+            </form>
+          </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <div role="navigation" aria-label="related navigaton">
+            <a href="Guide.html" title="Course guide"
+              >previous</a> |
+            <a href="P02.html" title="Part 2. Order events"
+              >next</a> |
+            <a href="genindex.html" title="General Index"
+              >index</a>
+          </div>
+          <div role="note" aria-label="source link">
+          </div>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer" role="contentinfo">
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.2.0.
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+
+<!-- Mirrored from https://egela.ehu.eus/pluginfile.php/12991494/mod_resource/content/73/html/P01.html by HTTrack Website Copier/3.x [XR&CO], Tue, 20 Oct 2026 10:50:51 GMT -->
+</html>

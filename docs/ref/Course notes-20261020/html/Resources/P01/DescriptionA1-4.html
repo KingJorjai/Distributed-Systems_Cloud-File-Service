@@ -1,0 +1,114 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  
+<!-- Mirrored from https://egela.ehu.eus/pluginfile.php/12991494/mod_resource/content/73/html/Resources/P01/DescriptionA1-4.html by HTTrack Website Copier/3.x [XR&CO], Tue, 20 Oct 2026 10:53:59 GMT -->
+<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=UTF-8" /><!-- /Added by HTTrack -->
+<head>
+    <meta charset="utf-8" />
+    <title>Description of the results to be achieved in Activity 1.4 &#8212; Distributed Systems</title>
+    <link rel="stylesheet" href="../../_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="header-wrapper" role="banner">
+      <div class="header">
+          <p class="logo"><a href="../../index.html">
+            <img class="logo" src="../../_static/Logo.jpg" alt="Logo"/>
+          </a></p>
+        <div class="headertitle"><a
+          href="../../index.html">Distributed Systems</a></div>
+        <div class="rel" role="navigation" aria-label="related navigation">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <a class="reference external image-reference" href="http://www.ehu.eus/es/web/informatika-fakultatea"><img alt="../../_images/Logo_Header1.jpg" src="../../_images/Logo_Header1.jpg" style="width: 720px;" /></a>
+<div class="section" id="description-of-the-results-to-be-achieved-in-activity-1-4">
+<h1>Description of the results to be achieved in Activity 1.4<a class="headerlink" href="#description-of-the-results-to-be-achieved-in-activity-1-4" title="Permalink to this headline">¶</a></h1>
+<p>In the subject SAR/SAZ they provided you with the code of a basic file service. The service client generated messages for the server according to a menu with the following options:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>List directory files</p></li>
+<li><p>Download a file</p></li>
+<li><p>Upload a file</p></li>
+<li><p>Delete a file</p></li>
+<li><p>Exit the service</p></li>
+</ol>
+</div></blockquote>
+<p>Now we intend to convert the file service into a cloud service, such as Dropbox. The idea is that the client has a local copy of the directory and a backup of it on the server. In the simplest case, which is what we intend in this activity, the directory is not shared with other clients (that is, all updates arrive from the same client), so there are no consistency problems.</p>
+<p>What we want is to hide the interaction with the server from the user. This will be completely automatic for the user, who performs his operations exclusively on his local directory. Thanks to the <code class="docutils literal notranslate"><span class="pre">inotify</span></code> native Linux notification service, the client can detect changes to a file and automatically communicate them to the server. It must be taken into account that now the query operations (list files and download a file) do not have to generate a request to the server, since the local directory has an exact copy of the client directory on the server. For this we will assume that initially the local and remote directories are empty.</p>
+<p>For the implementation, the simplest thing is to keep the notification client and the file system client as independent. Both programs can run concurrently and communicate using standard input/output. The notification client will generate the menu commands that the file service client already knows how to interpret.</p>
+<a class="reference external image-reference" href="http://es.creativecommons.org/blog/licencias/"><img alt="../../_images/Licencia1.jpg" src="../../_images/Licencia1.jpg" style="width: 720px;" /></a>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table of Contents</h3>
+          <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../Guide.html"><strong>Course guide</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../P01.html"><strong>Part 1. Distributed systems: from the network to the cloud</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../P02.html"><strong>Part 2. Order events</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../P03.html"><strong>Part 3. Replicate to increase reliability</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../P04.html"><strong>Part 4. Other problems of distributed coordination</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../Project.html"><strong>Implementing our cloud service</strong></a></li>
+</ul>
+
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="https://egela.ehu.eus/pluginfile.php/12991494/mod_resource/content/73/html/search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+            </form>
+          </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <div role="navigation" aria-label="related navigaton">
+            <a href="../../genindex.html" title="General Index"
+              >index</a>
+          </div>
+          <div role="note" aria-label="source link">
+          </div>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer" role="contentinfo">
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.2.0.
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+
+<!-- Mirrored from https://egela.ehu.eus/pluginfile.php/12991494/mod_resource/content/73/html/Resources/P01/DescriptionA1-4.html by HTTrack Website Copier/3.x [XR&CO], Tue, 20 Oct 2026 10:53:59 GMT -->
+</html>

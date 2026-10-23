@@ -1,0 +1,189 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  
+<!-- Mirrored from https://egela.ehu.eus/pluginfile.php/12991494/mod_resource/content/73/html/Project.html by HTTrack Website Copier/3.x [XR&CO], Tue, 20 Oct 2026 10:51:49 GMT -->
+<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=UTF-8" /><!-- /Added by HTTrack -->
+<head>
+    <meta charset="utf-8" />
+    <title>Implementing our cloud service &#8212; Distributed Systems</title>
+    <link rel="stylesheet" href="_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Part 4. Other problems of distributed coordination" href="P04.html" /> 
+  </head><body>
+    <div class="header-wrapper" role="banner">
+      <div class="header">
+          <p class="logo"><a href="index.html">
+            <img class="logo" src="_static/Logo.jpg" alt="Logo"/>
+          </a></p>
+        <div class="headertitle"><a
+          href="index.html">Distributed Systems</a></div>
+        <div class="rel" role="navigation" aria-label="related navigation">
+          <a href="P04.html" title="Part 4. Other problems of distributed coordination"
+             accesskey="P">previous</a> |
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <a class="reference external image-reference" href="http://www.ehu.eus/es/web/informatika-fakultatea"><img alt="_images/Logo_Header.jpg" src="_images/Logo_Header.jpg" style="width: 720px;" /></a>
+<div class="section" id="implementing-our-cloud-service">
+<h1><strong>Implementing our cloud service</strong><a class="headerlink" href="#implementing-our-cloud-service" title="Permalink to this headline">¶</a></h1>
+<p>The Project of the course consists of the final implementation of the cloud file service tolerant to failures from the ideas and concepts introduced during the course. Part of the project is developed and evaluated within some of the activities, specifically in Part 1 and Part 3, so here we are referring to the integration of the modules previously developed, to complete the functionality of the service, to the preparation of the documentation and the oral presentation of the project. For these aspects a dedication of 20 hours by each member of the group is estimated.</p>
+<p>It should be borne in mind that with the estimated dedication it is not possible to finish the implementation until obtaining a complete service in the style of those that exist commercially. What we want is a proof of concept to demonstrate that, with the necessary time, we would be able to build a complete cloud service. The evaluation of the work goes in this line: the important thing is to correctly implement a defined part making clear what has been done and what remains to be done.</p>
+<p>It is important to follow a modular and incremental structure, as described below.</p>
+<div class="section" id="incremental-development">
+<h2>Incremental development<a class="headerlink" href="#incremental-development" title="Permalink to this headline">¶</a></h2>
+<p>We can distinguish three phases in the development.</p>
+<ol class="arabic simple">
+<li><p><strong>Unreliable Client-Server</strong>. A single client sends requests transparently to a non-replicated server. This is the work proposed in Part 1.</p></li>
+<li><p><strong>Fault tolerant server</strong>. The server is replicated according to the passive replication technique. Communication support (broadcast primitives) must be implemented, and fault situations identified. In a separate module, an algorithm to detect a primary fault must be implemented, as well as a distributed algorithm of election of a new primary. These modules are designed on some of the activities in Part 3.</p></li>
+<li><p><strong>Client-Server sharing files</strong>. Several clients send requests on a shared file. The server notifies clients of the modification so that they update their local copies.</p></li>
+</ol>
+<p>Try to simplify to the maximum, since it is a proof of concept. For this, some measures are suggested:</p>
+<ul class="simple">
+<li><p>Mount the system on a single machine, associating names of clients and servers with ports.</p></li>
+<li><p>Although it is valued that the solution is as general as possible, restrict the tests to only three servers (primary and two secondary) and two clients.</p></li>
+<li><p>You can delegate some functions to do them by manual configuration (for example, to deal with some failure situation, to update the state in case of change of primary, etc).</p></li>
+</ul>
+<p>It is important that you follow the incremental design and make intelligent decisions to optimize your time. Organize group work by distributing roles and tasks, but do not disregard the work of colleagues. For example, if one develops, have another verify that code.</p>
+</div>
+<div class="section" id="presentation-of-the-results">
+<h2>Presentation of the results<a class="headerlink" href="#presentation-of-the-results" title="Permalink to this headline">¶</a></h2>
+<p>It is necessary to present a written <strong>report</strong> and the <strong>code</strong> developed. We will also dedicate a class to the <strong>oral presentation</strong> of the results. For planning reasons, the oral presentation must be done before the final version of the report is delivered. For the date of the oral presentation it will be necessary to have a <strong>draft of the report</strong>, which will be used to identify the issues to be improved for the final version.</p>
+<p>Once the memory is delivered, you will be asked for a demonstration of the operation of the service.</p>
+<div class="section" id="final-report">
+<h3>Final report<a class="headerlink" href="#final-report" title="Permalink to this headline">¶</a></h3>
+<p>The report of the project will have the following structure:</p>
+<ol class="arabic simple">
+<li><p>A description of the problem to be solved and the specific implementation objectives.</p></li>
+<li><p>A description of the approach followed, the modular architecture and the concrete solutions applied to each part.</p></li>
+<li><p>A reasoned explanation of the implementation decisions taken, with references to the code developed.</p></li>
+<li><p>A reasoned explanation of the tests performed and the results obtained.</p></li>
+<li><p>The conclusions and final considerations. In particular, it is important to describe what remains to be developed.</p></li>
+</ol>
+</div>
+<div class="section" id="oral-presentation">
+<h3>Oral presentation<a class="headerlink" href="#oral-presentation" title="Permalink to this headline">¶</a></h3>
+<p>We will dedicate a maximum of 15 minutes to the presentation of the partial results of the project for each group, with 5 additional minutes for questions. Each group member will present a part:</p>
+<ol class="arabic simple">
+<li><p>The approach, architecture and design decisions.</p></li>
+<li><p>Description of the parts implemented, what remains pending, and what is not going to be implemented.</p></li>
+<li><p>Tests performed, with the conclusions obtained, and tests pending.</p></li>
+</ol>
+</div>
+</div>
+<div class="section" id="evaluation">
+<h2>Evaluation<a class="headerlink" href="#evaluation" title="Permalink to this headline">¶</a></h2>
+<p>The project is evaluated as 20% of the total grade based on the report delivered, the code developed and the oral presentation in class. The specific evaluation criteria are as follows:</p>
+<div class="section" id="report">
+<h3>Report<a class="headerlink" href="#report" title="Permalink to this headline">¶</a></h3>
+<p>All members of the group are evaluated equally according to the following criteria:</p>
+<ul class="simple">
+<li><p><strong>Structure</strong>. It is well valued if it complies with what is specified, the different sections are linked so that they help the reader to locate himself, contain an index, some conclusions and references to the bibliography and/or resources used.</p></li>
+<li><p><strong>Content</strong>. It is well valued if it is original and does not include copied content, the ideas are well synthesized and the reasoning is consistent, uses precise terms demonstrating that the concepts have been understood, includes useful illustrations to complement the descriptions and describes the parts of the project that are not finished.</p></li>
+<li><p><strong>Legibility</strong>. It is well valued if the text is pleasant to read, grammatical structures are well constructed and does not contain misspellings.</p></li>
+<li><p><strong>Presentation</strong>. It is well valued if the format is homogeneous and the presentation is attractive to the reader.</p></li>
+</ul>
+</div>
+<div class="section" id="code">
+<h3>Code<a class="headerlink" href="#code" title="Permalink to this headline">¶</a></h3>
+<p>All members of the group are evaluated equally according to the following criteria:</p>
+<ul class="simple">
+<li><p><strong>Correction</strong>. It is well valued if it meets the established functional requirements, the tests performed are consistent with the specification and the verification collects the test results faithfully.</p></li>
+<li><p><strong>Modularity</strong>. It is well valued if it respects the proposed modularity.</p></li>
+<li><p><strong>Clarity</strong>. It is well valued if it is structured and easily followed.</p></li>
+<li><p><strong>Efficiency</strong>. It is well valued if it is not evident that it can be specified more compactly or that the solution can be programmed so that it uses fewer computing and communication resources.</p></li>
+</ul>
+</div>
+<div class="section" id="id1">
+<h3>Oral presentation<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<p>It is evaluated according to the following criteria:</p>
+<ul class="simple">
+<li><p><strong>Content</strong>. It is well valued if the main ideas are synthesized, listeners are not overwhelmed with superfluous details, precise terms are used with clear language and the questions asked are satisfactorily answered.</p></li>
+<li><p><strong>Formal aspects</strong>. It is well valued if the material used for the presentation is well structured, the presentation is well coordinated and is homogeneous among the members of the group, the speaker shows a respectful attitude towards the audience, efficiently uses the presentation resources and time is not exceeded.</p></li>
+</ul>
+<p>It is important to keep in mind that it is not intended to evaluate the particular ability to speak in public, but the attitude shown to learn to do so.</p>
+<a class="reference external image-reference" href="P04.html"><img alt="_images/up.jpg" src="_images/up.jpg" style="width: 720px;" /></a>
+<a class="reference external image-reference" href="http://es.creativecommons.org/blog/licencias/"><img alt="_images/Licencia.jpg" src="_images/Licencia.jpg" style="width: 720px;" /></a>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table of Contents</h3>
+          <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="Guide.html"><strong>Course guide</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="P01.html"><strong>Part 1. Distributed systems: from the network to the cloud</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="P02.html"><strong>Part 2. Order events</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="P03.html"><strong>Part 3. Replicate to increase reliability</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="P04.html"><strong>Part 4. Other problems of distributed coordination</strong></a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><strong>Implementing our cloud service</strong></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#incremental-development">Incremental development</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#presentation-of-the-results">Presentation of the results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#evaluation">Evaluation</a></li>
+</ul>
+</li>
+</ul>
+
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="https://egela.ehu.eus/pluginfile.php/12991494/mod_resource/content/73/html/search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+            </form>
+          </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <div role="navigation" aria-label="related navigaton">
+            <a href="P04.html" title="Part 4. Other problems of distributed coordination"
+              >previous</a> |
+            <a href="genindex.html" title="General Index"
+              >index</a>
+          </div>
+          <div role="note" aria-label="source link">
+          </div>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer" role="contentinfo">
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.2.0.
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+
+<!-- Mirrored from https://egela.ehu.eus/pluginfile.php/12991494/mod_resource/content/73/html/Project.html by HTTrack Website Copier/3.x [XR&CO], Tue, 20 Oct 2026 10:51:49 GMT -->
+</html>

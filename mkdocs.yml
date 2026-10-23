@@ -5,6 +5,10 @@ repo_url: https://github.com/KingJorjai/Distributed-Systems_Cloud-File-Service
 repo_name: KingJorjai/Distributed-Systems_Cloud-File-Service
 edit_uri: edit/main/docs/
 
+exclude_docs: |
+  ref/
+  superpowers/
+
 theme:
   name: material
   language: en

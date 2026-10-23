@@ -1,0 +1,261 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  
+<!-- Mirrored from https://egela.ehu.eus/pluginfile.php/12991494/mod_resource/content/73/html/P02.html by HTTrack Website Copier/3.x [XR&CO], Tue, 20 Oct 2026 10:50:51 GMT -->
+<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=UTF-8" /><!-- /Added by HTTrack -->
+<head>
+    <meta charset="utf-8" />
+    <title>Part 2. Order events &#8212; Distributed Systems</title>
+    <link rel="stylesheet" href="_static/agogo.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Part 3. Replicate to increase reliability" href="P03.html" />
+    <link rel="prev" title="Part 1. Distributed systems: from the network to the cloud" href="P01.html" /> 
+  </head><body>
+    <div class="header-wrapper" role="banner">
+      <div class="header">
+          <p class="logo"><a href="index.html">
+            <img class="logo" src="_static/Logo.jpg" alt="Logo"/>
+          </a></p>
+        <div class="headertitle"><a
+          href="index.html">Distributed Systems</a></div>
+        <div class="rel" role="navigation" aria-label="related navigation">
+          <a href="P01.html" title="Part 1. Distributed systems: from the network to the cloud"
+             accesskey="P">previous</a> |
+          <a href="P03.html" title="Part 3. Replicate to increase reliability"
+             accesskey="N">next</a> |
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <a class="reference external image-reference" href="http://www.ehu.eus/es/web/informatika-fakultatea"><img alt="_images/Logo_Header.jpg" src="_images/Logo_Header.jpg" style="width: 720px;" /></a>
+<div class="section" id="part-2-order-events">
+<h1><strong>Part 2. Order events</strong><a class="headerlink" href="#part-2-order-events" title="Permalink to this headline">¶</a></h1>
+<p>In the first part of the course we have started to build a file service in the cloud that we will complete throughout the course. In the preliminary version we have now we are assuming that the files are not shared. However, a good file system in the cloud should provide features such as directory sharing, access from different devices, etc., as Dropbox or EHUbox do.</p>
+<p>We will now consider that our service allows us to share files. In this case, suppose you share a document with a friend. Consider the following two situations:</p>
+<ol class="arabic simple">
+<li><p>In the first situation you agree that whoever is going to modify the document communicates it to the other (by phone, electronic mail or postal mail…, the method does not matter now) to agree on an order in the update.</p></li>
+<li><p>In the second situation, without notifying the friend, you modify the document. It turns out that your friend decides to do the same.</p></li>
+</ol>
+<p>What guarantees could we expect this service to give in each case? The order in which the changes are applied is relevant, since it is necessary to respect the <em>causality</em> in the modifications to the document. In Situation 2, these may be applied <em>concurrently</em>, that is, on the same copy, and it is expected that the service will detect this and warn of the possible problem (as Dropbox does, for example). In addition, it must be taken into account that the service, due to fault tolerance, will have several copies of the file, apart from those stored on the client devices.</p>
+<p>In the following activities we will explore the alternatives we have to satisfactorily resolve situations like these.</p>
+<div class="section" id="activity-2-1a-let-s-trust-the-clocks">
+<h2>Activity 2.1a. Let’s trust the clocks<a class="headerlink" href="#activity-2-1a-let-s-trust-the-clocks" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="estimated-dedication-8-hours">
+<h3><em>Estimated dedication: 8 hours</em><a class="headerlink" href="#estimated-dedication-8-hours" title="Permalink to this headline">¶</a></h3>
+<p>In Situation 1, the problem of concurrent access to the document is solved by exchanging explicit information between users, for example <em>first you and then me</em>, although this is not as simple as it seems.</p>
+<p>For Situation 2, we already know that services such as Dropbox use the document access and modification times to warn of possible inconsistencies. But to what extent can we trust this? We already know that clocks are imperfect, although there is currently an impressive technology related to the measurement of time. For example, you don’t have to take care of adjusting the time in your mobile phone: it’s always <em>on the second</em>. The same could be said about your PC. Have you wondered how they get it? In any case, how do we know if that <em>adjustment</em> is good enough to ensure that the applications that require that synchronization work correctly?</p>
+</div>
+<div class="section" id="what-is-there-to-be-done">
+<h3>What is there to be done<a class="headerlink" href="#what-is-there-to-be-done" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>How <em>good</em> is your watch time? And that of your mobile phone or your PC? Discuss in the group how the concept of <em>good time</em> can be measured. Time is good with respect to what? Write down the ideas.</p></li>
+<li><p>In class we will discuss the proposals and the teacher will make an introduction to the problem of time measurement. Read the <a class="reference external" href="Resources/Notes/Topic2.pdf">Notes of Topic 2</a> (Sections 2.2 and 2.2.1). If you are interested in the subject you can consult the related bibliography, where you will find concepts related to physics and astronomy that you do not have to know. More important is that you have clear concepts related to the measurement of time.</p></li>
+<li><p>If all the nodes of a network, both client computers and the server(s) of our cloud service, had access to a reliable source of time (for example GPS), they could adjust their clocks using that source. But what if it wasn’t like that? If the components of the cloud service could not access a reference time, they could at least try to keep their clocks synchronized with each other. If they do it well, this would be enough to order events. But how could they do it? Discuss in the group a possible strategy to synchronize your clocks in the absence of an external time source. To do this, suppose you communicate through a message exchange service (but you cannot assume that the service itself has a reliable clock to label messages). The objective is to select a <strong>reference time</strong> and determine the <strong>deviation</strong> of each clock at a given time with respect to the reference time (in order to adjust the clocks). Describe your strategy using a message passing protocol and try to quantify the <strong>accuracy</strong> it offers.</p></li>
+<li><p>The teacher will ask you to present the designed strategy in class. The different strategies will be discussed to try to improve them, and will be classified according to their approach. You can review this in the <a class="reference external" href="Resources/Notes/Topic2.pdf">Notes of Topic 2</a> (Section 2.2.2).</p></li>
+<li><p>As you can imagine, there are already very elaborate infrastructure and time services, which are what allow your computer to always be on time. The most widespread is the Network Time Protocol (NTP). In class we will share the NTP analysis: (A) how this infrastructure is organized, (B) how its protocols are, and (C) how it is configured in Linux. Then, each group will briefly expose the results of their analysis.</p></li>
+<li><p>Let’s go a little deeper into the <a class="reference external" href="Resources/P02/ntp_lab.pdf">NTP Symmetric Protocol</a>. The teacher will solve any doubts that have arisen to ensure that it has been well understood. In the group, simulate the operation of this protocol to synchronize your clocks. Prepare a report describing the simulated case, the synchronization values obtained (deviation and accuracy), and how you have reached them. Include a discussion about the advantages and disadvantages of NTP with respect to other synchronization protocols, specifically that of Cristian.</p></li>
+</ol>
+</div>
+<div class="section" id="results">
+<h3>Results<a class="headerlink" href="#results" title="Permalink to this headline">¶</a></h3>
+<p>The report is evaluated with a weight of 5% of the total grade.</p>
+<p>In addition, the activity is evaluated in a subsequent test.</p>
+<a class="reference external image-reference" href="P02.html"><img alt="_images/up.jpg" src="_images/up.jpg" style="width: 720px;" /></a>
+</div>
+</div>
+<div class="section" id="activity-2-1b-let-s-adjust-the-clocks">
+<h2>Activity 2.1b. Let’s adjust the clocks<a class="headerlink" href="#activity-2-1b-let-s-adjust-the-clocks" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="estimated-dedication-4-hours">
+<h3><em>Estimated dedication: 4 hours</em><a class="headerlink" href="#estimated-dedication-4-hours" title="Permalink to this headline">¶</a></h3>
+<p>Once we have calculated the deviation, it only remains to adjust the clock. This task is more delicate than it seems, as we can see in <a class="reference external" href="Resources/P02/Scenario_clock_adjust.html">this scenario</a>.</p>
+</div>
+<div class="section" id="id2">
+<h3>What is there to be done<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>In the group, discuss whether the user of the described scenario is right to complain and what lessons we should learn from it. See Section 2.2.3 of the course notes for help.</p></li>
+<li><p>In class, doubts will be resolved and we will formalize some additional concepts. We will also explore <a class="reference external" href="Resources/P02/linux-clocks.pdf">the support offered by Linux</a> to avoid this problem.</p></li>
+<li><p>We are already able to finish this activity. We only have to control the synchronization parameters of the clocks in the network with the aim of <em>keeping the deviation bounded between any pair of nodes at all times</em>. It seems clear that if the drift of a clock is big, the period between synchronizations must be shorter than if the drift was small. In the same way, a bad precision leads us to have to synchronize earlier. It’s about quantifying this. Suppose you have just synchronized the clock with a precision <em>d</em>. Assume that the clock has a maximum drift of <img class="math" src="_images/math/652b9d8b65c10aed0fdcdbde47396c879ed5bd33.png" alt="\delta"/>. If you intend to bound the deviation of your clock <img class="math" src="_images/math/ee4eb92a075bf4bbdf10156413f51aa0d2be1d5d.png" alt="\theta (t)"/> &lt; <img class="math" src="_images/math/0ca257f28785d0cffe56c42f026168041226fc32.png" alt="\Theta"/> for all <em>t</em>, what is the period in which the clock has to be synchronized again? Discuss it in the group and infer an expression for this calculation. Prepare a brief report explaining how you have deduced the expression and introducing a numerical example: you can use the data obtained in the previous activity.</p></li>
+</ol>
+<blockquote>
+<div><div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Since you will not have been able to deduce a value for the drift from the results of the previous experiment, use for example <img class="math" src="_images/math/652b9d8b65c10aed0fdcdbde47396c879ed5bd33.png" alt="\delta"/> = 10<sup>–5</sup>.</p>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="id3">
+<h3>Results<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
+<p>The report is evaluated with a weight of 2% of the total grade.</p>
+<p>In addition, the activity is evaluated in a subsequent test.</p>
+<a class="reference external image-reference" href="P02.html"><img alt="_images/up.jpg" src="_images/up.jpg" style="width: 720px;" /></a>
+</div>
+</div>
+<div class="section" id="activity-2-2-and-now-without-clocks">
+<h2>Activity 2.2. And now, without clocks<a class="headerlink" href="#activity-2-2-and-now-without-clocks" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id4">
+<h3><em>Estimated dedication: 4 hours</em><a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h3>
+<p>We can use the physical time provided by the conveniently synchronized clocks of the nodes of a distributed system to establish relations of <strong>causality</strong>.
+Indeed, an event <em>a</em> tagged with a time <em>t</em> can only be the cause of an event <em>b</em> tagged with a time <em>t’</em> if <em>t&lt;t’</em>, …provided that the clocks that set the timestamps are <em>perfectly</em> synchronized.
+However, despite the extraordinary current technological support and the use of ingenious synchronization algorithms, we always have to consider an error inherent in the measurement of time, which would compromise the establishment of causality relationships. In addition, sometimes the infrastructure needed for synchronization is simply not available.</p>
+<p>On the other hand, the important thing to determine causality is not the time in which events occur, but the relative order between them. Instead of defining the order with physical timestamps, we may be able to use a message-based strategy to order system events and capture their causality.
+Again, as with the physical clock synchronization protocols, the delay in communications can distort the perception of the order in which events occur. This also happens in the physical world, as you can see if you read the story told in this <a class="reference external" href="Resources/P02/Causality_metaphor.html">causality metaphor</a>.</p>
+<p>In the physical world there are known laws that we can take into account to recompose the causality (such as the speed of light or sound). But what about the events that are transmitted through a network (or the Internet)? For example, how can we establish that one message has been generated in response to another? What laws do we apply to correctly place events over time and thus correctly establish cause and effect relationships?</p>
+</div>
+<div class="section" id="id5">
+<h3>What is there to be done<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Do we have any way to reconstruct the order of the messages and the causality if we do without physical clocks? Using email as an example, discuss in the group what type of information a protocol should handle to determine the causality of some messages with respect to others.</p></li>
+<li><p>The teacher will collect the ideas and propose a <strong>model of events</strong> and the properties of causality. He will propose a protocol, proposed by Leslie Lamport, which we will test with an example. See the <a class="reference external" href="Resources/Notes/Topic2.pdf">Notes of Topic 2</a> (sections 2.3.1 and 2.3.2).</p></li>
+<li><p>In the group, analyze the protocol. Can it distinguish <em>in all cases</em> causality relationships from others that are not? Use an example developed by yourself to answer this question.</p></li>
+<li><p>We have verified that the Lamport protocol, which is simple and efficient, is not very accurate. Discuss in the group what additional information the protocol should include to cover its deficiencies.</p></li>
+<li><p>We will collect the ideas to develop a new protocol, more precise than that of Lamport. See the <a class="reference external" href="Resources/Notes/Topic2.pdf">Notes of Topic 2</a> (Section 2.3.3). To check if the new protocol resolves situations in which the basic protocol was ambiguous, we will define a partial order relationship between the vector clocks.</p></li>
+<li><p>Write a brief report that demonstrates, on the example you had chosen, why the new protocol is capable of resolving situations that the basic Lamport protocol did not solve.</p></li>
+</ol>
+</div>
+<div class="section" id="id8">
+<h3>Results<a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h3>
+<p>The report is evaluated with a weight of 2% of the total grade.</p>
+<p>In addition, the activity is evaluated in a subsequent test.</p>
+<a class="reference external image-reference" href="P02.html"><img alt="_images/up.jpg" src="_images/up.jpg" style="width: 720px;" /></a>
+</div>
+</div>
+<div class="section" id="activity-2-3a-manage-global-states-and-detect-defalcations">
+<h2>Activity 2.3a. Manage global states and detect defalcations<a class="headerlink" href="#activity-2-3a-manage-global-states-and-detect-defalcations" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="estimated-dedication-2-hours">
+<h3><em>Estimated dedication: 2 hours</em><a class="headerlink" href="#estimated-dedication-2-hours" title="Permalink to this headline">¶</a></h3>
+<p>A fundamental difference between a system where files are managed in a network, for example via FTP, and a file system in the cloud, such as Dropbox, is that in the first one the state of the system is only determined when we know the state of each one of the nodes of the network, while the second has a unique <strong>global state</strong>. Thus, for a given file, in an FTP system we need to control how many copies there are of that file, where they are and what attributes they have (for example, modification time), while in Dropbox (and in our future cloud file service ), thanks to its distributed system properties, the file has a single state, as if the system were centralized. Of course, the distributed system must provide the necessary mechanisms to make the single system vision possible, for example based on physical or logical clocks, as we have seen. Ordering events based on their causal relationships is only the first step.</p>
+<p>For example, in a cloud file system, where services are distributed and virtualized on different machines, it is often necessary to stop the set of nodes that support the service to migrate servers to other machines and restart the service to continue from the previous state. Now, can we stop the nodes at any time? What happens, for example, with the messages that are being transmitted? To understand the problem, we will use the following <a class="reference external" href="Resources/P02/Metaphor_global_state.html">metaphor</a> that will be familiar to you.</p>
+<p>The problem of stopping in a distributed system is analogous to the counting of intelligent civilizations in the galaxy: we cannot freeze the state of the nodes simultaneously, and the only way we have to communicate with them is by exchanging messages. That is, we try to offer a unique global state vision, but we cannot rely on a global vision of the system for it.</p>
+<p>Determining the global state of the system based on partial states obtained at different times is like recomposing the “state” of a football match from a sequence of photos that we have been taking on the field: the ball could appear in more than one photo, or none. But, if we don’t have the possibility to take a unique aerial photo of the field, we will have to develop a method. The good news is that the method will help us to solve a set of interesting problems, beyond the problem of stopping: we can detect deadlocks in the system or even <a class="reference external" href="Resources/P02/Defalcation.html">bank account defalcations</a>.</p>
+</div>
+<div class="section" id="id9">
+<h3>What is there to be done<a class="headerlink" href="#id9" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>From the information we have about the movements between bank accounts, represent these movements in the group by means of a chronogram, according to the process model and message passing events that we already know. Show the result to the teacher for review.</p></li>
+<li><p>The teacher will extend the model of events already known and formalize the concepts of <strong>consistent cut</strong> and <strong>inconsistent cut</strong>, included in the <a class="reference external" href="Resources/Notes/Topic2.pdf">Notes of Topic 2</a> (Section 2.4.1). Identify examples of both types of cuts in your chronogram.</p></li>
+<li><p>In class we will discuss a formal method, based on vector clocks, to automatically verify the consistency of the cuts (Section 2.4.2 of the Notes). Now you are in a position to explain why the statement of accounts presented is inconsistent and how the construction company and politicians may have taken advantage of it.</p></li>
+</ol>
+</div>
+<div class="section" id="id11">
+<h3>Results<a class="headerlink" href="#id11" title="Permalink to this headline">¶</a></h3>
+<p>The activity is evaluated in a subsequent test.</p>
+<a class="reference external image-reference" href="P02.html"><img alt="_images/up.jpg" src="_images/up.jpg" style="width: 720px;" /></a>
+</div>
+</div>
+<div class="section" id="activity-2-3b-build-global-states-and-avoid-defalcations">
+<h2>Activity 2.3b. Build global states and avoid defalcations<a class="headerlink" href="#activity-2-3b-build-global-states-and-avoid-defalcations" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id12">
+<h3><em>Estimated dedication: 4 hours</em><a class="headerlink" href="#id12" title="Permalink to this headline">¶</a></h3>
+<p>Dazzled by our sagacity to detect defalcations, the Anti-Corruption Agency has asked us to develop a method to automate the generation of consistent account statements, with the aim of avoiding ambiguities in reports such as the case of defalcation we have detected.</p>
+<p>We already know how to verify the consistency of a cut from the values ​​associated with the vector clocks of the cut events. However, what they ask us is somewhat more complicated: a way to avoid the generation of inconsistent bank reports. This would allow not only to avoid defalcations, but would also provide us with a tool to, for example, ensure that the stopping of a distributed system is always done in a consistent manner. Fortunately, Mani Chandy and Leslie Lamport devised a protocol that, under certain conditions, solves the problem of generating consistent global states.</p>
+<p>In this activity we will explore the Chandy-Lamport protocol, we will try to understand why it requires conditions and if these are acceptable in practice.</p>
+</div>
+<div class="section" id="id13">
+<h3>What is there to be done<a class="headerlink" href="#id13" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>The teacher will present the Chandy-Lamport protocol and we will discuss the conditions required by analyzing its operation on an example. Use as support Section 2.4.3 of the <a class="reference external" href="Resources/Notes/Topic2.pdf">Notes of Topic 2</a>.</p></li>
+<li><p>On the example of defalcation, represent in the group at least one case of the execution of the Chandy-Lamport protocol. You must learn to deduce that a correct execution of the protocol always obtains a consistent cut. Prepare a report that (a) includes the execution of the protocol and describes the global state achieved, demonstrating that it is consistent, and (b) explain, based on the inconsistent cut of the defalcation example and based on the conditions imposed by the Chandy-Lamport protocol, why this protocol could never produce such a cut.</p></li>
+</ol>
+</div>
+<div class="section" id="id15">
+<h3>Results<a class="headerlink" href="#id15" title="Permalink to this headline">¶</a></h3>
+<p>The report is evaluated with a weight of 4% of the total grade.</p>
+<p>In addition, the activity is evaluated in a subsequent test.</p>
+<a class="reference external image-reference" href="P02.html"><img alt="_images/up.jpg" src="_images/up.jpg" style="width: 720px;" /></a>
+</div>
+</div>
+<div class="section" id="activity-e2-individual-evaluation-test">
+<h2>Activity E2. Individual evaluation test<a class="headerlink" href="#activity-e2-individual-evaluation-test" title="Permalink to this headline">¶</a></h2>
+<p>Corresponds to the activities of Part 2.</p>
+<p>Weight: 12% of the total grade.</p>
+<p>Duration: 1 hour.</p>
+<p>Date: To be determined.</p>
+<a class="reference external image-reference" href="P02.html"><img alt="_images/up.jpg" src="_images/up.jpg" style="width: 720px;" /></a>
+<a class="reference external image-reference" href="http://es.creativecommons.org/blog/licencias/"><img alt="_images/Licencia.jpg" src="_images/Licencia.jpg" style="width: 720px;" /></a>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+          <h3>Table of Contents</h3>
+          <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="Guide.html"><strong>Course guide</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="P01.html"><strong>Part 1. Distributed systems: from the network to the cloud</strong></a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><strong>Part 2. Order events</strong></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#activity-2-1a-let-s-trust-the-clocks">Activity 2.1a. Let’s trust the clocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#activity-2-1b-let-s-adjust-the-clocks">Activity 2.1b. Let’s adjust the clocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#activity-2-2-and-now-without-clocks">Activity 2.2. And now, without clocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#activity-2-3a-manage-global-states-and-detect-defalcations">Activity 2.3a. Manage global states and detect defalcations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#activity-2-3b-build-global-states-and-avoid-defalcations">Activity 2.3b. Build global states and avoid defalcations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#activity-e2-individual-evaluation-test">Activity E2. Individual evaluation test</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="P03.html"><strong>Part 3. Replicate to increase reliability</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="P04.html"><strong>Part 4. Other problems of distributed coordination</strong></a></li>
+<li class="toctree-l1"><a class="reference internal" href="Project.html"><strong>Implementing our cloud service</strong></a></li>
+</ul>
+
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="https://egela.ehu.eus/pluginfile.php/12991494/mod_resource/content/73/html/search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+            </form>
+          </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <div role="navigation" aria-label="related navigaton">
+            <a href="P01.html" title="Part 1. Distributed systems: from the network to the cloud"
+              >previous</a> |
+            <a href="P03.html" title="Part 3. Replicate to increase reliability"
+              >next</a> |
+            <a href="genindex.html" title="General Index"
+              >index</a>
+          </div>
+          <div role="note" aria-label="source link">
+          </div>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer" role="contentinfo">
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.2.0.
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+
+<!-- Mirrored from https://egela.ehu.eus/pluginfile.php/12991494/mod_resource/content/73/html/P02.html by HTTrack Website Copier/3.x [XR&CO], Tue, 20 Oct 2026 10:50:51 GMT -->
+</html>
