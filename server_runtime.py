@@ -5,6 +5,7 @@ import shutil
 import socket
 import ssl
 import threading
+from pathlib import Path
 from urllib.parse import parse_qs
 
 import szasar
@@ -12,6 +13,7 @@ from auth import validate_password, validate_username
 from file_store import (
     AccessDeniedError,
     ConflictError,
+    FileStore,
     InvalidPasswordError,
     InvalidPathError,
     NotFoundError,
@@ -19,7 +21,17 @@ from file_store import (
     UserExistsError,
     UserNotFoundError,
 )
+from replication import (
+    NoQuorumError,
+    ReplicationLog,
+    ReplicationServer,
+    Replicator,
+)
 from tls import server_context
+
+
+class NotPrimaryError(Exception):
+    """Raised when a mutation is sent to a secondary."""
 
 
 class State:
@@ -148,6 +160,9 @@ def session(sock, runtime):
             if state != State.Identification:
                 sendER(sock)
                 continue
+            if runtime.config.role != "primary":
+                sendER(sock, 13)
+                continue
             if not config.registration_enabled:
                 sendER(sock, 15)
                 continue
@@ -160,9 +175,14 @@ def session(sock, runtime):
                 sendER(sock, 16)
                 continue
             try:
-                store.create_user(username, password)
+                operation = store.plan_user_create(username, password)
+                runtime.commit_operation({"operations": [operation]})
             except UserExistsError:
                 sendER(sock, 18)
+            except NoQuorumError:
+                sendER(sock, 12)
+            except NotPrimaryError:
+                sendER(sock, 13)
             except Exception:
                 sendER(sock, 16)
             else:
@@ -244,6 +264,9 @@ def session(sock, runtime):
             if state != State.Main:
                 sendER(sock)
                 continue
+            if runtime.config.role != "primary":
+                sendER(sock, 13)
+                continue
             if user == "anonimous":
                 sendER(sock, 7)
                 continue
@@ -258,9 +281,14 @@ def session(sock, runtime):
                 continue
             try:
                 store.authenticate(user, old_password)
-                store.set_password(user, new_password)
+                operation = store.plan_user_password(user, new_password)
+                runtime.commit_operation({"operations": [operation]})
             except (UserNotFoundError, UserDisabledError):
                 sendER(sock, 17)
+            except NoQuorumError:
+                sendER(sock, 12)
+            except NotPrimaryError:
+                sendER(sock, 13)
             except Exception:
                 sendER(sock, 3)
             else:
@@ -269,6 +297,9 @@ def session(sock, runtime):
         elif message.startswith(szasar.Command.Upload):
             if state != State.Main:
                 sendER(sock)
+                continue
+            if runtime.config.role != "primary":
+                sendER(sock, 13)
                 continue
             if user == "anonimous":
                 sendER(sock, 7)
@@ -305,21 +336,29 @@ def session(sock, runtime):
                 sendER(sock)
                 continue
             state = State.Main
+            if runtime.config.role != "primary":
+                sendER(sock, 13)
+                continue
             try:
                 data = reader.read_exact(filesize)
                 if expected_digest is not None:
                     actual = hashlib.sha256(data).hexdigest()
                     if actual != expected_digest:
                         raise ValueError("Hash mismatch.")
-                record, conflict = store.put_with_conflict(
+                operations, record, conflict = store.plan_put_with_conflict(
                     owner,
                     filename,
                     data,
                     expected_rev=revision,
                     client_id=client_id,
                 )
+                runtime.commit_operation({"operations": operations})
             except ConflictError:
                 sendER(sock, 20)
+            except NoQuorumError:
+                sendER(sock, 12)
+            except NotPrimaryError:
+                sendER(sock, 13)
             except (OSError, EOFError, ValueError, AccessDeniedError):
                 sendER(sock, 10)
             else:
@@ -355,15 +394,23 @@ def session(sock, runtime):
             if state != State.Main:
                 sendER(sock)
                 continue
+            if runtime.config.role != "primary":
+                sendER(sock, 13)
+                continue
             if user == "anonimous":
                 sendER(sock, 7)
                 continue
             try:
                 owner, filename = _split_target(user, message[4:])
                 store.access_for(user, owner, filename, write=True)
-                store.mkdir(owner, filename)
+                operations = store.plan_mkdir(owner, filename)
+                runtime.commit_operation({"operations": operations})
             except (InvalidPathError, AccessDeniedError, OSError):
                 sendER(sock, 11)
+            except NoQuorumError:
+                sendER(sock, 12)
+            except NotPrimaryError:
+                sendER(sock, 13)
             else:
                 sendOK(sock)
 
@@ -371,21 +418,32 @@ def session(sock, runtime):
             if state != State.Main:
                 sendER(sock)
                 continue
+            if runtime.config.role != "primary":
+                sendER(sock, 13)
+                continue
             if user == "anonimous":
                 sendER(sock, 7)
                 continue
             try:
                 owner, filename = _split_target(user, message[4:])
                 store.access_for(user, owner, filename, write=True)
-                store.rmdir(owner, filename)
+                operations = store.plan_rmdir(owner, filename)
+                runtime.commit_operation({"operations": operations})
             except (InvalidPathError, AccessDeniedError, OSError):
                 sendER(sock, 11)
+            except NoQuorumError:
+                sendER(sock, 12)
+            except NotPrimaryError:
+                sendER(sock, 13)
             else:
                 sendOK(sock)
 
         elif message.startswith(szasar.Command.Delete):
             if state != State.Main:
                 sendER(sock)
+                continue
+            if runtime.config.role != "primary":
+                sendER(sock, 13)
                 continue
             if user == "anonimous":
                 sendER(sock, 7)
@@ -394,14 +452,19 @@ def session(sock, runtime):
                 encoded_target, revision, client_id = _parse_delete(message[4:])
                 owner, filename = _split_target(user, encoded_target)
                 store.access_for(user, owner, filename, write=True)
-                record, conflict = store.delete_with_conflict(
+                operations, record, conflict = store.plan_delete_with_conflict(
                     owner,
                     filename,
                     expected_rev=revision,
                     client_id=client_id,
                 )
+                runtime.commit_operation({"operations": operations})
             except (InvalidPathError, AccessDeniedError, OSError, ValueError):
                 sendER(sock, 11)
+            except NoQuorumError:
+                sendER(sock, 12)
+            except NotPrimaryError:
+                sendER(sock, 13)
             else:
                 response = str(record.rev)
                 if conflict is not None:
@@ -420,18 +483,32 @@ def session(sock, runtime):
 class ServerRuntime:
     """Accept TLS connections and serve one session thread per client."""
 
-    def __init__(self, config, store):
+    def __init__(self, config, store, log=None):
         self.config = config
         self.store = store
+        self.log = log or ReplicationLog(
+            Path(config.files_path) / ".replication.sqlite3",
+            term=config.term,
+        )
+        self.replicator = None
+        self.replication_server = None
+        self._replication_thread = None
         self._socket = None
         self._stop = threading.Event()
         self.port = None
 
     def start(self):
-        """Bind the listening socket and load the TLS certificate."""
+        """Bind the listening socket and start the configured cluster role."""
         self._tls = server_context(
             self.config.tls_cert_file, self.config.tls_key_file
         )
+        if self.config.role == "primary":
+            self.replicator = Replicator(self.config, self.log)
+        else:
+            self.replication_server = ReplicationServer(
+                self.config, self.store, self.log
+            )
+            self.replication_server.start()
         listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         listener.bind((self.config.host, self.config.port))
@@ -442,6 +519,11 @@ class ServerRuntime:
 
     def serve_forever(self):
         """Accept connections until :meth:`stop` is called."""
+        if self.replication_server is not None:
+            self._replication_thread = threading.Thread(
+                target=self.replication_server.serve_forever, daemon=True
+            )
+            self._replication_thread.start()
         while not self._stop.is_set():
             try:
                 connection, _ = self._socket.accept()
@@ -459,12 +541,48 @@ class ServerRuntime:
             )
             thread.start()
 
+    def commit_operation(self, operation):
+        """Commit a deterministic operation through replication and local apply."""
+        if self.config.role != "primary":
+            raise NotPrimaryError("This server is not the primary.")
+        if self.replicator is not None:
+            self.replicator.replicate(operation)
+        self.store.apply_operation(operation)
+
+    def require_primary(self):
+        if self.config.role != "primary":
+            raise NotPrimaryError("This server is not the primary.")
+
     def stop(self):
         """Stop accepting new connections."""
         self._stop.set()
+        if self.replication_server is not None:
+            self.replication_server.stop()
         if self._socket is not None:
             try:
                 self._socket.close()
             except OSError:
                 pass
             self._socket = None
+        if self.log is not None:
+            self.log.close()
+
+
+def create_server(config, passwords=None):
+    """Build a runtime from an AppConfig or a ServerConfig."""
+    server_config = getattr(config, "server", config)
+    configured_passwords = passwords or getattr(config, "passwords", {})
+    store = FileStore(server_config.files_path)
+    if configured_passwords:
+        store.ensure_bootstrap_user(
+            "sar", configured_passwords.get("sar", ""), "admin"
+        )
+        store.ensure_bootstrap_user(
+            "sza", configured_passwords.get("sza", ""), "admin"
+        )
+    store.backfill()
+    log = ReplicationLog(
+        Path(server_config.files_path) / ".replication.sqlite3",
+        term=server_config.term,
+    )
+    return ServerRuntime(server_config, store, log)
