@@ -40,7 +40,7 @@ class ClusterNodeTests(unittest.TestCase):
         self.addCleanup(node.stop)
 
         self.assertEqual(node.role, Role.Leader)
-        self.assertEqual(node.client_endpoint(), ("127.0.0.1", 50012))
+        self.assertEqual(node.client_endpoint(), ("host1", 50012))
 
     def test_vote_is_persisted(self):
         node = self.make_node(role="secondary")

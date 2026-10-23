@@ -489,6 +489,9 @@ class ReplicationServer:
     def _handle_commit(self, connection, message):
         term = int(message["term"])
         index = int(message["index"])
+        if term < self.log.term():
+            self._send(connection, {"type": "ERROR", "message": "stale term"})
+            return
         if self.cluster is not None:
             self.cluster.observe_leader(term, message.get("leader"))
         last_applied = int(self.log.get_meta("last_applied", "0"))
@@ -514,6 +517,9 @@ class ReplicationServer:
     def _handle_abort(self, connection, message):
         term = int(message["term"])
         index = int(message["index"])
+        if term < self.log.term():
+            self._send(connection, {"type": "ERROR", "message": "stale term"})
+            return
         self.log.truncate_from(term, index)
         self._send(
             connection,
@@ -523,6 +529,9 @@ class ReplicationServer:
     def _handle_snap(self, connection, message):
         term = int(message["term"])
         index = int(message["index"])
+        if term < self.log.term():
+            self._send(connection, {"type": "ERROR", "message": "stale term"})
+            return
         if self.cluster is not None:
             self.cluster.observe_leader(term, message.get("leader"))
         self.store.import_snapshot(message["snapshot"])

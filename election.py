@@ -55,6 +55,11 @@ class ClusterNode:
         with self._lock:
             self.local_endpoint = (host, int(port))
 
+    def advertised_endpoint(self):
+        return self.client_addresses.get(
+            self.config.server_id, self.local_endpoint
+        )
+
     def client_endpoint(self):
         """Return the current primary's client endpoint, if known."""
         with self._lock:
@@ -65,7 +70,7 @@ class ClusterNode:
         if target is None:
             return None
         if target == self.config.server_id:
-            return self.local_endpoint
+            return self.advertised_endpoint()
         return self.client_addresses.get(target)
 
     def start(self):
@@ -129,7 +134,7 @@ class ClusterNode:
             self.last_heartbeat = time.monotonic()
 
     def _announce(self):
-        host, port = self.local_endpoint
+        host, port = self.advertised_endpoint()
         message = {
             "type": "COORD",
             "term": self.log.term(),
@@ -164,7 +169,7 @@ class ClusterNode:
 
     def _heartbeat_round(self):
         term = self.log.term()
-        host, port = self.local_endpoint
+        host, port = self.advertised_endpoint()
         message = {
             "type": "HB",
             "term": term,
