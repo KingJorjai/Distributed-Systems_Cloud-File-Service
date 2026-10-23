@@ -1,8 +1,13 @@
 # Configuration
 
-The application loads its settings from `config.toml`. Copy
-`config.toml.example` to `config.toml` for local changes; the file is ignored by
-Git.
+The desktop client and CLI load settings from the standard per-user
+configuration directory:
+
+- Windows: `%APPDATA%\CloudFileService\config.toml`
+- Linux: `$XDG_CONFIG_HOME/cloudfs/config.toml` or `~/.config/cloudfs/config.toml`
+
+`CONFIG_FILE` overrides the path. A local `config.toml` can still be used for
+development. The GUI writes the standard file.
 
 Configuration precedence is:
 

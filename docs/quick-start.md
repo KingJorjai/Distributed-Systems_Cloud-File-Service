@@ -7,7 +7,16 @@
 - A local TCP port available for the server.
 - A TLS certificate and key.
 
-## Install
+## Desktop client
+
+Download the client GUI bundle for your OS, extract it, and run
+`cloud-file-client-gui` (or `cloud-file-client-gui.exe`). The first-run wizard
+asks for the server, optional CA, local folder, and registration/login. The GUI
+starts the background daemon and can be closed to the system tray.
+
+See [Desktop Client](gui.md) for autostart, tray behavior, and CLI control.
+
+## Install from source
 
 From the repository root:
 
@@ -66,8 +75,7 @@ The default local folder is `client_files`.
 
 ## Register an account
 
-The CLI currently authenticates existing accounts. Use the GUI (M6) or the
-protocol to register:
+Use the desktop client to register interactively, or the protocol:
 
 ```text
 REGIalice?password123

@@ -6,14 +6,17 @@ One-way file synchronization: a `watchdog` client watches a local folder and pus
 
 Entrypoints:
 - `serv_fich_multithread.py` — server entrypoint; delegates to `ServerRuntime`.
-- `cli_fich.py` — client CLI; authenticates interactively, then starts `SyncWorker`.
+- `cli_fich.py` — CLI frontend; controls the background daemon over local IPC.
+- `gui_fich.py`/`gui_app.py` — Tkinter desktop frontend and tray.
+- `daemon_service.py`/`client_daemon.py` — background daemon owning `ClientSession` and `SyncWorker`.
+- `ipc.py` — authenticated Unix socket/named-pipe IPC.
 - `server_runtime.py` — TLS listener, session threads, protocol state machine, replication wiring.
 - `replication.py` — peer parsing, durable log, mTLS replication server/client, quorum coordinator.
 - `election.py` — heartbeats, persistent terms, election, fencing, and leader client endpoints.
 - `notification_hub.py` — per-user subscriptions and `UPDT` delivery on the primary.
 - `remote_watcher.py` — client notification connection that feeds remote updates into `SyncWorker`.
 - `file_store.py` — SQLite metadata, users/shares/settings, filesystem storage, ACLs.
-- `client_session.py` — TLS client protocol session used by CLI and future GUI.
+- `client_session.py` — TLS client protocol session used by the daemon and CLI/GUI frontends.
 - `client_state.py` — client metadata and durable outbox.
 - `sync_client.py` — watcher, debounce/coalescing queue, upload/delete worker.
 - `szasar.py` — protocol constants, `SocketReader`, path encoding, `recvline`/`recvall`.
@@ -53,6 +56,8 @@ Precedence: CLI args > environment > `config.toml` > defaults. `CONFIG_FILE` sel
 - `APP_PASSWORD_SAR` / `APP_PASSWORD_SZA` bootstrap admin accounts; an empty value disables that account. `anonimous` is passwordless and read-only.
 - Registered users and shares live in `files/.cloudfs.sqlite3`; registration is controlled by `ALLOW_REGISTRATION`.
 - `load_config()` is called from `main()`; importing the server no longer loads configuration or binds a port.
+- Client configuration defaults to the standard per-user config directory (`%APPDATA%\CloudFileService` on Windows, `$XDG_CONFIG_HOME/cloudfs` on Linux); `CONFIG_FILE` overrides it.
+- The GUI/CLI daemon uses local IPC with an authkey file mode `0600`; passwords are memory-only.
 
 ## Protocol constraints
 

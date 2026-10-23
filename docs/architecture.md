@@ -17,6 +17,19 @@ flowchart LR
     A[Authenticated client] -->|TLS login connection| S
 ```
 
+## Desktop client process
+
+The desktop GUI is a Tkinter frontend. It starts a per-user background daemon
+that owns `SyncWorker`, `RemoteWatcher`, and the management `ClientSession`.
+GUI and CLI communicate with the daemon over a local Unix socket or Windows
+named pipe using `multiprocessing.connection`; an authkey file with mode `0600`
+protects the channel. Closing the GUI hides it to the tray, while the tray
+**Quit** action stops both the GUI and the daemon.
+
+The daemon keeps credentials only in memory. Settings live in the standard
+per-user configuration directory. A single-instance lock prevents two daemons or
+two GUIs from running against the same state.
+
 ## Client
 
 `SyncWorker` watches the configured local folder recursively. `ChangeHandler`

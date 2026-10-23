@@ -70,6 +70,7 @@ nav:
       - Quick Start: quick-start.md
       - Configuration: configuration.md
       - Security: security.md
+      - Desktop GUI: gui.md
       - Docker: docker.md
   - Concepts:
       - Architecture: architecture.md

@@ -20,6 +20,11 @@ The current synchronization design intentionally keeps the scope small.
   groups, inherited per-file ACLs, or share expiration.
 - Notifications require an active client connection. A closed client discovers
   changes on its next startup reconciliation; there is no offline push.
+- The GUI requires Tkinter and a desktop session. The tray depends on the
+  platform's status-notifier support; if it is unavailable, the window is
+  minimized instead.
+- The daemon keeps passwords in memory only. After a daemon restart, the user
+  must log in again.
 - A local edit to an `ro` share is preserved as a local conflict copy while the
   remote version is restored.
 - Secondary reads may lag behind the primary.

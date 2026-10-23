@@ -468,8 +468,8 @@ Orden de recorte si hiciera falta: web admin completa → extras de GUI →
 reincorporación automática → copias de conflicto. No se recortan TLS, wizard,
 outbox, demo de failover ni memoria.
 
-M0–M4 están implementados y fusionados. M5 (shares entre usuarios, ACL
-`ro`/`rw`, `SHAR`/`UNSH`/`SHRS`, `SUBS`/`UPDT` y reconciliación de ficheros
-compartidos) está implementado en la rama `feat/m5-shares`; el plan detallado
-está en `2026-10-23-m5-shares.md`. El siguiente paso es el plan detallado de M6
-(GUI de cliente, registro y ajustes).
+M0–M5 están implementados y fusionados. M6 (daemon, IPC local, CLI de control,
+GUI Tkinter, bandeja y autostart) está implementado en la rama `feat/m6-gui`;
+el plan detallado está en `2026-10-23-m6-gui-daemon.md`. El siguiente paso es el
+plan detallado de M7 (web admin HTTPS) y M8 (memoria, presentación, demo y
+release).

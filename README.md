@@ -4,7 +4,7 @@
 [![Ruff](https://img.shields.io/badge/code%20style-Ruff-D7FF64?logo=ruff&logoColor=111111)](https://docs.astral.sh/ruff/)
 [![watchdog](https://img.shields.io/pypi/v/watchdog?logo=pypi&logoColor=white)](https://pypi.org/project/watchdog/)
 
-Automatic one-way file synchronization from a local client folder to a multithreaded server.
+Automatic file synchronization from a local folder to a TLS server, with a desktop client, CLI, and replicated fault-tolerant backend.
 
 Watch the repository locally with `watchdog`, then send file changes to the server over TCP.
 
@@ -14,9 +14,10 @@ Docker deployment is documented in the [Docker guide](https://kingjorjai.github.
 
 Docker images are published to [GitHub Container Registry](https://github.com/KingJorjai?tab=packages) from `main`.
 
-Tagged releases publish separate, self-contained client and server bundles for
-Windows x64 and Linux x64. They include the Python runtime and dependencies,
-so the target machine does not need Python, `pip`, or additional downloads.
+Tagged releases publish self-contained server, CLI client, and GUI client
+bundles for Windows x64 and Linux x64. They include the Python runtime and
+dependencies, so the target machine does not need Python, `pip`, or additional
+downloads. The GUI uses a background daemon and a system tray.
 Download them from the repository's [Releases](https://github.com/KingJorjai/Distributed-Systems_Cloud-File-Service/releases) page.
 
 ## Build the documentation

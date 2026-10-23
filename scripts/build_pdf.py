@@ -19,6 +19,7 @@ PAGES = (
     ("Quick Start", "quick-start/index.html"),
     ("Configuration", "configuration/index.html"),
     ("Security", "security/index.html"),
+    ("Desktop GUI", "gui/index.html"),
     ("Docker", "docker/index.html"),
     ("Architecture", "architecture/index.html"),
     ("Protocol", "protocol/index.html"),
