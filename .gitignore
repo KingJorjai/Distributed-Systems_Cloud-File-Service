@@ -224,3 +224,12 @@ __marimo__/
 
 # Local TLS material
 certs/
+
+# Generated Beamer artifacts
+docs/presentation/slides.pdf
+docs/presentation/*.aux
+docs/presentation/*.log
+docs/presentation/*.nav
+docs/presentation/*.out
+docs/presentation/*.snm
+docs/presentation/*.toc

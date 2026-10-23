@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { existsSync, realpathSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { argv, env } from "node:process";
 import { execFileSync } from "node:child_process";
 
@@ -9,9 +10,27 @@ if (!inputPath || !outputPath || !executablePath) {
   throw new Error("Usage: render_mermaid.mjs <input> <output> <browser>");
 }
 
-const globalRoot = env.MERMAID_CLI_ROOT ?? execFileSync("npm", ["root", "-g"], {
-  encoding: "utf8",
-}).trim();
+function findGlobalRoot() {
+  if (env.MERMAID_CLI_ROOT) {
+    return env.MERMAID_CLI_ROOT;
+  }
+  const npmRoot = execFileSync("npm", ["root", "-g"], {
+    encoding: "utf8",
+  }).trim();
+  if (existsSync(join(npmRoot, "@mermaid-js", "mermaid-cli", "package.json"))) {
+    return npmRoot;
+  }
+  try {
+    const executable = realpathSync(
+      execFileSync("which", ["mmdc"], { encoding: "utf8" }).trim(),
+    );
+    return resolve(dirname(executable), "../../..");
+  } catch {
+    return npmRoot;
+  }
+}
+
+const globalRoot = findGlobalRoot();
 const cliRoot = join(globalRoot, "@mermaid-js", "mermaid-cli");
 const requireFromCli = createRequire(join(cliRoot, "package.json"));
 const puppeteer = requireFromCli("puppeteer-core");
