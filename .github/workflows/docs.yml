@@ -52,16 +52,27 @@ jobs:
       - name: Build PDF
         run: python scripts/build_pdf.py
 
+      - name: Build presentation slides
+        uses: xu-cheng/latex-action@v3
+        with:
+          working_directory: docs/presentation
+          root_file: slides.tex
+
+      - name: Copy slides into the site
+        run: cp docs/presentation/slides.pdf site/presentation.pdf
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: site
 
-      - name: Upload PDF artifact
+      - name: Upload PDF artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cloud-file-service-pdf
-          path: site/cloud-file-service.pdf
+          name: cloud-file-service-pdfs
+          path: |
+            site/cloud-file-service.pdf
+            site/presentation.pdf
 
   deploy:
     needs: build
