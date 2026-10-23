@@ -8,7 +8,20 @@ All notable changes are recorded here. The project uses `MAJOR.MINOR.PATCH`:
 - `1.0.0` only when the final delivery is validated end to end.
 
 Build metadata is kept outside Git tags, for example
-`cloud-file-service-...-v0.11.0-build.42.zip`.
+`cloud-file-service-...-v0.11.1-build.42.zip`.
+
+## [0.11.1] - 2026-10-23
+
+M8 delivery fixes.
+
+- Serialize replication snapshots with applied commits so a transient
+  heartbeat snapshot cannot erase newer replica state.
+- Ignore snapshots at or below a replica's already applied index.
+- Make replication tests deterministic under slower CI runners.
+- Close failed runtimes and stores before temporary-directory cleanup on
+  Windows.
+- Pin `pymdown-extensions` to a version compatible with the installed
+  `mkdocstrings` release.
 
 ## [0.11.0] - 2026-10-23
 

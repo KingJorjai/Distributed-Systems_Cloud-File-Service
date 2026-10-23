@@ -82,11 +82,11 @@ docker compose -f compose.yaml -f compose.registry.yaml up -d server1 server2 se
 docker compose -f compose.yaml -f compose.registry.yaml run --rm client
 ```
 
-Version tags such as `v0.11.0` are also published when pushed to GitHub.
+Version tags such as `v0.11.1` are also published when pushed to GitHub.
 
 ## Downloadable standalone bundles
 
-Pushing a tag such as `v0.11.0` also creates a GitHub Release with independent
+Pushing a tag such as `v0.11.1` also creates a GitHub Release with independent
 server and client bundles for Windows x64 and Linux x64. Each bundle contains
 the application executable, its Python runtime and dependencies,
 `config.toml.example`, a short README, and an empty data directory.
@@ -97,10 +97,10 @@ component, extract it, configure the environment variables or TOML file, and
 run the executable from the extracted directory:
 
 ```text
-cloud-file-service-server-windows-x64-v0.11.0-build.<run>.zip
-cloud-file-service-client-windows-x64-v0.11.0-build.<run>.zip
-cloud-file-service-server-linux-x64-v0.11.0-build.<run>.tar.gz
-cloud-file-service-client-linux-x64-v0.11.0-build.<run>.tar.gz
+cloud-file-service-server-windows-x64-v0.11.1-build.<run>.zip
+cloud-file-service-client-windows-x64-v0.11.1-build.<run>.zip
+cloud-file-service-server-linux-x64-v0.11.1-build.<run>.tar.gz
+cloud-file-service-client-linux-x64-v0.11.1-build.<run>.tar.gz
 ```
 
 The release also contains `SHA256SUMS` and a Compose package. Verify the
