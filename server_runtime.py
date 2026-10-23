@@ -65,7 +65,16 @@ def _parse_upload(payload):
         raise ValueError("Missing upload size.")
     revision = int(parameters["rev"][0]) if "rev" in parameters else None
     digest = parameters.get("hash", [None])[0]
-    return encoded_target, filesize, revision, digest
+    client_id = parameters.get("client", [None])[0]
+    return encoded_target, filesize, revision, digest, client_id
+
+
+def _parse_delete(payload):
+    encoded_target, separator, query = payload.partition("?")
+    parameters = parse_qs(query, keep_blank_values=True) if separator else {}
+    revision = int(parameters["rev"][0]) if "rev" in parameters else None
+    client_id = parameters.get("client", [None])[0]
+    return encoded_target, revision, client_id
 
 
 def session(sock, runtime):
@@ -80,6 +89,7 @@ def session(sock, runtime):
     filesize = 0
     revision = None
     expected_digest = None
+    client_id = None
     download_data = b""
 
     while True:
@@ -264,9 +274,13 @@ def session(sock, runtime):
                 sendER(sock, 7)
                 continue
             try:
-                encoded_target, filesize, revision, expected_digest = _parse_upload(
-                    message[4:]
-                )
+                (
+                    encoded_target,
+                    filesize,
+                    revision,
+                    expected_digest,
+                    client_id,
+                ) = _parse_upload(message[4:])
                 owner, filename = _split_target(user, encoded_target)
                 store.access_for(user, owner, filename, write=True)
             except (InvalidPathError, AccessDeniedError, ValueError, IndexError):
@@ -297,13 +311,22 @@ def session(sock, runtime):
                     actual = hashlib.sha256(data).hexdigest()
                     if actual != expected_digest:
                         raise ValueError("Hash mismatch.")
-                store.put(owner, filename, data, expected_rev=revision)
+                record, conflict = store.put_with_conflict(
+                    owner,
+                    filename,
+                    data,
+                    expected_rev=revision,
+                    client_id=client_id,
+                )
             except ConflictError:
                 sendER(sock, 20)
             except (OSError, EOFError, ValueError, AccessDeniedError):
                 sendER(sock, 10)
             else:
-                sendOK(sock)
+                response = str(record.rev)
+                if conflict is not None:
+                    response += "\t" + szasar.encode_path(conflict.path)
+                sendOK(sock, response)
 
         elif message.startswith(szasar.Command.Download):
             if state != State.Main:
@@ -368,13 +391,22 @@ def session(sock, runtime):
                 sendER(sock, 7)
                 continue
             try:
-                owner, filename = _split_target(user, message[4:])
+                encoded_target, revision, client_id = _parse_delete(message[4:])
+                owner, filename = _split_target(user, encoded_target)
                 store.access_for(user, owner, filename, write=True)
-                store.delete(owner, filename)
-            except (InvalidPathError, AccessDeniedError, OSError):
+                record, conflict = store.delete_with_conflict(
+                    owner,
+                    filename,
+                    expected_rev=revision,
+                    client_id=client_id,
+                )
+            except (InvalidPathError, AccessDeniedError, OSError, ValueError):
                 sendER(sock, 11)
             else:
-                sendOK(sock)
+                response = str(record.rev)
+                if conflict is not None:
+                    response += "\t" + szasar.encode_path(conflict.path)
+                sendOK(sock, response)
 
         elif message.startswith(szasar.Command.Exit):
             sendOK(sock)

@@ -93,7 +93,7 @@ class ProtocolIntegrationTests(RuntimeTestCase):
             )
             self.assertEqual(response, "OK")
             sock.sendall(b"UPL2\r\n" + data)
-            self.assertEqual(reader.readline(), b"OK")
+            self.assertTrue(reader.readline().startswith(b"OK"))
             sock.sendall(b"SYNC\r\n")
 
             lines = self.read_manifest(sock, reader)
@@ -156,11 +156,68 @@ class ProtocolIntegrationTests(RuntimeTestCase):
                 "OK",
             )
             sock.sendall(b"UPL2\r\nx")
-            self.assertEqual(reader.readline(), b"OK")
+            self.assertTrue(reader.readline().startswith(b"OK"))
             sock.sendall(b"SYNC\r\n")
 
             lines = self.read_manifest(sock, reader)
             self.assertEqual(lines[0].split("\t")[1], "dir/a%20b.txt")
+
+    def test_stale_upload_returns_conflict_path(self):
+        with self.connect() as sock:
+            reader = SocketReader(sock)
+            self.register_and_login(sock, reader, "alice", "password-alice")
+            self.assertEqual(
+                self.command(sock, reader, "UPLOa.txt?size=6&rev=0"), "OK"
+            )
+            sock.sendall(b"UPL2\r\nserver")
+            self.assertTrue(reader.readline().startswith(b"OK"))
+
+            self.assertEqual(
+                self.command(
+                    sock, reader, "UPLOa.txt?size=6&rev=0&client=client-1"
+                ),
+                "OK",
+            )
+            sock.sendall(b"UPL2\r\nclient")
+            response = reader.readline().decode("ascii")
+            self.assertTrue(response.startswith("OK2\t"))
+
+            conflict = response.split("\t", 1)[1]
+            self.assertIn("conflict", conflict)
+            self.assertEqual(self.command(sock, reader, "DOWN" + conflict), "OK6")
+            sock.sendall(b"DOW2\r\n")
+            self.assertEqual(reader.readline(), b"OK")
+            self.assertEqual(reader.read_exact(6), b"server")
+
+    def test_stale_delete_returns_conflict_path(self):
+        with self.connect() as sock:
+            reader = SocketReader(sock)
+            self.register_and_login(sock, reader, "alice", "password-alice")
+            self.assertEqual(
+                self.command(sock, reader, "UPLOa.txt?size=6&rev=0"), "OK"
+            )
+            sock.sendall(b"UPL2\r\nserver")
+            self.assertTrue(reader.readline().startswith(b"OK"))
+
+            response = self.command(
+                sock,
+                reader,
+                "DELEa.txt?rev=0&client=client-1",
+            )
+            self.assertTrue(response.startswith("OK2\t"))
+            conflict = response.split("\t", 1)[1]
+            self.assertEqual(self.command(sock, reader, "DOWN" + conflict), "OK6")
+            sock.sendall(b"DOW2\r\n")
+            self.assertEqual(reader.readline(), b"OK")
+            self.assertEqual(reader.read_exact(6), b"server")
+
+    def test_legacy_upload_without_revision_still_works(self):
+        with self.connect() as sock:
+            reader = SocketReader(sock)
+            self.register_and_login(sock, reader, "alice", "password-alice")
+            self.assertEqual(self.command(sock, reader, "UPLOa.txt?size=1"), "OK")
+            sock.sendall(b"UPL2\r\nx")
+            self.assertTrue(reader.readline().startswith(b"OK"))
 
     def test_plaintext_rejected(self):
         raw = socket.create_connection(
