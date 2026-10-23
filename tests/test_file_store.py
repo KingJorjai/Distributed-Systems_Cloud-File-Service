@@ -242,6 +242,21 @@ class FileStoreTests(unittest.TestCase):
             self.assertEqual(restored.get("alice", "a.txt")[0], b"hello")
             self.assertEqual(restored.get_setting("registration_enabled"), "false")
 
+    def test_bootstrap_salt_is_deterministic(self):
+        with tempfile.TemporaryDirectory() as directory:
+            first = FileStore(Path(directory) / "first")
+            other = FileStore(Path(directory) / "other")
+            self.addCleanup(first.close)
+            self.addCleanup(other.close)
+            first.ensure_bootstrap_user(
+                "sar", "secret-password", "admin", salt=b"0" * 16
+            )
+            other.ensure_bootstrap_user(
+                "sar", "secret-password", "admin", salt=b"0" * 16
+            )
+
+            self.assertEqual(first.state_hash(), other.state_hash())
+
     def test_settings_round_trip(self):
         self.assertIsNone(self.store.get_setting("registration_enabled"))
         self.store.set_setting("registration_enabled", "false")

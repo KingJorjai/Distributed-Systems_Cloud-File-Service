@@ -574,12 +574,20 @@ def create_server(config, passwords=None):
     configured_passwords = passwords or getattr(config, "passwords", {})
     store = FileStore(server_config.files_path)
     if configured_passwords:
-        store.ensure_bootstrap_user(
-            "sar", configured_passwords.get("sar", ""), "admin"
-        )
-        store.ensure_bootstrap_user(
-            "sza", configured_passwords.get("sza", ""), "admin"
-        )
+        for username in ("sar", "sza"):
+            password = configured_passwords.get(username, "")
+            salt = hashlib.sha256(
+                "{}:{}:{}".format(
+                    server_config.cluster_token, username, password or "disabled"
+                ).encode("utf-8")
+            ).digest()[:16]
+            store.ensure_bootstrap_user(
+                username,
+                password,
+                "admin",
+                salt=salt,
+                created_at="1970-01-01T00:00:00+00:00",
+            )
     store.backfill()
     log = ReplicationLog(
         Path(server_config.files_path) / ".replication.sqlite3",

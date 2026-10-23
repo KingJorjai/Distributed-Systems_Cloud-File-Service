@@ -259,23 +259,27 @@ class FileStore:
             self._connection.commit()
         return User(username, role, bool(disabled))
 
-    def ensure_bootstrap_user(self, username, password, role="admin"):
+    def ensure_bootstrap_user(
+        self, username, password, role="admin", salt=None, created_at=None
+    ):
         """Create a bootstrap user if missing and apply the disabled flag."""
         with self._lock:
             existing = self.get_user(username)
             if existing is None:
-                digest, salt, iterations = hash_password(password or "disabled-account")
+                digest, salt_hex, iterations = hash_password(
+                    password or "disabled-account", salt=salt
+                )
                 self._connection.execute(
                     "INSERT INTO users(username, password_hash, salt, iterations, role, disabled, created_at) "
                     "VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (
                         username,
                         digest,
-                        salt,
+                        salt_hex,
                         iterations,
                         role,
                         0 if password else 1,
-                        _now(),
+                        created_at or _now(),
                     ),
                 )
                 self._connection.commit()
