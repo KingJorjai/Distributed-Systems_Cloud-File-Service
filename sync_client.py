@@ -15,6 +15,7 @@ from watchdog.observers import Observer
 from client_session import ClientSession, NoServerError, SyncError
 from client_state import ClientState
 from file_store import ManifestEntry
+from remote_watcher import RemoteWatcher
 
 
 class ChangeHandler(FileSystemEventHandler):
@@ -87,6 +88,7 @@ class SyncWorker:
         )
         self.session = ClientSession(config)
         self.changes = queue.Queue()
+        self.remote_changes = queue.Queue()
         self.ignored = {}
         self.ignored_lock = threading.Lock()
         self.stop_event = threading.Event()
@@ -96,6 +98,7 @@ class SyncWorker:
         self.observer = Observer()
         self.handler = ChangeHandler(self.root, self.changes, self._is_ignored)
         self.share_accesses = {}
+        self.watcher = RemoteWatcher(self)
 
     def start(self):
         """Reconcile once with the server, then watch for new changes."""
@@ -106,12 +109,14 @@ class SyncWorker:
         self.observer.schedule(self.handler, str(self.root), recursive=True)
         self.observer.start()
         self.worker.start()
+        self.watcher.start()
 
     def stop(self):
         """Stop the watcher and close the synchronization connection."""
         if self.stop_event.is_set():
             return
         self.stop_event.set()
+        self.watcher.stop()
         self.observer.stop()
         self.observer.join(timeout=5)
         self.worker.join(timeout=5)
@@ -420,6 +425,20 @@ class SyncWorker:
     def _run(self):
         """Consume queued changes and retry transient network failures."""
         while not self.stop_event.is_set():
+            try:
+                remote = self.remote_changes.get_nowait()
+            except queue.Empty:
+                remote = None
+            if remote is not None:
+                try:
+                    if isinstance(remote, dict) and remote.get("action") == "reconcile":
+                        self.reconcile()
+                    else:
+                        self._apply_remote(remote)
+                except (OSError, EOFError, socket.timeout, ssl.SSLError, SyncError):
+                    self._reconnect()
+                continue
+
             pending = self.state.pending()
             if pending:
                 change = pending[0]
@@ -445,6 +464,67 @@ class SyncWorker:
                     time.sleep(1)
             else:
                 self.state.ack(change_id)
+
+    def _apply_remote(self, update):
+        owner = update.owner
+        path = update.path
+        access = update.access
+        local_path = self._local_path(owner, path)
+        if update.op == "D":
+            try:
+                local_path.unlink()
+            except FileNotFoundError:
+                pass
+            self.state.set_file(
+                ManifestEntry(
+                    owner=owner,
+                    path=path,
+                    rev=update.rev,
+                    digest=update.digest,
+                    size=0,
+                    deleted=True,
+                    access=access,
+                )
+            )
+            self.ignore(local_path.relative_to(self.root).as_posix())
+            self._remove_empty_parents(local_path.parent)
+            return
+
+        if update.op != "U":
+            self.reconcile()
+            return
+
+        state_entry = self.state.get_file(owner, path)
+        digest = None
+        if local_path.is_file():
+            digest = hashlib.sha256(local_path.read_bytes()).hexdigest()
+        if digest == update.digest:
+            self.state.set_file(
+                ManifestEntry(
+                    owner=owner,
+                    path=path,
+                    rev=update.rev,
+                    digest=update.digest,
+                    size=update.size,
+                    deleted=False,
+                    access=access,
+                )
+            )
+            return
+        if local_path.is_file() and state_entry is not None:
+            if digest != state_entry["digest"]:
+                self._preserve_local_conflict(owner, path)
+        self._download(
+            ManifestEntry(
+                owner=owner,
+                path=path,
+                rev=update.rev,
+                digest=update.digest,
+                size=update.size,
+                deleted=False,
+                access=access,
+            )
+        )
 
     def _reconnect(self):
         try:

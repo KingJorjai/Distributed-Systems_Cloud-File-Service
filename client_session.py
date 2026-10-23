@@ -2,6 +2,7 @@
 
 import socket
 import ssl
+import threading
 from dataclasses import dataclass
 from urllib.parse import quote
 
@@ -86,6 +87,7 @@ class ClientSession:
         self.socket = None
         self.reader = None
         self.username = None
+        self._close_lock = threading.Lock()
 
     def _connect_endpoint(self, endpoint):
         raw = socket.create_connection((endpoint.host, endpoint.port), timeout=10)
@@ -151,12 +153,18 @@ class ClientSession:
 
     def close(self):
         """Close the connection, notifying the server when possible."""
-        if self.socket is not None:
+        with self._close_lock:
+            if self.socket is None:
+                return
+            if self.reader is not None:
+                try:
+                    self._command(szasar.Command.Exit)
+                except (OSError, EOFError, ssl.SSLError, SyncError, AttributeError):
+                    pass
             try:
-                self._command(szasar.Command.Exit)
-            except (OSError, EOFError, ssl.SSLError, SyncError):
+                self.socket.close()
+            except OSError:
                 pass
-            self.socket.close()
             self.socket = None
             self.reader = None
 
