@@ -28,6 +28,7 @@ class Command:
         Register,
         ChangePassword,
         Users,
+        Prim,
     ) = (
         "USER",
         "PASS",
@@ -44,6 +45,7 @@ class Command:
         "REGI",
         "CHPW",
         "USRS",
+        "PRIM",
     )
 
 

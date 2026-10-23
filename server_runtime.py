@@ -10,6 +10,7 @@ from urllib.parse import parse_qs
 
 import szasar
 from auth import validate_password, validate_username
+from election import ClusterNode
 from file_store import (
     AccessDeniedError,
     ConflictError,
@@ -160,7 +161,7 @@ def session(sock, runtime):
             if state != State.Identification:
                 sendER(sock)
                 continue
-            if runtime.config.role != "primary":
+            if not runtime.is_primary():
                 sendER(sock, 13)
                 continue
             if not config.registration_enabled:
@@ -187,6 +188,18 @@ def session(sock, runtime):
                 sendER(sock, 16)
             else:
                 sendOK(sock)
+
+        elif message.startswith(szasar.Command.Prim):
+            cluster = getattr(runtime, "cluster", None)
+            endpoint = (
+                cluster.client_endpoint()
+                if cluster is not None
+                else (config.host or "localhost", config.port)
+            )
+            if endpoint is None:
+                sendER(sock, 13)
+            else:
+                sendOK(sock, "{}:{}".format(endpoint[0], endpoint[1]))
 
         elif message.startswith(szasar.Command.Password):
             if state != State.Authentication:
@@ -264,7 +277,7 @@ def session(sock, runtime):
             if state != State.Main:
                 sendER(sock)
                 continue
-            if runtime.config.role != "primary":
+            if not runtime.is_primary():
                 sendER(sock, 13)
                 continue
             if user == "anonimous":
@@ -298,7 +311,7 @@ def session(sock, runtime):
             if state != State.Main:
                 sendER(sock)
                 continue
-            if runtime.config.role != "primary":
+            if not runtime.is_primary():
                 sendER(sock, 13)
                 continue
             if user == "anonimous":
@@ -336,7 +349,7 @@ def session(sock, runtime):
                 sendER(sock)
                 continue
             state = State.Main
-            if runtime.config.role != "primary":
+            if not runtime.is_primary():
                 sendER(sock, 13)
                 continue
             try:
@@ -394,7 +407,7 @@ def session(sock, runtime):
             if state != State.Main:
                 sendER(sock)
                 continue
-            if runtime.config.role != "primary":
+            if not runtime.is_primary():
                 sendER(sock, 13)
                 continue
             if user == "anonimous":
@@ -418,7 +431,7 @@ def session(sock, runtime):
             if state != State.Main:
                 sendER(sock)
                 continue
-            if runtime.config.role != "primary":
+            if not runtime.is_primary():
                 sendER(sock, 13)
                 continue
             if user == "anonimous":
@@ -442,7 +455,7 @@ def session(sock, runtime):
             if state != State.Main:
                 sendER(sock)
                 continue
-            if runtime.config.role != "primary":
+            if not runtime.is_primary():
                 sendER(sock, 13)
                 continue
             if user == "anonimous":
@@ -490,6 +503,7 @@ class ServerRuntime:
             Path(config.files_path) / ".replication.sqlite3",
             term=config.term,
         )
+        self.cluster = ClusterNode(config, store, self.log)
         self.replicator = None
         self.replication_server = None
         self._replication_thread = None
@@ -502,13 +516,10 @@ class ServerRuntime:
         self._tls = server_context(
             self.config.tls_cert_file, self.config.tls_key_file
         )
-        if self.config.role == "primary":
-            self.replicator = Replicator(self.config, self.log)
-        else:
-            self.replication_server = ReplicationServer(
-                self.config, self.store, self.log
-            )
-            self.replication_server.start()
+        self.replication_server = ReplicationServer(
+            self.config, self.store, self.log, self.cluster
+        )
+        self.replication_server.start()
         listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         listener.bind((self.config.host, self.config.port))
@@ -516,14 +527,18 @@ class ServerRuntime:
         listener.settimeout(0.2)
         self._socket = listener
         self.port = listener.getsockname()[1]
+        self.cluster.set_local_endpoint(
+            self.config.host or "localhost", self.port
+        )
+        self.cluster.start()
+        self.replicator = Replicator(self.config, self.log)
 
     def serve_forever(self):
         """Accept connections until :meth:`stop` is called."""
-        if self.replication_server is not None:
-            self._replication_thread = threading.Thread(
-                target=self.replication_server.serve_forever, daemon=True
-            )
-            self._replication_thread.start()
+        self._replication_thread = threading.Thread(
+            target=self.replication_server.serve_forever, daemon=True
+        )
+        self._replication_thread.start()
         while not self._stop.is_set():
             try:
                 connection, _ = self._socket.accept()
@@ -541,21 +556,25 @@ class ServerRuntime:
             )
             thread.start()
 
+    def is_primary(self):
+        return self.cluster.is_leader()
+
     def commit_operation(self, operation):
         """Commit a deterministic operation through replication and local apply."""
-        if self.config.role != "primary":
+        if not self.is_primary():
             raise NotPrimaryError("This server is not the primary.")
         if self.replicator is not None:
             self.replicator.replicate(operation)
         self.store.apply_operation(operation)
 
     def require_primary(self):
-        if self.config.role != "primary":
+        if not self.is_primary():
             raise NotPrimaryError("This server is not the primary.")
 
     def stop(self):
         """Stop accepting new connections."""
         self._stop.set()
+        self.cluster.stop()
         if self.replication_server is not None:
             self.replication_server.stop()
         if self._socket is not None:

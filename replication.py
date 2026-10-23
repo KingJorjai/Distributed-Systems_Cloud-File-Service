@@ -264,9 +264,10 @@ def _encode(message):
 class PeerConnection:
     """One outbound replication connection from the primary to a peer."""
 
-    def __init__(self, config, peer):
+    def __init__(self, config, peer, hello=None):
         self.config = config
         self.peer = peer
+        self.hello = hello
         self.socket = None
         self.reader = None
 
@@ -284,17 +285,15 @@ class PeerConnection:
         self.reader = szasar.SocketReader(
             self.socket, max_line=MAX_REPLICATION_MESSAGE
         )
-        self.send(
-            {
-                "type": "HELLO",
-                "id": self.config.server_id,
-                "role": "primary",
-                "term": self.config.term,
-                "last_index": 0,
-                "commit_index": 0,
-                "token": self.config.cluster_token,
-            }
-        )
+        hello = self.hello or {
+            "id": self.config.server_id,
+            "role": "primary",
+            "term": self.config.term,
+            "last_index": 0,
+            "commit_index": 0,
+            "token": self.config.cluster_token,
+        }
+        self.send({"type": "HELLO", **hello})
         response = self.recv()
         if response.get("type") != "HELLO_OK":
             self.close()
@@ -324,10 +323,11 @@ class PeerConnection:
 class ReplicationServer:
     """Secondary-side listener for replication messages."""
 
-    def __init__(self, config, store, log):
+    def __init__(self, config, store, log, cluster=None):
         self.config = config
         self.store = store
         self.log = log
+        self.cluster = cluster
         self._socket = None
         self._stop = threading.Event()
         self._connections = set()
@@ -411,12 +411,16 @@ class ReplicationServer:
             ):
                 self._send(connection, {"type": "HELLO_ERROR"})
                 return
+            if self.cluster is not None and int(hello.get("term", 0)) > self.log.term():
+                self.cluster.observe_term(int(hello["term"]))
             self._send(
                 connection,
                 {
                     "type": "HELLO_OK",
                     "id": self.config.server_id,
+                    "role": self.cluster.role if self.cluster else self.config.role,
                     "term": self.log.term(),
+                    "last_term": self.log.last_term(),
                     "last_index": self.log.last_index(),
                     "commit_index": self.log.commit_index(),
                 },
@@ -435,6 +439,12 @@ class ReplicationServer:
                     self._handle_abort(connection, message)
                 elif message_type == "SNAP":
                     self._handle_snap(connection, message)
+                elif message_type == "HB":
+                    self._handle_hb(connection, message)
+                elif message_type == "VOTE":
+                    self._handle_vote(connection, message)
+                elif message_type == "COORD":
+                    self._handle_coord(connection, message)
                 elif message_type == "PING":
                     self._send(connection, {"type": "PONG"})
                 else:
@@ -461,6 +471,8 @@ class ReplicationServer:
         if term < self.log.term():
             self._send(connection, {"type": "ERROR", "message": "stale term"})
             return
+        if self.cluster is not None:
+            self.cluster.observe_leader(term, message.get("leader"))
         payload = json.dumps(message["op"], separators=(",", ":"))
         self.log.append(term, index, payload)
         self._send(
@@ -477,6 +489,8 @@ class ReplicationServer:
     def _handle_commit(self, connection, message):
         term = int(message["term"])
         index = int(message["index"])
+        if self.cluster is not None:
+            self.cluster.observe_leader(term, message.get("leader"))
         last_applied = int(self.log.get_meta("last_applied", "0"))
         try:
             for current in range(last_applied + 1, index + 1):
@@ -507,16 +521,55 @@ class ReplicationServer:
         )
 
     def _handle_snap(self, connection, message):
+        term = int(message["term"])
+        index = int(message["index"])
+        if self.cluster is not None:
+            self.cluster.observe_leader(term, message.get("leader"))
         self.store.import_snapshot(message["snapshot"])
-        self.log.set_meta("term", message["term"])
-        self.log.set_meta("commit_index", message["index"])
-        self.log.set_meta("last_applied", message["index"])
+        self.log.reset_to(term, index)
+        self._send(
+            connection,
+            {"type": "SNAP_OK", "term": term, "index": index},
+        )
+
+    def _handle_hb(self, connection, message):
+        accepted = self.cluster.handle_hb(message) if self.cluster else True
+        if accepted:
+            self._send(
+                connection,
+                {
+                    "type": "HB_OK",
+                    "term": self.log.term(),
+                    "id": self.config.server_id,
+                    "commit_index": self.log.commit_index(),
+                    "last_index": self.log.last_index(),
+                },
+            )
+        else:
+            self._send(
+                connection,
+                {"type": "HB_ERROR", "term": self.log.term()},
+            )
+
+    def _handle_vote(self, connection, message):
+        granted = self.cluster.handle_vote(message) if self.cluster else False
         self._send(
             connection,
             {
-                "type": "SNAP_OK",
-                "term": message["term"],
-                "index": message["index"],
+                "type": "VOTE_OK",
+                "term": self.log.term(),
+                "id": self.config.server_id,
+                "granted": bool(granted),
+            },
+        )
+
+    def _handle_coord(self, connection, message):
+        accepted = self.cluster.handle_coord(message) if self.cluster else True
+        self._send(
+            connection,
+            {
+                "type": "COORD_OK" if accepted else "COORD_ERROR",
+                "term": self.log.term(),
             },
         )
 
@@ -544,6 +597,7 @@ class Replicator:
                 "type": "RB",
                 "term": term,
                 "index": index,
+                "leader": self.config.server_id,
                 "op": operation,
             }
             payload = json.dumps(operation, separators=(",", ":"))
@@ -564,7 +618,12 @@ class Replicator:
             for connection in connections:
                 try:
                     connection.send(
-                        {"type": "COMMIT", "term": term, "index": index}
+                        {
+                            "type": "COMMIT",
+                            "term": term,
+                            "index": index,
+                            "leader": self.config.server_id,
+                        }
                     )
                 except (OSError, ReplicationError):
                     pass

@@ -18,6 +18,30 @@ class SyncError(Exception):
         super().__init__(message or "ER{}".format(self.code))
 
 
+class NoServerError(Exception):
+    """Raised when none of the configured client endpoints is reachable."""
+
+
+@dataclass(frozen=True)
+class Endpoint:
+    host: str
+    port: int
+
+
+def parse_client_endpoints(value, default_host, default_port):
+    """Parse ``host:port,...`` or fall back to the configured single server."""
+    endpoints = []
+    for item in value.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        host, port = item.rsplit(":", 1)
+        endpoints.append(Endpoint(host, int(port)))
+    if not endpoints:
+        endpoints.append(Endpoint(default_host, int(default_port)))
+    return endpoints
+
+
 @dataclass(frozen=True)
 class FileStat:
     rev: int
@@ -42,19 +66,76 @@ class ClientSession:
 
     def __init__(self, config):
         self.config = config
+        self.endpoints = parse_client_endpoints(
+            getattr(config, "peers", ""), config.server, config.port
+        )
+        self.endpoint_index = 0
+        self.current_endpoint = None
         self.socket = None
         self.reader = None
         self.username = None
 
-    def connect(self):
-        """Open a verified TLS connection to the configured server."""
-        raw = socket.create_connection(
-            (self.config.server, self.config.port), timeout=10
-        )
-        server_name = self.config.tls_server_name or self.config.server
+    def _connect_endpoint(self, endpoint):
+        raw = socket.create_connection((endpoint.host, endpoint.port), timeout=10)
+        server_name = self.config.tls_server_name or endpoint.host
         context = client_context(self.config.tls_ca_file)
         self.socket = context.wrap_socket(raw, server_hostname=server_name)
         self.reader = szasar.SocketReader(self.socket)
+        self.current_endpoint = endpoint
+
+    def connect(self):
+        """Open a verified TLS connection to one of the configured servers."""
+        last_error = None
+        for _ in range(len(self.endpoints)):
+            endpoint = self.endpoints[self.endpoint_index]
+            try:
+                self._connect_endpoint(endpoint)
+                return
+            except OSError as error:
+                last_error = error
+                self._advance_endpoint()
+        if last_error is not None:
+            raise last_error
+        raise NoServerError("No client endpoint is configured.")
+
+    def _advance_endpoint(self):
+        self.endpoint_index = (self.endpoint_index + 1) % len(self.endpoints)
+
+    def resolve_primary(self):
+        """Connect to a seed and follow ``PRIM`` to the current primary."""
+        self.connect()
+        for _ in range(3):
+            response = self._command(szasar.Command.Prim)
+            host, port = response.rsplit(":", 1)
+            endpoint = Endpoint(host, int(port))
+            if endpoint == self.current_endpoint:
+                return
+            self.socket.close()
+            self.socket = None
+            self.reader = None
+            self._connect_endpoint(endpoint)
+        raise NoServerError("Too many primary redirects.")
+
+    def connect_and_login(self, username, password):
+        """Find the current primary, log in, and retry other seeds if needed."""
+        last_error = None
+        for _ in range(len(self.endpoints)):
+            try:
+                self.resolve_primary()
+                self.login(username, password)
+                return
+            except SyncError as error:
+                self.close()
+                if error.code == 13:
+                    last_error = error
+                    self._advance_endpoint()
+                    continue
+                raise
+            except OSError as error:
+                self.close()
+                last_error = error
+                self._advance_endpoint()
+        raise NoServerError("No primary available: {}".format(last_error))
 
     def close(self):
         """Close the connection, notifying the server when possible."""

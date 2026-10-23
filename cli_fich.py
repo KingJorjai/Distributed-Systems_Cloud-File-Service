@@ -5,7 +5,7 @@ import sys
 import time
 from dataclasses import replace
 
-from client_session import ClientSession, SyncError
+from client_session import ClientSession, NoServerError, SyncError
 from config import ConfigurationError, load_config, validate_port
 from sync_client import SyncWorker
 
@@ -94,9 +94,8 @@ def main():
         user = input("Introduce el nombre de usuario: ")
         password = input("Introduce la contraseña: ")
         try:
-            session.connect()
-            session.login(user, password)
-        except (OSError, EOFError, SyncError) as error:
+            session.connect_and_login(user, password)
+        except (OSError, EOFError, SyncError, NoServerError) as error:
             if isinstance(error, SyncError) and error.code < len(ER_MSG):
                 print(ER_MSG[error.code])
             else:
@@ -109,7 +108,7 @@ def main():
     sync_worker = SyncWorker(local_path, config, user, password)
     try:
         sync_worker.start()
-    except (OSError, EOFError, SyncError) as error:
+    except (OSError, EOFError, SyncError, NoServerError) as error:
         print("No se ha podido iniciar la sincronización automática: {}".format(error))
         return
 

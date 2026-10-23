@@ -45,6 +45,7 @@ class ClientSessionTests(unittest.TestCase):
         self.server_config = ServerConfig(
             host="127.0.0.1",
             port=0,
+            replication_port=0,
             files_path=str(self.root),
             tls_cert_file=str(cert_path),
             tls_key_file=str(key_path),

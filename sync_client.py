@@ -11,7 +11,7 @@ from pathlib import Path
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from client_session import ClientSession, SyncError
+from client_session import ClientSession, NoServerError, SyncError
 from client_state import ClientState
 from file_store import ManifestEntry
 
@@ -98,8 +98,7 @@ class SyncWorker:
     def start(self):
         """Reconcile once with the server, then watch for new changes."""
         self.root.mkdir(parents=True, exist_ok=True)
-        self.session.connect()
-        self.session.login(self.username, self.password)
+        self.session.connect_and_login(self.username, self.password)
         self.reconcile()
         self.observer.schedule(self.handler, str(self.root), recursive=True)
         self.observer.start()
@@ -372,9 +371,9 @@ class SyncWorker:
         except (OSError, EOFError, ssl.SSLError, SyncError):
             pass
         try:
-            self.session.connect()
-            self.session.login(self.username, self.password)
-        except (OSError, EOFError, ssl.SSLError, SyncError):
+            self.session.connect_and_login(self.username, self.password)
+            self.reconcile()
+        except (OSError, EOFError, ssl.SSLError, SyncError, NoServerError):
             pass
 
     def _perform(self, action, filename):

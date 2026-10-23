@@ -2,6 +2,7 @@ import tempfile
 import threading
 import time
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 import trustme
@@ -142,6 +143,27 @@ class ReplicationIntegrationTests(unittest.TestCase):
 
         self.assertEqual(raised.exception.code, 12)
         self.assertIsNone(primary.store.stat("alice", "a.txt"))
+
+    def test_prim_redirects_client_to_primary(self):
+        primary, secondary2, secondary3 = self.start_cluster()
+        client = self.connect(primary)
+        client.register("alice", "password-alice")
+        self.assertTrue(
+            wait_until(lambda: secondary2.cluster.client_endpoint() is not None)
+        )
+
+        seed = self.client_config(secondary2.port)
+        seed = replace(seed, peers="localhost:{}".format(secondary2.port))
+        redirected = ClientSession(seed)
+        self.addCleanup(redirected.close)
+        redirected.connect_and_login("alice", "password-alice")
+        redirected.upload("alice", "redirected.txt", b"hello")
+
+        self.assertTrue(
+            wait_until(
+                lambda: primary.store.stat("alice", "redirected.txt") is not None
+            )
+        )
 
     def test_secondary_rejects_client_mutation(self):
         primary, secondary2, secondary3 = self.start_cluster()

@@ -28,6 +28,7 @@ class ClusterNode:
         self.location = "{}:{}".format(
             config.host or "localhost", config.port
         )
+        self.local_endpoint = (config.host or "localhost", config.port)
         self.client_addresses = {}
         for peer in parse_peers(config.client_addresses):
             self.client_addresses[peer.server_id] = (peer.host, peer.port)
@@ -50,6 +51,10 @@ class ClusterNode:
     def is_leader(self):
         return self.role == Role.Leader
 
+    def set_local_endpoint(self, host, port):
+        with self._lock:
+            self.local_endpoint = (host, int(port))
+
     def client_endpoint(self):
         """Return the current primary's client endpoint, if known."""
         with self._lock:
@@ -59,11 +64,9 @@ class ClusterNode:
                 target = self.current_leader
         if target is None:
             return None
-        if target in self.client_addresses:
-            return self.client_addresses[target]
         if target == self.config.server_id:
-            return (self.config.host or "localhost", self.config.port)
-        return None
+            return self.local_endpoint
+        return self.client_addresses.get(target)
 
     def start(self):
         """Start the cluster monitor and elect the initial primary."""
@@ -126,10 +129,13 @@ class ClusterNode:
             self.last_heartbeat = time.monotonic()
 
     def _announce(self):
+        host, port = self.local_endpoint
         message = {
             "type": "COORD",
             "term": self.log.term(),
             "leader": self.config.server_id,
+            "client_host": host,
+            "client_port": port,
         }
         for response in self._broadcast(message):
             if response is not None and int(response.get("term", 0)) > self.log.term():
@@ -143,7 +149,10 @@ class ClusterNode:
                 self._heartbeat_round()
                 self._stop.wait(self.config.heartbeat_interval)
             elif role == Role.Follower:
-                if time.monotonic() - self.last_heartbeat > self.config.failure_timeout:
+                if (
+                    time.monotonic() - self.last_heartbeat
+                    > self.config.failure_timeout + self._jitter
+                ):
                     self._start_election()
                 self._stop.wait(min(0.05, self.config.heartbeat_interval))
             else:
@@ -155,10 +164,13 @@ class ClusterNode:
 
     def _heartbeat_round(self):
         term = self.log.term()
+        host, port = self.local_endpoint
         message = {
             "type": "HB",
             "term": term,
             "leader": self.config.server_id,
+            "client_host": host,
+            "client_port": port,
             "last_index": self.log.last_index(),
             "commit_index": self.log.commit_index(),
         }
@@ -185,6 +197,7 @@ class ClusterNode:
             {
                 "type": "SNAP",
                 "term": term,
+                "leader": self.config.server_id,
                 "index": self.log.commit_index(),
                 "snapshot": self.store.export_snapshot(),
             },
@@ -240,6 +253,11 @@ class ClusterNode:
             if self._role == Role.Leader and leader != self.config.server_id:
                 self._role = Role.Follower
             self.current_leader = leader
+            if message.get("client_host") is not None:
+                self.client_addresses[leader] = (
+                    message["client_host"],
+                    int(message["client_port"]),
+                )
             self.last_heartbeat = time.monotonic()
         return True
 
@@ -281,8 +299,20 @@ class ClusterNode:
             else:
                 self._role = Role.Follower
             self.current_leader = leader
+            if message.get("client_host") is not None:
+                self.client_addresses[leader] = (
+                    message["client_host"],
+                    int(message["client_port"]),
+                )
             self.last_heartbeat = time.monotonic()
         return True
+
+    def observe_term(self, term):
+        with self._lock:
+            if term > self.log.term():
+                self.log.advance_term(term)
+                self._role = Role.Follower
+                self.current_leader = None
 
     def observe_leader(self, term, leader):
         with self._lock:
