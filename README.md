@@ -110,4 +110,4 @@ python cli_fich.py localhost 50012 client_files
 
 The client arguments are `server`, `port`, and `local_folder`. The default local folder is `client_files`.
 
-The client reconciles with the server at startup, uploads new or locally modified files, downloads missing or remotely modified files, propagates deletes, and preserves conflict copies when both sides changed. Pending changes are kept in a local outbox and retried after a restart. Server push notifications between clients arrive in M5.
+The client reconciles with the server at startup, uploads new or locally modified files, downloads missing or remotely modified files, propagates deletes, and preserves conflict copies when both sides changed. Pending changes are kept in a local outbox and retried after a restart. Active clients receive server notifications through a separate subscription connection; shared files are mounted under `shared/<owner>/`.

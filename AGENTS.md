@@ -10,6 +10,8 @@ Entrypoints:
 - `server_runtime.py` — TLS listener, session threads, protocol state machine, replication wiring.
 - `replication.py` — peer parsing, durable log, mTLS replication server/client, quorum coordinator.
 - `election.py` — heartbeats, persistent terms, election, fencing, and leader client endpoints.
+- `notification_hub.py` — per-user subscriptions and `UPDT` delivery on the primary.
+- `remote_watcher.py` — client notification connection that feeds remote updates into `SyncWorker`.
 - `file_store.py` — SQLite metadata, users/shares/settings, filesystem storage, ACLs.
 - `client_session.py` — TLS client protocol session used by CLI and future GUI.
 - `client_state.py` — client metadata and durable outbox.
@@ -59,18 +61,19 @@ Precedence: CLI args > environment > `config.toml` > defaults. `CONFIG_FILE` sel
 - `SYNC` returns `OK<count>`, tab-separated manifest lines, and `END`. `STATpath` returns `OK<rev>\t<hash>\t<size>`.
 - Replication messages are one JSON object per CRLF line over mTLS: `HELLO`, `HELLO_OK`, `HB`, `HB_OK`, `VOTE`, `VOTE_OK`, `COORD`, `RB`, `ACK`, `COMMIT`, `COMMITTED`, `ABORT`, `SNAP`. The primary commits after a 2/3 quorum; secondaries apply only committed entries.
 - `PRIM` is accepted before authentication and returns `OKhost:port` for the current primary or `ER13` when no leader is known.
+- Sharing commands: `SHAR<path>?<grantee>?<ro|rw>`, `UNSH<path>?<grantee>`, and `SHRS` for grantee shares. `SUBS<client_id>` opens a notification stream; `UPDT` carries owner/path/rev/hash/size/op/access/client id.
 - New commands: `REGI`, `CHPW`, `USRS`, `SYNC`, `STAT`. `DELEpath?rev=&client=` returns a revision and optional conflict path. Error codes 14–20 cover sharing, registration, users, long lines, and revision conflicts.
 - There is no `LIST` command. Keep protocol changes in sync across `szasar.py`, `server_runtime.py`, `client_session.py`, and `docs/protocol.md`.
 - Preserve `safe_path` traversal/symlink checks and atomic upload (`tempfile` + `os.replace`); uploads are limited by `MAX_FILE_SIZE` and `SPACE_MARGIN`.
 
 ## Behavior boundaries
 
-- At startup the client reconciles the server manifest with its state and local files, so it can download remote changes and apply tombstones. Server push notifications are still M5; without them, other clients observe changes on their next reconciliation. Conflict copies are implemented; version history and garbage collection are not.
+- At startup the client reconciles the server manifest with its state and local files, so it can download remote changes and apply tombstones. Active clients receive `UPDT` notifications through a separate subscription connection; offline clients converge on the next reconciliation. Conflict copies are implemented; version history and garbage collection are not.
 - `server1` starts as primary in Compose. If it stops, `server2`/`server3` elect a new primary; clients use `PRIM` to redirect. A restarted old primary becomes a follower and receives a snapshot. Secondaries serve reads but reject mutations with `ER13` while they are followers.
+- Shared files are mounted locally under `shared/<owner>/<path>`; owned files stay at the root. `ro` local edits are preserved as local conflict copies and the remote version is restored. Notifications require an active client; offline clients reconcile on the next start.
 - Renames are modeled as delete + upload (recursive for directories). Startup reconciliation uploads only new/modified local files and downloads missing/remote-modified files.
 - The client opens two TLS connections per run: the interactive login connection plus `SyncWorker`'s own authenticated connection.
 - Changes are persisted in the client outbox before execution and replayed after restart. Startup reconciliation handles offline changes before the watcher starts; uploads wait for size/mtime to stabilize (roughly 0.7 s).
-- Sharing schema/ACL exists, but `SHAR`/`UNSH` and notifications arrive in M5.
 
 ## Docs and release
 

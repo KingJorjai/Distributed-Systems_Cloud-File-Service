@@ -18,6 +18,7 @@ The client watches a local folder with [`watchdog`](https://python-watchdog.read
 - Atomic server-side uploads and tombstones for deletes.
 - Recursive synchronization of files and directories below the local folder.
 - Passive replication with a primary and two secondaries, quorum-confirmed mutations, durable logs, election, failover, and automatic rejoin.
+- Cross-user file and directory sharing with `ro`/`rw` ACLs and live change notifications.
 
 !!! warning
     Changes made directly on the server are not synchronized back to the client. Bidirectional conflict resolution is outside the current scope.

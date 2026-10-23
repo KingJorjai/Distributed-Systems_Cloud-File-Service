@@ -59,6 +59,24 @@ preserves the current server version as a conflict copy named
 `<stem> (conflict <client id> <timestamp>)<suffix>` and returns its path to the
 client.
 
+## Shared files and notifications
+
+A user can share a file or directory with another active user as `ro` or `rw`.
+The owner always has implicit `rw`; self-shares and `anonimous` grantees are
+rejected. Shares are stored in the replicated `shares` table.
+
+On the client, owned files stay at the root and shared files are mounted under
+`shared/<owner>/<path>`. `ClientState` records the owner, path, and access.
+`ro` local edits are preserved as local conflict copies and the remote version
+is restored; `rw` changes follow the normal conflict rules.
+
+The primary keeps a `NotificationHub` with one subscription per `SUBS`
+connection. After a committed mutation, it sends `UPDT` to the owner and to
+matching grantees, excluding the originating `client_id`. The client
+`RemoteWatcher` keeps a separate TLS subscription connection, enqueues updates
+into `SyncWorker`, and triggers a full reconciliation after reconnecting. Share
+creation/revocation sends `S`/`R` so the grantee adds or removes local copies.
+
 ## Replication
 
 The primary plans each mutation as deterministic operations: file writes include

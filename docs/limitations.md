@@ -2,19 +2,26 @@
 
 The current synchronization design intentionally keeps the scope small.
 
-- Synchronization is one-way: client to server. Server-side changes are not
-  pushed back to clients yet.
+- Synchronization converges both ways for owned and shared files, but active
+  push notifications require a running client; offline changes are applied on
+  the next startup reconciliation.
 - Conflict copies are implemented for file uploads and deletes. Conflict
   handling for directory removal is coarse: a stale directory delete removes
   the remote tree without creating per-file conflict copies.
 - Version history is not implemented. Conflict copies are ordinary files and
   are not garbage-collected.
-- The client reconciles owned files at startup. Shared files and server push
-  notifications arrive in M5.
+- The client reconciles owned and shared files at startup. Active clients receive
+  server push notifications; offline clients do not.
 - A local delete is never sent for a file that was never synchronized, so a new
   local file created and removed while offline leaves no remote trace.
 - Passive replication, quorum, heartbeats, election, client redirection, and
   automatic snapshot rejoin are implemented.
+- Shares support file and directory prefixes with `ro`/`rw` access. There are no
+  groups, inherited per-file ACLs, or share expiration.
+- Notifications require an active client connection. A closed client discovers
+  changes on its next startup reconciliation; there is no offline push.
+- A local edit to an `ro` share is preserved as a local conflict copy while the
+  remote version is restored.
 - Secondary reads may lag behind the primary.
 - Snapshots are transferred as one JSON message and are limited by the 64 MiB
   replication line limit; a very large file store needs chunked snapshots.

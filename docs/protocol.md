@@ -20,6 +20,10 @@ for a private/development CA. Hostname verification is always enabled.
 | `CHPWold?new` | Change the current user's password. Both values are URL-encoded. |
 | `USRS` | List enabled users that can be selected as share grantees. |
 | `PRIM` | Return the current primary client endpoint, or `ER13`. |
+| `SHAR<path>?<grantee>?<access>` | Share an owned file/directory (`ro` or `rw`). |
+| `UNSH<path>?<grantee>` | Revoke a share. |
+| `SHRS` | List shares granted to the current user. |
+| `SUBS<client_id>` | Subscribe this connection to change notifications. |
 | `SYNC` | Return the current manifest of owned and shared files. |
 | `STATpath` | Return `rev`, hash, and size for one owned path. |
 | `DOWNfilename` | Prepare a file download. |
@@ -138,6 +142,24 @@ session.
 | 18 | User already exists |
 | 19 | Protocol line too long |
 | 20 | Revision conflict |
+
+## Shares and notifications
+
+`SHAR` and `UNSH` are mutations and are replicated through the operation log.
+Only the owner can share or revoke; self-shares and `anonimous` grantees are
+rejected. `SHRS` returns `OK<count>` + `<owner>\t<encoded path>\t<access>` lines
+and `END`.
+
+`SUBS<client_id>` keeps the connection open for notifications. After the `OK`,
+the server may send:
+
+```text
+UPDT<owner>\t<encoded path>\t<rev>\t<hash>\t<size>\t<op>\t<access>\t<client_id>
+```
+
+`op` is `U` (upload/modify), `D` (delete), `S` (share created), or `R` (share
+revoked). Notifications are sent after commit to the owner and matching grantees,
+excluding the originating `client_id`.
 
 ## Server-to-server replication
 
