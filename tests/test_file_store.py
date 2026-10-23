@@ -114,6 +114,55 @@ class FileStoreTests(unittest.TestCase):
         with self.assertRaises(ShareExistsError):
             self.store.create_share("alice", "a.txt", "bob", "rw")
 
+    def test_stale_upload_creates_conflict_copy(self):
+        self.store.put("alice", "a.txt", b"server")
+
+        record, conflict = self.store.put_with_conflict(
+            "alice", "a.txt", b"client", expected_rev=0, client_id="client-1"
+        )
+
+        self.assertEqual(record.rev, 2)
+        self.assertIsNotNone(conflict)
+        self.assertIn("conflict client-1", conflict.path)
+        self.assertEqual(self.store.get("alice", conflict.path)[0], b"server")
+        self.assertEqual(self.store.get("alice", "a.txt")[0], b"client")
+
+    def test_stale_delete_creates_conflict_copy(self):
+        self.store.put("alice", "a.txt", b"server")
+
+        tombstone, conflict = self.store.delete_with_conflict(
+            "alice", "a.txt", expected_rev=0, client_id="client-1"
+        )
+
+        self.assertTrue(tombstone.deleted)
+        self.assertIsNotNone(conflict)
+        self.assertEqual(self.store.get("alice", conflict.path)[0], b"server")
+        with self.assertRaises(NotFoundError):
+            self.store.get("alice", "a.txt")
+
+    def test_delete_of_tombstone_has_no_conflict(self):
+        self.store.put("alice", "a.txt", b"server")
+        self.store.delete("alice", "a.txt")
+
+        tombstone, conflict = self.store.delete_with_conflict(
+            "alice", "a.txt", expected_rev=0, client_id="client-1"
+        )
+
+        self.assertTrue(tombstone.deleted)
+        self.assertIsNone(conflict)
+
+    def test_conflict_names_are_unique(self):
+        self.store.put("alice", "a.txt", b"server")
+        _, first = self.store.put_with_conflict(
+            "alice", "a.txt", b"one", expected_rev=0, client_id="client-1"
+        )
+        self.store.put("alice", "a.txt", b"server-2")
+        _, second = self.store.put_with_conflict(
+            "alice", "a.txt", b"two", expected_rev=1, client_id="client-1"
+        )
+
+        self.assertNotEqual(first.path, second.path)
+
     def test_backfill_scans_existing_files(self):
         existing = self.root / "alice" / "legacy.txt"
         existing.parent.mkdir(parents=True, exist_ok=True)

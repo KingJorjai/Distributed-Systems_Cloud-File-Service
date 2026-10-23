@@ -10,7 +10,7 @@ import threading
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from auth import hash_password, validate_password, validate_username, verify_password
 
@@ -445,6 +445,67 @@ class FileStore:
             )
             self._connection.commit()
         return FileRecord(owner, normalized, rev, digest, len(data), mtime_ns, False)
+
+
+    def _conflict_path(self, owner, path, client_id):
+        candidate = PurePosixPath(path)
+        safe_client = re.sub(r"[^A-Za-z0-9_-]", "", client_id or "")[:16] or "client"
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+        stem = candidate.stem[:120]
+        suffix = candidate.suffix
+        counter = 1
+        while True:
+            marker = "conflict {}{}".format(
+                safe_client, "" if counter == 1 else "-{}".format(counter)
+            )
+            name = "{} ({} {}){}".format(stem, marker, stamp, suffix)
+            conflict = str(candidate.with_name(name))
+            if self.stat(owner, conflict) is None:
+                return conflict
+            counter += 1
+
+    def put_with_conflict(
+        self, owner, path, data, expected_rev=None, client_id=None
+    ):
+        """Store bytes, preserving the current version if the revision is stale."""
+        normalized = _normalize_path(path)
+        current = self.stat(owner, normalized)
+        current_rev = current.rev if current is not None else 0
+        if expected_rev is not None and expected_rev != current_rev:
+            conflict = None
+            if current is not None and not current.deleted:
+                current_data, _ = self.get(owner, normalized)
+                conflict = self.put(
+                    owner,
+                    self._conflict_path(owner, normalized, client_id),
+                    current_data,
+                )
+            record = self.put(
+                owner, normalized, data, expected_rev=current_rev
+            )
+            return record, conflict
+        return self.put(
+            owner, normalized, data, expected_rev=expected_rev
+        ), None
+
+    def delete_with_conflict(
+        self, owner, path, expected_rev=None, client_id=None
+    ):
+        """Delete a file, preserving the current version if the revision is stale."""
+        normalized = _normalize_path(path)
+        current = self.stat(owner, normalized)
+        current_rev = current.rev if current is not None else 0
+        if expected_rev is not None and expected_rev != current_rev:
+            conflict = None
+            if current is not None and not current.deleted:
+                current_data, _ = self.get(owner, normalized)
+                conflict = self.put(
+                    owner,
+                    self._conflict_path(owner, normalized, client_id),
+                    current_data,
+                )
+            return self.delete(owner, normalized), conflict
+        return self.delete(owner, normalized), None
 
     def get(self, owner, path):
         """Return ``(bytes, FileRecord)`` for an existing file."""
