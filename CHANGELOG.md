@@ -8,7 +8,11 @@ All notable changes are recorded here. The project uses `MAJOR.MINOR.PATCH`:
 - `1.0.0` only when the final delivery is validated end to end.
 
 Build metadata is kept outside Git tags, for example
-`cloud-file-service-...-v0.11.1-build.42.zip`.
+`cloud-file-service-...-v0.11.2-build.42.zip`.
+
+## [0.11.2] - 2026-10-23
+
+- Stabilize the replication convergence test timings on slow CI runners.
 
 ## [0.11.1] - 2026-10-23
 

@@ -52,7 +52,10 @@ class ReplicationIntegrationTests(unittest.TestCase):
             replication_host="127.0.0.1",
             replication_port=replication_port,
             cluster_token="secret",
-            replication_timeout=0.5,
+            replication_timeout=1.0,
+            heartbeat_interval=0.5,
+            failure_timeout=5.0,
+            election_timeout=2.0,
         )
 
     def start_runtime(self, config):

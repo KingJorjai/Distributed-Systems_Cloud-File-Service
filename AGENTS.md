@@ -85,7 +85,7 @@ Precedence: CLI args > environment > `config.toml` > defaults. `CONFIG_FILE` sel
 
 ## Docs and release
 
-- Versioning: `MAJOR.MINOR.PATCH` tags, current `v0.11.1`; minor per milestone, patch for fixes, `v1.0.0` only after final validated delivery. Build metadata stays outside tags.
+- Versioning: `MAJOR.MINOR.PATCH` tags, current `v0.11.2`; minor per milestone, patch for fixes, `v1.0.0` only after final validated delivery. Build metadata stays outside tags.
 - Final report: `docs/report.md`; demo: `docs/demo.md`; Beamer slides: `docs/presentation/slides.tex`; local/Docker demos: `scripts/demo_failover.py` and `scripts/demo_docker.sh`.
 - Build slides with `scripts/build_slides.sh` (two `pdflatex` passes, output `site/presentation.pdf`).
 

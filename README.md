@@ -15,7 +15,7 @@ Docker deployment is documented in the [Docker guide](https://kingjorjai.github.
 Docker images are published to [GitHub Container Registry](https://github.com/KingJorjai?tab=packages) from `main`.
 
 Tagged releases use `MAJOR.MINOR.PATCH`; the current development release is
-`v0.11.1`. A new minor is added for each milestone, patches are used for fixes,
+`v0.11.2`. A new minor is added for each milestone, patches are used for fixes,
 and `v1.0.0` is reserved for the final validated delivery. Build numbers stay
 outside the tag. See [Release and Versioning](docs/release.md).
 

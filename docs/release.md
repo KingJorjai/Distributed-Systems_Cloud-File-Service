@@ -4,7 +4,7 @@ The project uses Semantic Versioning with a deliberate `0.x.y` phase.
 
 ## Rules
 
-- `MAJOR.MINOR.PATCH` is the Git tag format: `v0.11.1`.
+- `MAJOR.MINOR.PATCH` is the Git tag format: `v0.11.2`.
 - `MINOR` increments for each completed milestone or grouped feature set.
 - `PATCH` increments for fixes and maintenance without a milestone.
 - `1.0.0` is reserved for the final validated delivery. It is not used while
@@ -29,6 +29,7 @@ The project uses Semantic Versioning with a deliberate `0.x.y` phase.
 | `v0.10.0` | M7 server administration |
 | `v0.11.0` | M8 delivery preparation |
 | `v0.11.1` | M8 delivery fixes |
+| `v0.11.2` | CI stability fixes |
 
 `v1.0.0` will be created only after the final manual GUI/tray validation and
 the final report review.
@@ -45,7 +46,7 @@ mkdocs build --strict
 Publish only the current tag:
 
 ```sh
-git push origin v0.11.1
+git push origin v0.11.2
 ```
 
 Do not use `git push --tags` with the historical milestone tags. The release
