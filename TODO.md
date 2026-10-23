@@ -1,23 +1,25 @@
-# TODOs del proyecto
+# Trabajo pendiente
 
-Este documento recoge las funcionalidades que todavía no están implementadas.
+Estado actual: M0–M8 implementados y publicados como `v0.11.3`. Queda la
+validación manual final y el tag `v1.0.0`.
 
-## Sincronización bidireccional
+## Validación final
 
-- [ ] Añadir un mensaje `UPDATE` para que el servidor informe al cliente de cambios remotos.
-- [ ] Descargar archivos nuevos o modificados en el servidor y eliminar del cliente los que ya no existan.
+- [ ] Abrir la GUI en un escritorio Linux real y comprobar login, subida,
+      descarga, cierre a bandeja, mostrar, pausar/reanudar, salir y autostart.
+- [ ] Repetir la comprobación visual con el bundle de Windows x64.
+- [ ] Revisar el informe, la presentación y los PDFs finales.
+- [ ] Crear `v1.0.0` solo cuando la validación anterior esté completa.
 
-## Versiones y conflictos
+## Endurecimiento para producción
 
-- [ ] Implementar una base de datos de sincronización con `fichero | rev | hash` en el cliente y el servidor.
-- [ ] Enviar la revisión y el hash durante las subidas.
-- [ ] Detectar conflictos y conservar copias con nombres diferenciados.
-- [ ] Permitir que el cliente descargue y resuelva las copias en conflicto.
+- [ ] Rate limiting y recuperación de cuentas.
+- [ ] Auditoría administrativa persistente.
+- [ ] Snapshots por chunks y límites de tamaño configurables.
+- [ ] Historial de versiones y recolección de basura de lápidas/conflictos.
+- [ ] Grupos y ACLs heredadas.
+- [ ] Instaladores firmados, auto-update y gestión de secretos con keyring.
+- [ ] Rotación de certificados y automatización del despliegue TLS.
 
-## Seguridad y operación
-
-- [ ] Sustituir las credenciales educativas por secretos gestionados de forma segura.
-- [ ] Añadir cifrado TLS al protocolo TCP.
-- [ ] Añadir persistencia y gestión segura de usuarios y permisos.
-- [ ] Validar permisos de volúmenes y configuración antes de iniciar el servidor.
-- [ ] Hacer persistente la cola de cambios para no perder operaciones pendientes al cerrar el cliente.
+Estas mejoras están fuera del alcance de la entrega actual y se detallan en
+`docs/limitations.md`.

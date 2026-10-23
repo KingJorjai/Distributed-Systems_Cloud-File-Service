@@ -1,5 +1,6 @@
 """System tray icon for the GUI."""
 
+import sys
 import threading
 
 from PIL import Image, ImageDraw
@@ -35,6 +36,16 @@ class TrayIcon:
     @property
     def available(self):
         return pystray is not None
+
+    @property
+    def docked(self):
+        if self.icon is None:
+            return False
+        if sys.platform.startswith("linux") and hasattr(
+            self.icon, "_systray_manager"
+        ):
+            return self.icon._systray_manager is not None
+        return True
 
     def start(self):
         if pystray is None:

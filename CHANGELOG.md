@@ -8,7 +8,13 @@ All notable changes are recorded here. The project uses `MAJOR.MINOR.PATCH`:
 - `1.0.0` only when the final delivery is validated end to end.
 
 Build metadata is kept outside Git tags, for example
-`cloud-file-service-...-v0.11.2-build.42.zip`.
+`cloud-file-service-...-v0.11.3-build.42.zip`.
+
+## [0.11.3] - 2026-10-23
+
+- Include `version.py` in the server and client Docker images.
+- Verify the Docker failover, post-failover upload, and rejoin demo again.
+- Fall back to minimizing the window when the Linux tray cannot dock.
 
 ## [0.11.2] - 2026-10-23
 

@@ -63,6 +63,16 @@ class GuiApp:
             self.tray.start()
         except Exception:
             self.tray = None
+        self.root.after(1500, self._check_tray)
+
+    def _check_tray(self):
+        if self.tray is None or self.tray.docked:
+            return
+        self.tray.stop()
+        self.tray = None
+        if self.root.state() == "withdrawn":
+            self.show()
+        self._log("Bandeja del sistema no disponible; la ventana se minimizará.")
 
     def _clear(self):
         for widget in self.root.winfo_children():

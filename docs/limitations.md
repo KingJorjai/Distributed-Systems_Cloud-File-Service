@@ -38,11 +38,9 @@ The current synchronization design intentionally keeps the scope small.
   network partitions. A leader that cannot obtain a majority steps down.
 - A node that was unreachable during an aborted proposal may retain an
   uncommitted entry until the next heartbeat/snapshot.
-- Sharing is modelled in the database, but `SHAR`/`UNSH` commands and
-  notifications arrive in M5.
 - The client is supported on Windows x64 and Linux x64. macOS is out of scope.
 - Release bundles are portable and unsigned; Windows SmartScreen may warn.
-  There is no installer, uninstaller, auto-update, or tray icon yet.
+  There is no installer, uninstaller, or auto-update yet.
 - TLS requires a certificate. A private CA certificate must be distributed to
   clients; there is no “ignore certificate” option.
 - There is no rate limiting, email verification, or self-service password

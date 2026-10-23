@@ -193,7 +193,7 @@ python -m ruff check .
 mkdocs build --strict
 ```
 
-At the time of writing, the suite contains **171 tests**, all passing. The
+At the time of writing, the suite contains **174 tests**, all passing. The
 coverage includes:
 
 - configuration precedence, TLS rejection, path traversal and symlink checks;

@@ -348,7 +348,7 @@ Tareas:
 - [ ] Preparar la presentación de 15 minutos: 3 bloques, uno por miembro, con demo de 3 minutos.
 - [ ] Ensayar la demo dos veces y dejar un guion reproducible (`scripts/demo.sh`).
 - [ ] Generar PDF con `python scripts/build_pdf.py`; actualizar `PAGES` si se añaden páginas.
-- [ ] Tag `v0.11.0` y verificar bundles de cliente y servidor; `v1.0.0` se reserva para la validación final.
+- [ ] Tag `v0.11.3` y verificar bundles de cliente y servidor; `v1.0.0` se reserva para la validación final.
 
 **Criterio de salida:** memoria PDF, presentación ensayada, demo reproducible y release publicado.
 
@@ -422,7 +422,7 @@ python scripts/demo_failover.py
 - `docs/presentation/outline.md` y material de la presentación.
 - `scripts/demo.sh` y `scripts/demo_failover.py`.
 - Documentación MkDocs actualizada.
-- Release `v0.11.0` con bundles de cliente y servidor; `v1.0.0` queda para la entrega final validada.
+- Release `v0.11.3` con bundles de cliente y servidor; `v1.0.0` queda para la entrega final validada.
 
 ---
 
@@ -468,9 +468,8 @@ Orden de recorte si hiciera falta: web admin completa → extras de GUI →
 reincorporación automática → copias de conflicto. No se recortan TLS, wizard,
 outbox, demo de failover ni memoria.
 
-M0–M7 están implementados y fusionados. M8 (memoria, presentación Beamer, demo
-local y Docker, PDF y preparación de release) está implementado en la rama
-`feat/m8-delivery`; el plan detallado está en
-`2026-10-23-m8-delivery.md`. Queda crear el tag `v0.11.0` y publicar la release;
-`v1.0.0` se reserva para la validación final.
+M0–M8 están implementados y publicados como `v0.11.3`. El plan detallado de la
+entrega está en `2026-10-23-m8-delivery.md`. Queda la validación manual de
+GUI/tray, la publicación de la documentación final y el tag `v1.0.0`; la rama
+`main` se actualiza desde `feat/final-project`.
 con confirmación explícita.
