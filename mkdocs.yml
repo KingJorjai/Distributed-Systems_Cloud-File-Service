@@ -69,6 +69,7 @@ nav:
   - Getting Started:
       - Quick Start: quick-start.md
       - Configuration: configuration.md
+      - Security: security.md
       - Docker: docker.md
   - Concepts:
       - Architecture: architecture.md

@@ -11,10 +11,15 @@ services:
       CONFIG_FILE: /app/config.toml
       SERVER_PORT: "${SERVER_INTERNAL_PORT:-50012}"
       SERVER_FILES_PATH: /app/files
+      TLS_CERT_FILE: /app/certs/server.crt
+      TLS_KEY_FILE: /app/certs/server.key
+      TLS_CA_FILE: /app/certs/ca.crt
+      TLS_SERVER_NAME: localhost
       APP_PASSWORD_SAR: "${APP_PASSWORD_SAR:-}"
       APP_PASSWORD_SZA: "${APP_PASSWORD_SZA:-}"
     volumes:
       - "${SERVER_DATA_PATH:-./files}:/app/files"
+      - "${CERTS_PATH:-./certs}:/app/certs:ro"
       - "${APP_CONFIG_FILE:-./config.toml.example}:/app/config.toml:ro"
     restart: unless-stopped
 
@@ -33,9 +38,12 @@ services:
       CLIENT_SERVER: server
       CLIENT_PORT: "${SERVER_INTERNAL_PORT:-50012}"
       CLIENT_LOCAL_PATH: /data
+      CLIENT_TLS_CA_FILE: /app/certs/ca.crt
+      CLIENT_TLS_SERVER_NAME: server
       PYTHONUNBUFFERED: "1"
     stdin_open: true
     tty: true
     volumes:
       - "${CLIENT_DATA_PATH:-./client_files}:/data"
+      - "${CERTS_PATH:-./certs}:/app/certs:ro"
       - "${APP_CONFIG_FILE:-./config.toml.example}:/app/config.toml:ro"

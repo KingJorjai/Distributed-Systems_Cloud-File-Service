@@ -1,13 +1,18 @@
 # Server API
 
-The multithreaded server authenticates clients and serves file operations concurrently.
+The multithreaded server authenticates clients, stores metadata, and serves file
+operations concurrently over TLS.
 
-::: serv_fich_multithread.State
+::: server_runtime.State
 
-::: serv_fich_multithread.safe_path
+::: server_runtime.ServerRuntime
 
-::: serv_fich_multithread.sendOK
+::: file_store.FileStore
 
-::: serv_fich_multithread.sendER
+::: file_store.safe_path
 
-::: serv_fich_multithread.session
+::: server_runtime.sendOK
+
+::: server_runtime.sendER
+
+::: server_runtime.session

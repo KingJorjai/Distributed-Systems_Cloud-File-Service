@@ -1,8 +1,11 @@
 # Sync Client API
 
-The synchronization worker watches a local folder and sends changes through a dedicated connection.
+The synchronization worker watches a local folder, persists pending changes in
+an outbox, and sends them through a dedicated TLS connection.
 
-::: sync_client.SyncConnection
+::: client_session.ClientSession
+
+::: client_state.ClientState
 
 ::: sync_client.ChangeHandler
 

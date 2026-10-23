@@ -14,6 +14,22 @@ flowchart LR
 - Docker Engine with Compose v2.
 - A free host port, `50012` by default.
 
+## Create TLS certificates
+
+The container refuses plaintext connections. Create the bind-mounted
+directories first so Docker does not create them as root, then generate a
+development CA and a server certificate that includes the Compose service name:
+
+```sh
+mkdir -p files client_files certs
+python -m pip install -r requirements-dev.txt
+python scripts/generate_dev_cert.py --output certs --host server --host localhost --host 127.0.0.1
+```
+
+`compose.yaml` mounts `./certs` read-only into both containers. For a real
+deployment, replace these files with certificates from a public CA. See the
+[Security guide](security.md).
+
 ## Configure permissions
 
 The containers use the host UID and GID for the bind-mounted data directories. Create a local `.env` file from the example:
@@ -93,6 +109,9 @@ The server is exposed at `localhost:50012` on the host and at `server:50012` ins
 changes the container and client port. Set both when moving the complete service
 to another port.
 
+The server certificate must contain the hostname used by the client. The
+development command above includes `server`, `localhost`, and `127.0.0.1`.
+
 ## Start the client
 
 Run the client interactively from a second terminal:
@@ -116,6 +135,10 @@ docker compose down
 The bind-mounted files remain on the host after containers stop. Use `docker compose down --rmi local` to also remove the locally built images.
 
 ## Troubleshooting
+
+If the client reports a certificate error, confirm that `./certs/server.crt`
+contains the `server` SAN and that `./certs/ca.crt` is mounted in both
+containers. Regenerate the certificate with `--host server` if needed.
 
 Inspect the server logs when the client cannot connect:
 

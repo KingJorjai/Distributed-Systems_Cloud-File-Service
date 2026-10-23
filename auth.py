@@ -38,4 +38,8 @@ def validate_username(username):
 
 def validate_password(password):
     """Return whether a password meets the minimum policy."""
-    return isinstance(password, str) and len(password) >= 8
+    return (
+        isinstance(password, str)
+        and len(password) >= 8
+        and not any(character in password for character in ("\x00", "\r", "\n"))
+    )

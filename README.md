@@ -47,12 +47,21 @@ From the project directory, create the virtual environment and install the depen
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
+```
+
+Create a development certificate (the `certs/` directory is ignored by Git):
+
+```sh
+python scripts/generate_dev_cert.py --output certs
 ```
 
 Start the server in one terminal:
 
 ```sh
 source .venv/bin/activate
+export TLS_CERT_FILE=certs/server.crt
+export TLS_KEY_FILE=certs/server.key
 export APP_PASSWORD_SAR='set-a-local-password'
 export APP_PASSWORD_SZA='set-another-local-password'
 python serv_fich_multithread.py
@@ -62,6 +71,7 @@ Start the client in another terminal:
 
 ```sh
 source .venv/bin/activate
+export CLIENT_TLS_CA_FILE=certs/ca.crt
 python cli_fich.py localhost 50012 client_files
 ```
 
@@ -73,6 +83,8 @@ From PowerShell, create and activate a Windows virtual environment:
 py -3.10 -m venv .venv-win
 .\.venv-win\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
+python scripts/generate_dev_cert.py --output certs
 ```
 
 Start the server in one PowerShell window:
@@ -80,6 +92,8 @@ Start the server in one PowerShell window:
 ```powershell
 cd C:\Users\<usuario>\DS\Distributed-Systems_Cloud-File-Service
 .\.venv-win\Scripts\Activate.ps1
+$env:TLS_CERT_FILE = "certs/server.crt"
+$env:TLS_KEY_FILE = "certs/server.key"
 $env:APP_PASSWORD_SAR = "set-a-local-password"
 $env:APP_PASSWORD_SZA = "set-another-local-password"
 python serv_fich_multithread.py
@@ -90,9 +104,10 @@ Start the client in another PowerShell window:
 ```powershell
 cd C:\Users\<usuario>\DS\Distributed-Systems_Cloud-File-Service
 .\.venv-win\Scripts\Activate.ps1
+$env:CLIENT_TLS_CA_FILE = "certs/ca.crt"
 python cli_fich.py localhost 50012 client_files
 ```
 
 The client arguments are `server`, `port`, and `local_folder`. The default local folder is `client_files`.
 
-The client automatically uploads created, modified, renamed, and deleted files. Existing files are uploaded when it starts. Changes made directly on the server are not synchronized back to the client.
+The client automatically uploads created, modified, renamed, and deleted files. Existing files are uploaded when it starts. Pending changes are kept in a local outbox and retried after a restart. Changes made directly on the server are not synchronized back to the client yet.

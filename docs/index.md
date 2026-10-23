@@ -12,9 +12,10 @@ The client watches a local folder with [`watchdog`](https://python-watchdog.read
 ## Key properties
 
 - Client-to-server synchronization.
-- Separate TCP connection for automatic synchronization.
+- TLS-encrypted TCP connections with mandatory certificate verification.
+- Durable client outbox that retries pending changes after restart.
 - Debounced file events and retries after transient connection failures.
-- Atomic server-side uploads.
+- Atomic server-side uploads and tombstones for deletes.
 - Recursive synchronization of files and directories below the local folder.
 
 !!! warning

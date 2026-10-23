@@ -12,6 +12,7 @@ from auth import validate_password, validate_username
 from file_store import (
     AccessDeniedError,
     ConflictError,
+    InvalidPasswordError,
     InvalidPathError,
     NotFoundError,
     UserDisabledError,
@@ -165,17 +166,14 @@ def session(sock, runtime):
             try:
                 if user == "anonimous":
                     if password:
-                        raise UserNotFoundError(user)
+                        raise InvalidPasswordError(user)
                 else:
                     store.authenticate(user, password)
             except UserDisabledError:
                 sendER(sock, 17)
                 state = State.Identification
-            except (UserNotFoundError, Exception) as error:
-                if isinstance(error, (UserDisabledError,)):
-                    sendER(sock, 17)
-                else:
-                    sendER(sock, 3)
+            except (UserNotFoundError, InvalidPasswordError):
+                sendER(sock, 3)
                 state = State.Identification
             else:
                 sendOK(sock)
