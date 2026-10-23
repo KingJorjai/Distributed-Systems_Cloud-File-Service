@@ -28,6 +28,18 @@ class Endpoint:
     port: int
 
 
+@dataclass(frozen=True)
+class RemoteUpdate:
+    owner: str
+    path: str
+    rev: int
+    digest: str
+    size: int
+    op: str
+    access: str
+    client_id: str
+
+
 def parse_client_endpoints(value, default_host, default_port):
     """Parse ``host:port,...`` or fall back to the configured single server."""
     endpoints = []
@@ -272,6 +284,30 @@ class ClientSession:
     def rmdir(self, owner, path):
         self._command(
             "{}{}".format(szasar.Command.RemoveDir, self._address(owner, path))
+        )
+
+    def subscribe(self, client_id):
+        self._command("{}{}".format(szasar.Command.Subscribe, client_id))
+
+    def read_notification(self):
+        line = self.reader.readline().decode("ascii")
+        if line.startswith("ER"):
+            raise SyncError(line[2:])
+        if not line.startswith("UPDT"):
+            raise SyncError(1, "Unexpected notification: {}".format(line))
+        fields = line[4:].split("\t")
+        if len(fields) != 8:
+            raise SyncError(1, "Malformed notification: {}".format(line))
+        owner, path, rev, digest, size, op, access, client_id = fields
+        return RemoteUpdate(
+            owner=owner,
+            path=szasar.decode_path(path),
+            rev=int(rev),
+            digest=digest,
+            size=int(size),
+            op=op,
+            access=access,
+            client_id=client_id,
         )
 
     def shares(self):

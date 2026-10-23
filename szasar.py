@@ -32,6 +32,7 @@ class Command:
         Share,
         Unshare,
         Shares,
+        Subscribe,
     ) = (
         "USER",
         "PASS",
@@ -52,6 +53,7 @@ class Command:
         "SHAR",
         "UNSH",
         "SHRS",
+        "SUBS",
     )
 
 

@@ -24,6 +24,7 @@ from file_store import (
     UserExistsError,
     UserNotFoundError,
 )
+from notification_hub import NotificationHub
 from replication import (
     NoQuorumError,
     ReplicationLog,
@@ -106,11 +107,14 @@ def session(sock, runtime):
     expected_digest = None
     client_id = None
     download_data = b""
+    subscription = None
 
     while True:
         try:
             raw_message = reader.readline()
         except (EOFError, OSError, ssl.SSLError):
+            if subscription is not None:
+                runtime.notification_hub.unsubscribe(subscription)
             try:
                 sock.close()
             except OSError:
@@ -121,6 +125,8 @@ def session(sock, runtime):
                 sendER(sock, 19)
             except OSError:
                 pass
+            if subscription is not None:
+                runtime.notification_hub.unsubscribe(subscription)
             try:
                 sock.close()
             except OSError:
@@ -128,6 +134,8 @@ def session(sock, runtime):
             return
 
         if raw_message == b"":
+            if subscription is not None:
+                runtime.notification_hub.unsubscribe(subscription)
             sock.close()
             return
         try:
@@ -350,6 +358,20 @@ def session(sock, runtime):
                 )
             sock.sendall(b"END\r\n")
 
+        elif message.startswith(szasar.Command.Subscribe):
+            if state != State.Main:
+                sendER(sock)
+                continue
+            if user == "anonimous":
+                sendER(sock, 7)
+                continue
+            if subscription is not None:
+                runtime.notification_hub.unsubscribe(subscription)
+            subscription = runtime.notification_hub.subscribe(
+                user, message[4:], sock
+            )
+            sendOK(sock)
+
         elif message.startswith(szasar.Command.ChangePassword):
             if state != State.Main:
                 sendER(sock)
@@ -442,7 +464,7 @@ def session(sock, runtime):
                     expected_rev=revision,
                     client_id=client_id,
                 )
-                runtime.commit_operation({"operations": operations})
+                runtime.commit_operation({"operations": operations}, origin_client_id=client_id)
             except ConflictError:
                 sendER(sock, 20)
             except NoQuorumError:
@@ -548,7 +570,7 @@ def session(sock, runtime):
                     expected_rev=revision,
                     client_id=client_id,
                 )
-                runtime.commit_operation({"operations": operations})
+                runtime.commit_operation({"operations": operations}, origin_client_id=client_id)
             except (InvalidPathError, AccessDeniedError, OSError, ValueError):
                 sendER(sock, 11)
             except NoQuorumError:
@@ -562,6 +584,8 @@ def session(sock, runtime):
                 sendOK(sock, response)
 
         elif message.startswith(szasar.Command.Exit):
+            if subscription is not None:
+                runtime.notification_hub.unsubscribe(subscription)
             sendOK(sock)
             sock.close()
             return
@@ -581,6 +605,7 @@ class ServerRuntime:
             term=config.term,
         )
         self.cluster = ClusterNode(config, store, self.log)
+        self.notification_hub = NotificationHub(store)
         self.replicator = None
         self.replication_server = None
         self._replication_thread = None
@@ -636,13 +661,16 @@ class ServerRuntime:
     def is_primary(self):
         return self.cluster.is_leader()
 
-    def commit_operation(self, operation):
+    def commit_operation(self, operation, origin_client_id=None):
         """Commit a deterministic operation through replication and local apply."""
         if not self.is_primary():
             raise NotPrimaryError("This server is not the primary.")
         if self.replicator is not None:
             self.replicator.replicate(operation)
         self.store.apply_operation(operation)
+        self.notification_hub.publish_operation(
+            operation, origin_client_id=origin_client_id
+        )
 
     def require_primary(self):
         if not self.is_primary():
@@ -652,6 +680,7 @@ class ServerRuntime:
         """Stop accepting new connections."""
         self._stop.set()
         self.cluster.stop()
+        self.notification_hub.close()
         if self.replication_server is not None:
             self.replication_server.stop()
         if self._socket is not None:
