@@ -346,13 +346,18 @@ def session(sock, runtime):
             if state != State.Main:
                 sendER(sock)
                 continue
-            shares = store.list_shares(grantee=user)
+            shares = [
+                share
+                for share in store.list_shares()
+                if share.owner == user or share.grantee == user
+            ]
             sendOK(sock, len(shares))
             for share in shares:
                 sock.sendall(
-                    "{}\t{}\t{}\r\n".format(
+                    "{}\t{}\t{}\t{}\r\n".format(
                         share.owner,
                         szasar.encode_path(share.path),
+                        share.grantee,
                         share.access,
                     ).encode("ascii")
                 )

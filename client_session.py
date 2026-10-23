@@ -30,6 +30,14 @@ class Endpoint:
 
 
 @dataclass(frozen=True)
+class ShareInfo:
+    owner: str
+    path: str
+    grantee: str
+    access: str
+
+
+@dataclass(frozen=True)
 class RemoteUpdate:
     owner: str
     path: str
@@ -322,8 +330,12 @@ class ClientSession:
         count = int(self._command(szasar.Command.Shares))
         shares = []
         for _ in range(count):
-            owner, path, access = self.reader.readline().decode("ascii").split("\t")
-            shares.append((owner, szasar.decode_path(path), access))
+            owner, path, grantee, access = (
+                self.reader.readline().decode("ascii").split("\t")
+            )
+            shares.append(
+                ShareInfo(owner, szasar.decode_path(path), grantee, access)
+            )
         if self.reader.readline() != b"END":
             raise SyncError(1, "Share list terminator missing.")
         return shares

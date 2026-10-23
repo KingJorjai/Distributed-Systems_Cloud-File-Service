@@ -99,6 +99,31 @@ class SyncWorker:
         self.handler = ChangeHandler(self.root, self.changes, self._is_ignored)
         self.share_accesses = {}
         self.watcher = RemoteWatcher(self)
+        self.event_callback = None
+        self.last_error = None
+
+    def _emit(self, event, **data):
+        self.last_error = data.get("message", self.last_error) if event == "error" else self.last_error
+        if self.event_callback is not None:
+            try:
+                self.event_callback({"event": event, **data})
+            except Exception:
+                pass
+
+    def pending_count(self):
+        return len(self.state.pending())
+
+    def status(self):
+        endpoint = getattr(self.session, "current_endpoint", None)
+        return {
+            "running": not self.stop_event.is_set(),
+            "username": self.username,
+            "pending": self.pending_count(),
+            "endpoint": "{}:{}".format(endpoint.host, endpoint.port)
+            if endpoint is not None
+            else None,
+            "last_error": self.last_error,
+        }
 
     def start(self):
         """Reconcile once with the server, then watch for new changes."""
@@ -110,6 +135,7 @@ class SyncWorker:
         self.observer.start()
         self.worker.start()
         self.watcher.start()
+        self._emit("start", local_path=str(self.root))
 
     def stop(self):
         """Stop the watcher and close the synchronization connection."""
@@ -122,6 +148,7 @@ class SyncWorker:
         self.worker.join(timeout=5)
         self.session.close()
         self.state.close()
+        self._emit("stop")
 
     def ignore(self, filename):
         """Temporarily ignore events caused by a manual download."""
@@ -152,8 +179,9 @@ class SyncWorker:
 
     def _load_shares(self):
         self.share_accesses = {
-            (owner, path): access
-            for owner, path, access in self.session.shares()
+            (share.owner, share.path): share.access
+            for share in self.session.shares()
+            if share.grantee == self.username
         }
 
     def _share_access(self, owner, path):
@@ -310,9 +338,11 @@ class SyncWorker:
                 access=access,
             )
         )
+        self._emit("upload", owner=owner, path=path)
         if result.conflict_path is not None:
             owner_of_conflict = owner
             self._save_conflict(owner_of_conflict, result.conflict_path)
+            self._emit("conflict", owner=owner, path=result.conflict_path)
 
     def _save_conflict(self, owner, conflict_path):
         data = self.session.download(owner, conflict_path)
@@ -376,6 +406,7 @@ class SyncWorker:
         os.replace(temporary, target)
         self.state.set_file(entry)
         self.ignore(target.relative_to(self.root).as_posix())
+        self._emit("download", owner=entry.owner, path=entry.path)
 
     def _delete_remote(self, owner, path, state_entry):
         result = self.session.delete(
@@ -410,6 +441,7 @@ class SyncWorker:
         self.state.set_file(remote_entry)
         self.ignore(target.relative_to(self.root).as_posix())
         self._remove_empty_parents(target.parent)
+        self._emit("delete", owner=owner, path=path)
 
     def _remove_empty_parents(self, directory):
         shared_root = self.root / "shared"
@@ -458,8 +490,9 @@ class SyncWorker:
 
             try:
                 self._perform(action, owner, path)
-            except (OSError, EOFError, socket.timeout, ssl.SSLError, SyncError):
+            except (OSError, EOFError, socket.timeout, ssl.SSLError, SyncError) as error:
                 if not self.stop_event.is_set():
+                    self._emit("error", message=str(error), action=action, path=path)
                     self._reconnect()
                     time.sleep(1)
             else:
@@ -534,8 +567,9 @@ class SyncWorker:
         try:
             self.session.connect_and_login(self.username, self.password)
             self.reconcile()
-        except (OSError, EOFError, ssl.SSLError, SyncError, NoServerError):
-            pass
+            self._emit("reconnect", endpoint=self.status()["endpoint"])
+        except (OSError, EOFError, ssl.SSLError, SyncError, NoServerError) as error:
+            self._emit("error", message=str(error))
 
     def _perform(self, action, owner, path):
         state_entry = self.state.get_file(owner, path)
