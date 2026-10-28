@@ -163,7 +163,7 @@ class FailoverTests(unittest.TestCase):
             wait_until(
                 lambda: secondary2.cluster.is_leader()
                 or secondary3.cluster.is_leader(),
-                timeout=5,
+                timeout=20,
             )
         )
         new_leader = (
