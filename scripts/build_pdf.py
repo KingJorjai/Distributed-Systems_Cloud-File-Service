@@ -26,6 +26,7 @@ PAGES = (
     ("Protocol", "protocol/index.html"),
     ("Final Report", "report/index.html"),
     ("Demo", "demo/index.html"),
+    ("LAN Demo", "demo-lan/index.html"),
     ("Limitations", "limitations/index.html"),
     ("Protocol Helpers API", "api/protocol/index.html"),
 )

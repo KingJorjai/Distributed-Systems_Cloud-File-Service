@@ -39,7 +39,7 @@ Speaker: Anne Baquedano Mella / Laura Rodríguez Rodríguez
 2. Notifications: `SUBS`/`UPDT`, conflict copies, revocation, offline sync.
 3. Desktop GUI and daemon: tray, autostart, CLI control.
 4. HTTPS admin: users, shares, settings, status, step-down.
-5. Test results: 174 tests, Docker cluster, failover, notifications.
+5. Test results: 177 tests, Docker cluster, failover, notifications.
 6. Limitations and pending work.
 7. Conclusions and lessons learned.
 

@@ -80,6 +80,7 @@ nav:
   - Project:
       - Final Report: report.md
       - Demo: demo.md
+      - LAN Demo: demo-lan.md
       - Presentation: presentation/outline.md
       - Release Policy: release.md
   - API Reference:

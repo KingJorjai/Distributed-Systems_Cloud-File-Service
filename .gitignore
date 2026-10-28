@@ -120,6 +120,7 @@ ipython_config.py
 # pixi
 
 # Local synchronization data
+/demo/
 client_files/
 files/
 #   Similar to Pipfile.lock, it is generally recommended to include pixi.lock in version control.

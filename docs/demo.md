@@ -1,8 +1,12 @@
 # Reproducible Demo
 
 The demonstration shows three servers, two clients, a shared file, a primary
-failure, election, a post-failover upload, and rejoin. Two variants are
-provided: a fast local script and a real Docker Compose cluster.
+failure, election, a post-failover upload, and rejoin. Three variants are
+provided: a fast local script, a real Docker Compose cluster, and a multi-PC
+LAN demo.
+
+For a multi-PC laboratory demo with bundles, see the
+[LAN demo guide](demo-lan.md).
 
 ## Prerequisites
 

@@ -10,6 +10,8 @@ Watch the repository locally with `watchdog`, then send file changes to the serv
 
 Read the full documentation at [kingjorjai.github.io/Distributed-Systems_Cloud-File-Service](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/). The [final report](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/report/) and the [reproducible demo](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/demo/) are part of it.
 
+A multi-PC laboratory demo is documented in the [LAN demo guide](docs/demo-lan.md).
+
 Docker deployment is documented in the [Docker guide](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/docker/).
 
 Docker images are published to [GitHub Container Registry](https://github.com/KingJorjai?tab=packages) from `main`.
