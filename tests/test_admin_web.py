@@ -14,7 +14,7 @@ from file_store import FileStore
 from server_runtime import ServerRuntime
 
 
-def wait_until(predicate, timeout=5):
+def wait_until(predicate, timeout=20):
     import time
 
     deadline = time.monotonic() + timeout

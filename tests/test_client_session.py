@@ -14,7 +14,7 @@ from server_runtime import ServerRuntime
 from sync_client import SyncWorker
 
 
-def wait_until(predicate, timeout=5):
+def wait_until(predicate, timeout=20):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if predicate():

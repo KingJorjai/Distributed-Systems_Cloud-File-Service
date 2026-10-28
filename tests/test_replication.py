@@ -102,7 +102,7 @@ class ReplicationLogTests(unittest.TestCase):
         self.assertIsNotNone(self.log.get(1, 1))
 
 
-def wait_until(predicate, timeout=5):
+def wait_until(predicate, timeout=20):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if predicate():

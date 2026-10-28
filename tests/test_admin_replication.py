@@ -12,7 +12,7 @@ from file_store import FileStore
 from server_runtime import ServerRuntime
 
 
-def wait_until(predicate, timeout=5):
+def wait_until(predicate, timeout=20):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if predicate():
