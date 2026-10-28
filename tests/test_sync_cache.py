@@ -25,20 +25,22 @@ class SyncCacheTests(unittest.TestCase):
                 "alice",
                 "password-alice",
             )
-            self.addCleanup(worker.state.close)
-            original = Path.read_bytes
-            calls = []
+            try:
+                original = Path.read_bytes
+                calls = []
 
-            def counting(path):
-                calls.append(path)
-                return original(path)
+                def counting(path):
+                    calls.append(path)
+                    return original(path)
 
-            with patch("pathlib.Path.read_bytes", counting):
-                first = worker._local_files()
-                second = worker._local_files()
+                with patch("pathlib.Path.read_bytes", counting):
+                    first = worker._local_files()
+                    second = worker._local_files()
 
-            self.assertEqual(first, second)
-            self.assertEqual(len(calls), 1)
+                self.assertEqual(first, second)
+                self.assertEqual(len(calls), 1)
+            finally:
+                worker.state.close()
 
 
 if __name__ == "__main__":
