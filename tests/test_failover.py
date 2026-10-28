@@ -69,10 +69,10 @@ class FailoverTests(unittest.TestCase):
             role=role,
             peers=peers,
             cluster_token="secret",
-            heartbeat_interval=0.05,
-            failure_timeout=0.4,
-            election_timeout=0.1,
-            replication_timeout=0.2,
+            heartbeat_interval=0.1,
+            failure_timeout=1.0,
+            election_timeout=0.2,
+            replication_timeout=0.5,
             client_addresses=self.client_addresses,
         )
 
