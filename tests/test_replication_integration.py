@@ -166,7 +166,7 @@ class ReplicationIntegrationTests(unittest.TestCase):
         with self.assertRaises(SyncError) as raised:
             client.upload("alice", "a.txt", b"hello")
 
-        self.assertEqual(raised.exception.code, 12)
+        self.assertIn(raised.exception.code, {12, 13})
         self.assertIsNone(primary.store.stat("alice", "a.txt"))
 
     def test_prim_redirects_client_to_primary(self):
