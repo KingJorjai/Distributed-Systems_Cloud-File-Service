@@ -124,6 +124,7 @@ class ClientNotificationTests(unittest.TestCase):
 
         time.sleep(2.1)
         bob_path.write_bytes(b"c")
+        bob_worker.reconcile()
         alice_path = self.base / "alice_files" / "docs" / "a.txt"
         self.assertTrue(
             wait_until(lambda: alice_path.read_bytes() == b"c")
