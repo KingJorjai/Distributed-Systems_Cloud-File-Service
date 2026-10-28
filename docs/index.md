@@ -17,7 +17,7 @@ The client watches a local folder with [`watchdog`](https://python-watchdog.read
 - Debounced file events and retries after transient connection failures.
 - Atomic server-side uploads and tombstones for deletes.
 - Recursive synchronization of files and directories below the local folder.
-- Passive replication with a primary and two secondaries, quorum-confirmed mutations, durable logs, election, failover, and automatic rejoin.
+- Passive replication with a primary and configurable secondaries, quorum-confirmed mutations, durable logs, election, failover, and automatic rejoin.
 - Cross-user file and directory sharing with `ro`/`rw` ACLs and live change notifications.
 - Desktop GUI with background daemon, system tray, autostart, and CLI control.
 - Optional HTTPS server administration panel with users, shares, registration settings, replication status, and step-down demo.
@@ -34,6 +34,8 @@ The client watches a local folder with [`watchdog`](https://python-watchdog.read
 | [Architecture](architecture.md) | Watcher, queue, network worker, and server. |
 | [Protocol](protocol.md) | TCP commands, replication, and sharing. |
 | [Final Report](report.md) | Problem, architecture, decisions, tests, and pending work. |
-| [Demo](demo.md) | Local and Docker failover demonstrations. |
+| [Demo](demo.md) | Local, Docker, and LAN failover demonstrations. |
+| [Offline Kit](offline-kit.md) | Single-file Ubuntu 22.04 client/server kit. |
+| [LAN Demo](demo-lan.md) | Multi-PC LAN demo with generated bundles. |
 | [Presentation](presentation/outline.md) | 15-minute talk outline and timing. |
 | [API Reference](api/sync-client.md) | Python classes and functions generated from docstrings. |

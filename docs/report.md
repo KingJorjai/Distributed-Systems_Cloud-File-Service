@@ -193,8 +193,8 @@ python -m ruff check .
 mkdocs build --strict
 ```
 
-At the time of writing, the suite contains **177 tests**, all passing. The
-coverage includes:
+At the time of writing, the suite contains **178 tests**, all passing on
+Python 3.10.12 and in CI. The coverage includes:
 
 - configuration precedence, TLS rejection, path traversal and symlink checks;
 - file storage, revisions, tombstones, conflict copies, snapshots and state
@@ -234,6 +234,10 @@ client containers, including the three-node health check and the final hash
 comparison.
 
 The expected final line reports the same state hash on all three servers.
+
+A self-contained Ubuntu 22.04 offline kit is available as a single ZIP for
+machines without Internet access or a Python installation. It contains the
+server, desktop client, CA, configuration, logs, and a no-terminal launcher.
 
 ## 8. Limitations and work remaining
 

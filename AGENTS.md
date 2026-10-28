@@ -87,6 +87,7 @@ Precedence: CLI args > environment > `config.toml` > defaults. `CONFIG_FILE` sel
 
 - Versioning: `MAJOR.MINOR.PATCH` tags, current `v0.11.3`; minor per milestone, patch for fixes, `v1.0.0` only after final validated delivery. Build metadata stays outside tags.
 - LAN demo: `scripts/demo_lan_config.py`, `scripts/demo_lan_check.py`, and `docs/demo-lan.md`.
+- Offline kit: `scripts/build_offline_kit.sh`, `cloudfs.py`, and `docs/offline-kit.md`.
 - Final report: `docs/report.md`; demo: `docs/demo.md`; Beamer slides: `docs/presentation/slides.tex`; local/Docker demos: `scripts/demo_failover.py` and `scripts/demo_docker.sh`.
 - Build slides with `scripts/build_slides.sh` (two `pdflatex` passes, output `site/presentation.pdf`).
 

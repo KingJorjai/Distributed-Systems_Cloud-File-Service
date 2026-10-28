@@ -1,5 +1,6 @@
 """Background synchronization daemon controlled over local IPC."""
 
+import logging
 import threading
 import time
 from pathlib import Path
@@ -10,6 +11,8 @@ from config import default_config_path, load_config
 from ipc import IpcServer, ipc_address, ipc_key
 from single_instance import InstanceLock
 from sync_client import SyncWorker
+
+logger = logging.getLogger(__name__)
 
 
 class DaemonService:
@@ -99,6 +102,7 @@ class DaemonService:
             self.session.close()
         session = ClientSession(self.config)
         session.connect_and_login(username, password)
+        logger.info("daemon login user=%s", username)
         self.session = session
         self.username = username
         self.password = password
@@ -121,6 +125,7 @@ class DaemonService:
         if self.session is not None:
             self.session.close()
         self.session = None
+        logger.info("daemon logout")
         self.username = None
         self.password = None
         return self.status()

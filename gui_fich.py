@@ -1,9 +1,12 @@
 """Desktop entrypoint for the Cloud File Service client."""
 
 import argparse
+import logging
+import os
 import sys
 from pathlib import Path
 
+from app_logging import configure
 from client_state import default_state_dir
 from config import load_config
 from gui_controller import GuiController
@@ -24,6 +27,12 @@ def main(argv=None):
     parser.add_argument("--minimized", action="store_true")
     args = parser.parse_args(argv)
 
+    if getattr(sys, "frozen", False):
+        os.chdir(Path(sys.executable).resolve().parent)
+        if args.config is None and Path("config.toml").is_file():
+            args.config = str(Path("config.toml").resolve())
+    configure("gui")
+    log = logging.getLogger("gui")
     config = load_config(args.config).client
     state = default_state_dir() if not config.state_dir else config.state_dir
     lock = InstanceLock(Path(state) / "gui.lock")
@@ -53,6 +62,7 @@ def main(argv=None):
 
     from gui_app import GuiApp
 
+    log.info("GUI started")
     GuiApp(
         root,
         controller,
@@ -62,6 +72,7 @@ def main(argv=None):
     try:
         root.mainloop()
     finally:
+        log.info("GUI stopped")
         controller.close()
         lock.release()
     return 0

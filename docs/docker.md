@@ -145,7 +145,7 @@ passwords configured in `.env`, then create or modify a file in
 ## Shared files
 
 Share a file or directory with another registered user as `ro` or `rw` through
-the client API (`SHAR`/`UNSH`; the GUI arrives in M6). Grantees see shared paths
+the client API (`SHAR`/`UNSH`) or the GUI. Grantees see shared paths
 under `shared/<owner>/` in their local data directory. Active clients receive
 `UPDT` notifications and download changes immediately; revoking a share removes
 the grantee's local copy on the next notification or reconciliation.

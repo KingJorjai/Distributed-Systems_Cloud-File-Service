@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import os
 import queue
 import shutil
@@ -16,6 +17,8 @@ from client_session import ClientSession, NoServerError, SyncError
 from client_state import ClientState
 from file_store import ManifestEntry
 from remote_watcher import RemoteWatcher
+
+logger = logging.getLogger(__name__)
 
 
 class ChangeHandler(FileSystemEventHandler):
@@ -91,6 +94,7 @@ class SyncWorker:
         self.remote_changes = queue.Queue()
         self.ignored = {}
         self.ignored_lock = threading.Lock()
+        self._local_digests = {}
         self.stop_event = threading.Event()
         self.worker = threading.Thread(
             target=self._run, name="sync-worker", daemon=True
@@ -104,6 +108,7 @@ class SyncWorker:
 
     def _emit(self, event, **data):
         self.last_error = data.get("message", self.last_error) if event == "error" else self.last_error
+        logger.info("sync event=%s data=%s", event, data)
         if self.event_callback is not None:
             try:
                 self.event_callback({"event": event, **data})
@@ -200,21 +205,45 @@ class SyncWorker:
 
     def _local_files(self):
         result = {}
+        seen = set()
         for path in self.root.rglob("*"):
             if not path.is_file() or path.name.startswith(".download-"):
                 continue
             relative = path.relative_to(self.root).as_posix()
+            try:
+                info = path.stat()
+            except OSError:
+                continue
+            cached = self._local_digests.get(relative)
+            if (
+                cached is not None
+                and cached[0] == info.st_size
+                and cached[1] == info.st_mtime_ns
+            ):
+                digest = cached[2]
+            else:
+                data = path.read_bytes()
+                digest = hashlib.sha256(data).hexdigest()
+                self._local_digests[relative] = (
+                    info.st_size,
+                    info.st_mtime_ns,
+                    digest,
+                )
+            seen.add(relative)
             owner, file_path = self._owner_path(relative)
-            data = path.read_bytes()
             result[(owner, file_path)] = {
-                "digest": hashlib.sha256(data).hexdigest(),
-                "size": len(data),
+                "digest": digest,
+                "size": info.st_size,
                 "local": relative,
             }
+        self._local_digests = {
+            key: value for key, value in self._local_digests.items() if key in seen
+        }
         return result
 
     def reconcile(self):
         """Apply the manifest, local files, and last known state."""
+        logger.info("reconciliation started")
         self._load_shares()
         remote = {
             (entry.owner, entry.path): entry for entry in self.session.sync()
@@ -230,6 +259,7 @@ class SyncWorker:
                 owner, path, remote.get(key), local.get(key), state.get(key)
             )
         self.state.clear_outbox()
+        logger.info("reconciliation complete")
 
     def _reconcile_path(self, owner, path, remote_entry, local_entry, state_entry):
         access = self._share_access(owner, path)

@@ -1,9 +1,12 @@
 """Administrative operations shared by the HTTPS admin panel."""
 
+import logging
 import threading
 from datetime import datetime, timezone
 
 from file_store import StoreError
+
+logger = logging.getLogger(__name__)
 
 
 class AdminError(Exception):
@@ -20,6 +23,7 @@ class AdminService:
         self._lock = threading.RLock()
 
     def _record(self, actor, action, target=""):
+        logger.warning("admin action actor=%s action=%s target=%s", actor, action, target)
         with self._lock:
             self._audit.append(
                 {

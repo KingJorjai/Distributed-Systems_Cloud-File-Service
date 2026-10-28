@@ -68,6 +68,7 @@ nav:
   - Home: index.md
   - Getting Started:
       - Quick Start: quick-start.md
+      - Offline Kit: offline-kit.md
       - Configuration: configuration.md
       - Security: security.md
       - Desktop GUI: gui.md

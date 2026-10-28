@@ -19,7 +19,13 @@ The generator supports any number of servers and clients, and several
 processes may share a PC. Use different generated directories, ports, data
 directories, and client state directories when roles share a machine.
 
+For the smaller single-ZIP client/server kit, see the
+[Offline Kit](offline-kit.md).
+
 ## Build the demo bundles
+
+The generator and certificate step require the repository, Python 3.10.12, and
+`requirements-dev.txt` (`trustme`). The bundle build requires Docker.
 
 Build the Linux server, CLI client, and GUI client bundles on Ubuntu 22.04:
 
@@ -34,9 +40,9 @@ Extract the bundles on the demo PCs:
 
 ```sh
 mkdir -p ~/cloudfs-demo
-tar -xzf cloud-file-service-server-linux-x64-*.tar.gz -C ~/cloudfs-demo
-tar -xzf cloud-file-service-client-linux-x64-*.tar.gz -C ~/cloudfs-demo
-tar -xzf cloud-file-service-client-gui-linux-x64-*.tar.gz -C ~/cloudfs-demo
+tar -xzf demo/bundles/server/cloud-file-server.tar.gz -C ~/cloudfs-demo
+tar -xzf demo/bundles/client/cloud-file-client.tar.gz -C ~/cloudfs-demo
+tar -xzf demo/bundles/client-gui/cloud-file-client-gui.tar.gz -C ~/cloudfs-demo
 ```
 
 Set the bundle paths in each shell:

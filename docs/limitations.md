@@ -39,6 +39,9 @@ The current synchronization design intentionally keeps the scope small.
 - A node that was unreachable during an aborted proposal may retain an
   uncommitted entry until the next heartbeat/snapshot.
 - The client is supported on Windows x64 and Linux x64. macOS is out of scope.
+- The offline demo kit targets Ubuntu 22.04 and Python 3.10.12. Python 3.10 is
+  end-of-life, so the kit is intended only for the LAN demonstration; a
+  production deployment must migrate to a supported Python release.
 - Release bundles are portable and unsigned; Windows SmartScreen may warn.
   There is no installer, uninstaller, or auto-update yet.
 - TLS requires a certificate. A private CA certificate must be distributed to

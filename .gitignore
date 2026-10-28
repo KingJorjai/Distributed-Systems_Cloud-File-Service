@@ -120,6 +120,7 @@ ipython_config.py
 # pixi
 
 # Local synchronization data
+/logs/
 /demo/
 client_files/
 files/

@@ -3,6 +3,7 @@
 import hmac
 import html
 import json
+import logging
 import secrets
 import ssl
 import threading
@@ -119,13 +120,16 @@ class AdminServer:
             self._thread = None
 
 
+logger = logging.getLogger(__name__)
+
+
 class AdminHandler(BaseHTTPRequestHandler):
     """Request router for the admin panel."""
 
     server_version = "CloudFileService/1.0"
 
     def log_message(self, format, *args):
-        return
+        logger.info("admin %s", format % args)
 
     @property
     def service(self):

@@ -26,7 +26,7 @@ python -m pip install --no-cache-dir -r /src/requirements.txt -r /src/requiremen
 cp -a /src /work
 cd /work
 export PYTHONDONTWRITEBYTECODE=1
-for component in server client client-gui; do
+for component in server client client-gui client-gui-lite cloudfs; do
   python scripts/build_release_bundle.py "$component" \
     --output "/out/$component" \
     --archive-format gztar

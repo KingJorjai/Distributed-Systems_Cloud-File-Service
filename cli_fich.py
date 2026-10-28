@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 
 import json
+import logging
+import os
 import signal
 import sys
 import time
+from pathlib import Path
 
+from app_logging import configure
 from client_session import ClientSession, NoServerError, SyncError
 from config import ConfigurationError, load_config, validate_port
 from daemon_client import ensure_daemon
@@ -223,7 +227,15 @@ def main(argv=None):
 
         return daemon_main([item for item in argv if item != "--daemon"])
 
+    if getattr(sys, "frozen", False):
+        os.chdir(Path(sys.executable).resolve().parent)
+    configure("client")
+    logging.getLogger("client").info("CLI started")
     config_path, foreground, command = _parse_options(argv)
+    if config_path is None and getattr(sys, "frozen", False):
+        candidate = Path("config.toml")
+        if candidate.is_file():
+            config_path = str(candidate.resolve())
     if foreground:
         return _foreground(config_path)
     try:

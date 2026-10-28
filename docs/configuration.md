@@ -78,7 +78,7 @@ The client asks `PRIM` for the current primary and redirects if necessary. Leave
 | `SERVER_FILES_PATH` | `files` | Root storage directory. |
 | `TLS_CERT_FILE` | `certs/server.crt` | PEM server certificate. |
 | `TLS_KEY_FILE` | `certs/server.key` | PEM private key. |
-| `TLS_CA_FILE` | `certs/ca.crt` | CA used by replication (reserved for M3). |
+| `TLS_CA_FILE` | `certs/ca.crt` | CA used for replication and private-CA client trust. |
 | `ALLOW_REGISTRATION` | `true` | Enables `REGI`. |
 | `SERVER_ID` | `server1` | Cluster identity. |
 | `SERVER_ROLE` | `primary` | `primary` or `secondary`. |

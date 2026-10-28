@@ -1,6 +1,7 @@
 """Multithreaded TLS server runtime and client session state machine."""
 
 import hashlib
+import logging
 import shutil
 import socket
 import ssl
@@ -38,6 +39,9 @@ from tls import server_context
 
 class NotPrimaryError(Exception):
     """Raised when a mutation is sent to a secondary."""
+
+
+logger = logging.getLogger(__name__)
 
 
 class State:
@@ -97,6 +101,11 @@ def _parse_delete(payload):
 
 def session(sock, runtime):
     """Serve one authenticated client session until it disconnects."""
+    try:
+        peer = sock.getpeername()
+    except OSError:
+        peer = "unknown"
+    logger.info("client connection from %s", peer)
     reader = szasar.SocketReader(sock)
     config = runtime.config
     store = runtime.store
@@ -238,6 +247,7 @@ def session(sock, runtime):
                 sendER(sock, 3)
                 state = State.Identification
             else:
+                logger.info("login user=%s from=%s", user, peer)
                 sendOK(sock)
                 state = State.Main
 
@@ -491,6 +501,13 @@ def session(sock, runtime):
             except (OSError, EOFError, ValueError, AccessDeniedError):
                 sendER(sock, 10)
             else:
+                logger.info(
+                    "upload owner=%s path=%s size=%s rev=%s",
+                    owner,
+                    filename,
+                    len(data),
+                    record.rev,
+                )
                 response = str(record.rev)
                 if conflict is not None:
                     response += "\t" + szasar.encode_path(conflict.path)
@@ -507,6 +524,7 @@ def session(sock, runtime):
             except (InvalidPathError, AccessDeniedError, NotFoundError, ValueError):
                 sendER(sock, 5)
                 continue
+            logger.info("download owner=%s path=%s size=%s", owner, filename, len(data))
             download_data = data
             sendOK(sock, len(download_data))
             state = State.Downloading
@@ -639,6 +657,7 @@ class ServerRuntime:
 
     def start(self):
         """Bind the listening socket and start the configured cluster role."""
+        logger.info("starting server %s role=%s", self.config.server_id, self.config.role)
         self._tls = server_context(
             self.config.tls_cert_file, self.config.tls_key_file
         )
@@ -663,6 +682,7 @@ class ServerRuntime:
                 self.config, self.admin_service, self.cluster
             )
             self.admin_server.start()
+            logger.info("admin panel enabled on %s:%s", self.config.admin_host, self.config.admin_port)
 
     def serve_forever(self):
         """Accept connections until :meth:`stop` is called."""
@@ -695,6 +715,7 @@ class ServerRuntime:
         finally:
             with self._session_lock:
                 self._active_sessions -= 1
+            logger.info("client session closed")
             try:
                 connection.close()
             except OSError:
@@ -743,6 +764,10 @@ class ServerRuntime:
             self.store.apply_operation(operation)
             if index is not None:
                 self.log.set_meta("last_applied", index)
+            logger.info(
+                "commit ops=%s",
+                [item.get("kind") for item in operation.get("operations", [])],
+            )
             self.notification_hub.publish_operation(
                 operation, origin_client_id=origin_client_id
             )
@@ -753,6 +778,7 @@ class ServerRuntime:
 
     def stop(self):
         """Stop accepting new connections."""
+        logger.info("stopping server %s", self.config.server_id)
         self._stop.set()
         self.cluster.stop()
         if self.admin_server is not None:

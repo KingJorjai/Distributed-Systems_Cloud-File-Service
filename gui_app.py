@@ -9,11 +9,16 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
+from app_logging import default_log_file
 from autostart import disable as disable_autostart
 from autostart import enable as enable_autostart
 from autostart import is_enabled
 from config import default_config_path, load_config
-from tray import TrayIcon
+
+try:
+    from tray import TrayIcon
+except ImportError:
+    TrayIcon = None
 
 
 def _open_path(path):
@@ -52,6 +57,9 @@ class GuiApp:
         self.root.after(200, self._poll)
 
     def _start_tray(self):
+        if TrayIcon is None:
+            self.tray = None
+            return
         self.tray = TrayIcon(
             self.root,
             on_show=self.show,
@@ -223,6 +231,9 @@ class GuiApp:
             side="left", padx=6
         )
         ttk.Button(actions, text="Cambiar contraseña", command=self.change_password).pack(
+            side="left", padx=6
+        )
+        ttk.Button(actions, text="Abrir logs", command=self.open_logs).pack(
             side="left", padx=6
         )
         ttk.Button(actions, text="Cerrar sesión", command=self.logout).pack(
@@ -442,6 +453,11 @@ class GuiApp:
         path = Path(self.controller.status().get("local_path") or self.folder_var.get())
         if path.exists():
             _open_path(path)
+
+    def open_logs(self):
+        path = default_log_file("gui").resolve().parent
+        path.mkdir(parents=True, exist_ok=True)
+        _open_path(path)
 
     def save_settings(self):
         values = {

@@ -17,6 +17,7 @@ MERMAID_RENDERER = Path(__file__).with_name("render_mermaid.mjs")
 PAGES = (
     ("Home", "index.html"),
     ("Quick Start", "quick-start/index.html"),
+    ("Offline Kit", "offline-kit/index.html"),
     ("Configuration", "configuration/index.html"),
     ("Security", "security/index.html"),
     ("Desktop GUI", "gui/index.html"),

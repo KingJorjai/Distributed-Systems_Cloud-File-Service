@@ -23,6 +23,33 @@ COMPONENTS = {
         "data_directory": "client_files",
         "hidden_imports": ["client_daemon", "daemon_service"],
     },
+    "cloudfs": {
+        "entrypoint": "cloudfs.py",
+        "executable": "cloudfs",
+        "readme": "README-client-gui.txt",
+        "data_directory": "files",
+        "hidden_imports": [
+            "serv_fich_multithread",
+            "gui_fich",
+            "gui_app",
+            "client_daemon",
+            "daemon_service",
+        ],
+        "exclude_modules": ["PIL", "pystray", "tray"],
+    },
+    "client-gui-lite": {
+        "entrypoint": "gui_fich.py",
+        "executable": "cloud-file-client-gui",
+        "readme": "README-client-gui.txt",
+        "data_directory": "client_files",
+        "windowed": True,
+        "hidden_imports": [
+            "client_daemon",
+            "daemon_service",
+            "gui_app",
+        ],
+        "exclude_modules": ["PIL", "pystray", "tray"],
+    },
     "client-gui": {
         "entrypoint": "gui_fich.py",
         "executable": "cloud-file-client-gui",
@@ -78,6 +105,11 @@ def build_bundle(component: str, output_directory: Path, archive_format: str) ->
                 item
                 for module in settings.get("hidden_imports", [])
                 for item in ("--hidden-import", module)
+            ],
+            *[
+                item
+                for module in settings.get("exclude_modules", [])
+                for item in ("--exclude-module", module)
             ],
             *(["--windowed"] if settings.get("windowed") else []),
             *extra_binaries,
