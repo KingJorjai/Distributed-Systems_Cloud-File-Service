@@ -24,6 +24,17 @@ Entrypoints:
 - `config.py` — TOML + environment configuration.
 - `tls.py` — strict server/client TLS contexts.
 
+Additional modules:
+- `app_logging.py` — logging configuration and default log paths.
+- `autostart.py` — desktop autostart helpers.
+- `cloudfs.py` — unified offline entrypoint for server and desktop client.
+- `daemon_client.py` — IPC client helper.
+- `daemon_service.py` / `client_daemon.py` — background daemon and daemon entrypoint.
+- `error_messages.py` — protocol error messages.
+- `gui_controller.py` — GUI actions over daemon IPC.
+- `single_instance.py` — process lock.
+- `tray.py` — optional system-tray icon.
+
 Server files live under `files/<username>/`; client default is `client_files/`. Both are gitignored. Roadmap: `docs/superpowers/plans/` (internal). `docs/ref/` is committed course material and excluded from MkDocs.
 
 ## Commands
@@ -39,9 +50,14 @@ python -m unittest discover -s tests -v   # all tests
 python -m unittest tests.test_file_store.FileStoreTests.test_revision_increments -v
 python -m ruff check .                    # enforced lint
 mkdocs build --strict                     # docs
+python scripts/demo_lan_config.py ...     # generate a LAN demo layout
+python scripts/demo_lan_check.py ...      # check LAN ports, TLS, admin, and PRIM
+scripts/build_demo_bundles.sh             # build Ubuntu 22.04 demo bundles
+scripts/build_offline_kit.sh              # build the self-contained offline kit
 ```
 
 - Tests are stdlib `unittest`, not pytest. They require `requirements.txt` because importing `cli_fich` pulls in `watchdog`; TLS tests require `trustme` from `requirements-dev.txt`.
+- The suite currently has 178 tests. The offline kit targets Ubuntu 22.04 and Python 3.10.12, which is end-of-life outside that laboratory demo.
 - Tests use temporary directories and ephemeral ports; they do not depend on a global `config.toml`.
 - `ruff check` passes; `ruff format --check` currently fails on most source files. Do not run `ruff format .` wholesale unless asked.
 - `.github/workflows/tests.yml` runs tests and lint on Ubuntu/Windows and strict docs on Linux.
@@ -88,6 +104,9 @@ Precedence: CLI args > environment > `config.toml` > defaults. `CONFIG_FILE` sel
 - Versioning: `MAJOR.MINOR.PATCH` tags, current `v0.11.3`; minor per milestone, patch for fixes, `v1.0.0` only after final validated delivery. Build metadata stays outside tags.
 - LAN demo: `scripts/demo_lan_config.py`, `scripts/demo_lan_check.py`, and `docs/demo-lan.md`.
 - Offline kit: `scripts/build_offline_kit.sh`, `cloudfs.py`, and `docs/offline-kit.md`.
+- Logs: `app_logging.py` configures rotating files under `logs/`; the GUI has an **Abrir logs** button.
+- The compact offline kit has no tray. The full GUI bundle still contains the tray.
+- The offline kit contains a unified `cloudfs` executable, server and client configs, a CA, and a no-terminal client launcher.
 - Final report: `docs/report.md`; demo: `docs/demo.md`; Beamer slides: `docs/presentation/slides.tex`; local/Docker demos: `scripts/demo_failover.py` and `scripts/demo_docker.sh`.
 - Build slides with `scripts/build_slides.sh` (two `pdflatex` passes, output `site/presentation.pdf`).
 

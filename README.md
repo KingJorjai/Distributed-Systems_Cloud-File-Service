@@ -12,9 +12,11 @@ Read the full documentation at [kingjorjai.github.io/Distributed-Systems_Cloud-F
 
 A multi-PC laboratory demo is documented in the [LAN demo guide](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/demo-lan/).
 
-An offline Ubuntu 22.04 kit is documented in the [Offline Kit](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/offline-kit/).
+An offline Ubuntu 22.04 kit is documented in the [Offline Kit](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/offline-kit/). The compact kit is a single ZIP with a no-terminal client, a server launcher, and rotating logs.
 
 Docker deployment is documented in the [Docker guide](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/docker/).
+
+Security notes and current limitations are in the [Security guide](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/security/) and [Limitations](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/limitations/).
 
 Docker images are published to [GitHub Container Registry](https://github.com/KingJorjai?tab=packages) from `main`.
 
