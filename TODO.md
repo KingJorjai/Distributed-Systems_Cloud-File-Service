@@ -1,7 +1,8 @@
 # Trabajo pendiente
 
-Estado actual: M0–M8 implementados y publicados como `v0.11.3`. Queda la
-validación manual final y el tag `v1.0.0`.
+Estado actual: M0–M8 implementados y publicados como `v0.11.3`. El tooling
+LAN y el kit offline están listos. Queda la validación manual final y el tag
+`v1.0.0`.
 
 ## Validación final
 

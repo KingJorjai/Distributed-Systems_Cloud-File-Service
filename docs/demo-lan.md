@@ -22,6 +22,16 @@ directories, and client state directories when roles share a machine.
 For the smaller single-ZIP client/server kit, see the
 [Offline Kit](offline-kit.md).
 
+## Prerequisites
+
+- Python 3.10.12 and the development dependencies (`trustme`) to generate
+  certificates and run `demo_lan_config.py`.
+- Docker Engine with Compose v2 to build the bundles.
+- `scripts/demo_lan_check.py` is run from the repository and is not included
+  in the bundles.
+- The demo targets Ubuntu 22.04 and Python 3.10.12. Python 3.10 is
+  end-of-life, so this kit is intended for the laboratory demonstration only.
+
 ## Build the demo bundles
 
 The generator and certificate step require the repository, Python 3.10.12, and

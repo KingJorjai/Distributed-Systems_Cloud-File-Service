@@ -13,8 +13,8 @@ The project uses Semantic Versioning with a deliberate `0.x.y` phase.
 - Build metadata stays outside the Git tag. Release artifacts append
   `-build.<run>`; strict SemVer build metadata would be `+build.<run>`.
 - Older milestone tags (`v0.3.0`–`v0.10.0`) are local only. Published releases
-  start at `v0.11.0`; do not use `git push --tags`, because it would trigger the
-  release workflow for old commits. Push release tags explicitly.
+  start at `v0.11.0`; push release tags explicitly, because `git push --tags`
+  would trigger the release workflow for every old commit.
 
 ## Milestone tags
 
