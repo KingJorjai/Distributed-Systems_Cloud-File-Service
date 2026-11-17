@@ -36,6 +36,8 @@ Create or reuse a host-only laboratory network. In this example the subnet is
 
 The network must allow these ports between the PCs:
 
+![VirtualBox host-only network](assets/setup/vbox-network.png)
+
 | Port | Purpose |
 | ---: | --- |
 | `50012` | Client protocol |
@@ -120,6 +122,8 @@ Expected output:
 Servidor TLS 0.11.3 escuchando en el puerto 50012 (rol primary).
 ```
 
+![Server startup](assets/setup/server-startup.png)
+
 Secondary output:
 
 ```text
@@ -149,6 +153,8 @@ Expected result:
 ...
 All checks passed.
 ```
+
+![Network checker](assets/setup/network-check.png)
 
 Use `--client-cert`, `--client-key`, and `--token` to also test the replication
 handshake.
