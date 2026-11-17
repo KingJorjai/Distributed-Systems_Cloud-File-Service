@@ -20,6 +20,12 @@ The objective is not a commercial product. It is a working demonstration of the
 distributed-systems mechanisms, with explicit decisions and an honest account of
 what remains unfinished.
 
+The scope is the three increments of the course project: client-server
+synchronization, passive replication with failover, and cross-user sharing with
+notifications. Topics from Part 4 (exclusive access, distributed transactions,
+consensus, and secure multiparty computation) are studied but intentionally
+outside the delivered proof of concept.
+
 ## 2. Distributed-system properties
 
 The system consists of independent client and server processes that communicate
@@ -37,6 +43,27 @@ different machines or containers.
   primary is elected and a returning node receives a snapshot.
 - **Sharing:** owners grant `ro`/`rw` access to other users, and active clients
   receive change notifications.
+- **Consistency model:** mutations are linearized at the primary; secondary
+  reads may lag behind the primary.
+- **Failure model:** crash-stop only. The system does not tolerate Byzantine
+  nodes or arbitrary network partitions.
+- **Scope:** the project implements the first three increments of the course
+  project. Exclusive access, distributed transactions, consensus, and secure
+  multiparty computation are studied but not implemented.
+
+### Scope against the course
+
+| Course topic | Status | Notes |
+| --- | --- | --- |
+| Client-server synchronization | Implemented | TLS, manifest, upload/download, tombstones, conflicts |
+| Passive replication | Implemented | Primary/secondaries, quorum, durable log, snapshot rejoin |
+| Failure detection and election | Implemented | Heartbeats, terms, votes, fencing, step-down |
+| Sharing and notifications | Implemented | `ro`/`rw`, `UPDT`, offline reconciliation |
+| Distributed transactions | Not implemented | Each mutation is one atomic primary operation |
+| Exclusive access | Not implemented | No locks or leases |
+| Generic consensus | Not implemented | Leader election only |
+| Secure multiparty computation | Not implemented | Out of scope |
+| Version history/GC | Not implemented | Out of scope |
 
 The implementation deliberately does not attempt Byzantine fault tolerance,
 arbitrary network partitions, or a complete commercial security model.
@@ -132,14 +159,24 @@ step-down. Admin mutations use the same replicated path as client mutations.
   and the commit index, allowing restart and rejoin. See `replication.py`.
 - **Quorum before apply.** `Replicator.replicate` broadcasts and commits only
   after a majority; see `replication.py:Replicator`.
+- **Reliable broadcast for passive replication.** The primary sends each
+  operation to all secondaries, waits for a majority of ACKs, and only then
+  commits. This is a replication primitive, not a generic group-communication
+  library.
 - **Conflict preservation.** `FileStore.plan_put_with_conflict` and
   `plan_delete_with_conflict` keep the current server version as a conflict
   file instead of overwriting it silently.
-- **Election safety.** `election.py:ClusterNode` checks terms, persists votes,
-  compares logs, and fences leaders that lose quorum.
+- **Leader election.** `election.py:ClusterNode` checks terms, persists votes,
+  compares logs, and fences leaders that lose quorum. It is a leader-election
+  algorithm, not a generic consensus protocol.
+- **No distributed transactions.** A client mutation is one atomic operation at
+  the primary. Multi-object transactions are not implemented.
 - **Client transparency.** `SyncWorker.reconcile` uses the last state as a
   three-way base; `RemoteWatcher` closes the gap between active notifications
   and offline reconciliation.
+- **Echo suppression, not exactly-once.** `client_id` prevents a client from
+  receiving its own notification; retries and conflict handling make repeated
+  operations safe, but the protocol does not provide exactly-once semantics.
 - **Local IPC.** `ipc.py` uses a Unix socket or Windows named pipe and an authkey
   file with mode `0600`; no local TCP port is opened.
 - **Admin safety.** `admin_service.py` prevents self-disable and disabling the
@@ -203,6 +240,7 @@ Python 3.10.12 and in CI. The coverage includes:
 - three-replica convergence, quorum rejection, snapshots and replication logs;
 - failover election, client redirection with `PRIM`, rejoin and post-failover
   notification;
+- GUI controller, daemon IPC, autostart, HTTPS admin sessions, and CSRF;
 - sharing ACLs, notification delivery, revocation and offline reconciliation;
 - daemon IPC, GUI controller actions, single instance, autostart and HTTPS admin
   sessions/CSRF.
@@ -221,6 +259,11 @@ Measured results:
 The GUI and tray were exercised through the controller/IPC layer, automated
 tests, and a PyInstaller bundle. A real desktop session is still required for
 the final visual and tray checklist because CI is headless.
+
+The efficiency figures are functional checks, not a formal benchmark: the suite
+has 178 tests, and the demos verify convergence, failover, rejoin, and
+notifications. The client cache avoids rereading unchanged files in later
+reconciliations.
 
 ## 7. Reproducible demo
 
@@ -249,6 +292,11 @@ server, desktop client, CA, configuration, logs, and a no-terminal launcher.
   nodes or arbitrary network partitions.
 - There is no version history, tombstone garbage collection, or chunked
   transfer for very large files; snapshots are a single replication message.
+- There is no distributed transaction, exclusive-access protocol, generic
+  consensus protocol, or version of secure multiparty computation. These are
+  course topics outside the delivered scope.
+- There is no at-rest encryption; files and SQLite metadata are stored in
+  plaintext on the server and on clients.
 - The client supports Windows and Linux; macOS and signed native installers are
   out of scope. Portable bundles are unsigned.
 - The GUI depends on Tkinter and a desktop session; tray support depends on the
@@ -275,7 +323,8 @@ a returning replica converges.
 
 With more time, the next steps would be TLS deployment automation, durable
 admin audit logging, rate limiting, chunked snapshots, version history, and
-signed installers for end users.
+signed installers for end users. These are implementation and operational
+improvements, not missing course-theory mechanisms.
 
 ## 10. References
 

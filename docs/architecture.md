@@ -100,6 +100,12 @@ mutations to the primary admin URL.
 
 ## Replication
 
+The system implements primary-based passive replication, not generic
+group communication. Replication transparency is obtained by sequencing
+mutations at the primary; ordered delivery is therefore primary
+sequencing, not a generic FIFO, causal, or total-order broadcast
+implementation.
+
 The primary plans each mutation as deterministic operations: file writes include
 the exact revision, hash, size, `mtime_ns`, conflict copy name, and base64 data.
 It broadcasts the operation to the secondaries over mutual TLS, waits for a

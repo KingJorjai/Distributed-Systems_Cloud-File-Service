@@ -42,6 +42,10 @@ The current synchronization design intentionally keeps the scope small.
 - The offline demo kit targets Ubuntu 22.04 and Python 3.10.12. Python 3.10 is
   end-of-life, so the kit is intended only for the LAN demonstration; a
   production deployment must migrate to a supported Python release.
+- Files and SQLite metadata are stored in plaintext. The project provides TLS
+  in transit, but no at-rest encryption.
+- Exclusive access, distributed transactions, consensus, and secure multiparty
+  computation are course topics outside the implemented scope.
 - Release bundles are portable and unsigned; Windows SmartScreen may warn.
   There is no installer, uninstaller, or auto-update yet.
 - TLS requires a certificate. A private CA certificate must be distributed to

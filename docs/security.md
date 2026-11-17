@@ -54,6 +54,8 @@ There is no login rate limiting yet.
 
 - The laboratory kit targets Python 3.10.12, which is end-of-life. It is a
   deliberate LAN-demo constraint and must not be exposed to the Internet.
+- Files and SQLite metadata are stored in plaintext. The project provides TLS
+  in transit, but no at-rest encryption.
 
 - No TLS certificate rotation or automatic renewal is built in; use a reverse
   proxy or renew the mounted certificate.
