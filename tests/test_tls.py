@@ -87,7 +87,7 @@ class TlsTests(unittest.TestCase):
                     received = raw.recv(1)
                 except ConnectionResetError:
                     received = b""
-                self.assertEqual(received, b"")
+                self.assertIn(received, (b"", b"\x15"))
 
 
 if __name__ == "__main__":

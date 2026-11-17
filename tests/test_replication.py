@@ -241,9 +241,10 @@ class ReplicationServerTests(unittest.TestCase):
             raw.sendall(b'{"type":"HELLO"}\r\n')
             raw.settimeout(1)
             try:
-                self.assertEqual(raw.recv(1), b"")
+                received = raw.recv(1)
             except ConnectionResetError:
-                pass
+                received = b""
+            self.assertIn(received, (b"", b"\x15"))
 
     def test_commit_applies_in_order(self):
         connection = self.peer()

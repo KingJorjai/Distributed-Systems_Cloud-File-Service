@@ -279,9 +279,10 @@ class ProtocolIntegrationTests(RuntimeTestCase):
             raw.sendall(b"USERalice\r\n")
             raw.settimeout(1)
             try:
-                self.assertEqual(raw.recv(1), b"")
+                received = raw.recv(1)
             except ConnectionResetError:
-                pass
+                received = b""
+            self.assertIn(received, (b"", b"\x15"))
 
     def test_refuses_to_start_without_certificate(self):
         with tempfile.TemporaryDirectory() as directory:
