@@ -8,7 +8,9 @@ Automatic file synchronization from a local folder to a TLS server, with a deskt
 
 Watch the repository locally with `watchdog`, then send file changes to the server over TCP.
 
-Read the full documentation at [kingjorjai.github.io/Distributed-Systems_Cloud-File-Service](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/). The [final report](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/report/) and the [reproducible demo](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/demo/) are part of it.
+Read the full documentation at [kingjorjai.github.io/Distributed-Systems_Cloud-File-Service](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/).
+
+The step-by-step installation guide is at [Installation](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/installation/). The [final report](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/report/) and the [reproducible demo](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/demo/) are part of it.
 
 A multi-PC laboratory demo is documented in the [LAN demo guide](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/demo-lan/).
 
