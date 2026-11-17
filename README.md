@@ -12,7 +12,6 @@ Read the full documentation at [kingjorjai.github.io/Distributed-Systems_Cloud-F
 
 The step-by-step installation guide is at [Installation](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/installation/). The [final report](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/report/) and the [reproducible demo](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/demo/) are part of it.
 
-A multi-PC laboratory demo is documented in the [LAN demo guide](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/demo-lan/).
 
 An offline Ubuntu 22.04 kit is documented in the [Offline Kit](https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/offline-kit/). The compact kit is a single ZIP with a no-terminal client, a server launcher, and rotating logs.
 

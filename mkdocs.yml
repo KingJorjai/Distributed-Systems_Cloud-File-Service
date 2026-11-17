@@ -69,7 +69,6 @@ nav:
   - Getting Started:
       - Quick Start: quick-start.md
       - Installation: installation.md
-      - Installation (LAN): installation-lan.md
       - Offline Kit: offline-kit.md
       - Configuration: configuration.md
       - Security: security.md
@@ -83,7 +82,6 @@ nav:
   - Project:
       - Final Report: report.md
       - Demo: demo.md
-      - LAN Demo: demo-lan.md
       - Presentation: presentation/outline.md
       - Release Policy: release.md
   - API Reference:

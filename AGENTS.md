@@ -50,14 +50,12 @@ python -m unittest discover -s tests -v   # all tests
 python -m unittest tests.test_file_store.FileStoreTests.test_revision_increments -v
 python -m ruff check .                    # enforced lint
 mkdocs build --strict                     # docs
-python scripts/demo_lan_config.py ...     # generate a LAN demo layout
-python scripts/demo_lan_check.py ...      # check LAN ports, TLS, admin, and PRIM
 scripts/build_demo_bundles.sh             # build Ubuntu 22.04 demo bundles
 scripts/build_offline_kit.sh              # build the self-contained offline kit
 ```
 
 - Tests are stdlib `unittest`, not pytest. They require `requirements.txt` because importing `cli_fich` pulls in `watchdog`; TLS tests require `trustme` from `requirements-dev.txt`.
-- The suite currently has 178 tests. The offline kit targets Ubuntu 22.04 and Python 3.10.12, which is end-of-life outside that laboratory demo.
+- The suite currently has 178 tests. The offline kit targets Ubuntu 22.04 and Python 3.10.12, which is end-of-life outside the demonstration environment.
 - Tests use temporary directories and ephemeral ports; they do not depend on a global `config.toml`.
 - `ruff check` passes; `ruff format --check` currently fails on most source files. Do not run `ruff format .` wholesale unless asked.
 - `.github/workflows/tests.yml` runs tests and lint on Ubuntu/Windows and strict docs on Linux.
@@ -102,7 +100,6 @@ Precedence: CLI args > environment > `config.toml` > defaults. `CONFIG_FILE` sel
 ## Docs and release
 
 - Versioning: `MAJOR.MINOR.PATCH` tags, current `v0.11.3`; minor per milestone, patch for fixes, `v1.0.0` only after final validated delivery. Build metadata stays outside tags.
-- LAN demo: `scripts/demo_lan_config.py`, `scripts/demo_lan_check.py`, and `docs/demo-lan.md`.
 - Installation guide: `docs/installation.md`.
 - Offline kit: `scripts/build_offline_kit.sh`, `cloudfs.py`, and `docs/offline-kit.md`.
 - Logs: `app_logging.py` configures rotating files under `logs/`; the GUI has an **Abrir logs** button.

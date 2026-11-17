@@ -40,7 +40,7 @@ The current synchronization design intentionally keeps the scope small.
   uncommitted entry until the next heartbeat/snapshot.
 - The client is supported on Windows x64 and Linux x64. macOS is out of scope.
 - The offline demo kit targets Ubuntu 22.04 and Python 3.10.12. Python 3.10 is
-  end-of-life, so the kit is intended only for the LAN demonstration; a
+  end-of-life, so the kit is intended only for the demonstration environment; a
   production deployment must migrate to a supported Python release.
 - Files and SQLite metadata are stored in plaintext. The project provides TLS
   in transit, but no at-rest encryption.

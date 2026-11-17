@@ -1,20 +1,20 @@
 # Installation Guide
 
-This guide installs Cloud File Service on independent Linux machines. It covers a
-single server and a replicated cluster. No virtual machine is required; the same
-steps apply to physical machines, containers, or virtual machines.
+This guide installs Cloud File Service on independent machines. It covers a
+single server and a replicated cluster. It does not assume a fixed layout,
+fixed IP addresses, or any particular number of nodes.
 
-The guide targets Ubuntu 22.04 and Python 3.10.12. Python 3.10 is end-of-life,
-so this guide is intended for the laboratory demonstration. A production
-deployment must migrate to a supported Python release.
+The guide targets Ubuntu 22.04 and Python 3.10.12. Python 3.10 is
+end-of-life, so this guide is intended for the demonstration environment. A
+production deployment must migrate to a supported Python release.
 
 ## Prerequisites
 
-- Ubuntu 22.04 on each node.
+- Ubuntu 22.04 on each machine.
 - The self-contained Linux bundles, or the repository and a Python 3.10.12
   virtual environment.
-- A fixed IP address for each server.
-- Open firewall ports between the nodes.
+- A fixed IP address or hostname for each server.
+- Open firewall ports between the machines.
 - A browser that can import a private CA, or a browser where the certificate
   warning can be accepted once.
 - No Internet access is required after the bundles, certificates, and
@@ -22,22 +22,33 @@ deployment must migrate to a supported Python release.
 
 ## Network layout
 
-Use fixed IP addresses. The example below uses three servers and two clients:
+Choose one of these layouts.
 
-| Node | Role | Example IP |
-| --- | --- | --- |
-| `server1` | Primary | `192.168.1.101` |
-| `server2` | Secondary | `192.168.1.102` |
-| `server3` | Secondary | `192.168.1.103` |
-| `client1` | `alice` | `192.168.1.111` |
-| `client2` | `bob` | `192.168.1.112` |
+### Single node
 
-The same steps also work for one server and one client. Replace every example IP
-with the real laboratory IP addresses.
+```text
+server1: 192.168.1.101
+client1: 192.168.1.111
+```
+
+The server runs in standalone mode with quorum 1.
+
+### Multi-node cluster
+
+```text
+server1: 192.168.1.101   primary
+server2: 192.168.1.102   secondary
+server3: 192.168.1.103   secondary
+client1: 192.168.1.111
+client2: 192.168.1.112
+```
+
+Replace every example IP with the real machine addresses. The same steps work
+for one server and one client, or for more nodes.
 
 ## Firewall
 
-Allow these ports from the laboratory subnet on each server:
+Allow these ports from the trusted network on each server:
 
 ```sh
 sudo ufw allow from 192.168.1.0/24 to any port 50012 proto tcp
@@ -55,18 +66,19 @@ On Windows, create equivalent inbound rules with `New-NetFirewallRule`.
 
 ## Certificates
 
-Generate one CA and one server certificate with every server IP as a SAN:
+Generate one CA and one server certificate with every server address as a SAN:
 
 ```sh
 python scripts/generate_dev_cert.py --output certs \
+  --host server1.example.com \
+  --host server2.example.com \
+  --host server3.example.com \
   --host 192.168.1.101 \
   --host 192.168.1.102 \
   --host 192.168.1.103 \
   --host localhost \
   --host 127.0.0.1
 ```
-
-![Certificate generation](assets/setup/cert-generation.png)
 
 Copy to each server:
 
@@ -78,50 +90,112 @@ certs/server.key
 
 Copy only `certs/ca.crt` to each client. Keep `server.key` only on the servers.
 
-If the IP addresses change, regenerate the certificate. The laboratory CA is a
-development CA and must not be used for a production deployment.
+If the addresses change, regenerate the certificate. The development CA is intended for the demonstration; use a public CA for a
+real deployment.
 
-## Generate the configuration
+## Server configuration
 
-Run the generator with the fixed IPs:
+### Single server
 
-```sh
-python scripts/demo_lan_config.py \
-  --server server1@192.168.1.101:50012:60012:50080 \
-  --server server2@192.168.1.102:50012:60012:50080 \
-  --server server3@192.168.1.103:50012:60012:50080 \
-  --client alice@192.168.1.111 \
-  --client bob@192.168.1.112 \
-  --output demo/lan
+```toml
+[server]
+host = "0.0.0.0"
+port = 50012
+files_path = "files"
+tls_cert_file = "certs/server.crt"
+tls_key_file = "certs/server.key"
+tls_ca_file = "certs/ca.crt"
+registration_enabled = true
+server_id = "server1"
+role = "primary"
+peers = ""
+primary = ""
+replication_host = "0.0.0.0"
+replication_port = 60012
+cluster_token = ""
+term = 1
+replication_timeout = 2.0
+heartbeat_interval = 0.5
+failure_timeout = 2.0
+election_timeout = 1.0
+client_addresses = ""
+admin_enabled = true
+admin_host = "0.0.0.0"
+admin_port = 50080
+admin_addresses = ""
+allow_admin_failover = false
+admin_session_timeout = 3600.0
 ```
 
-For one server, use a single `--server`. For several servers on one PC, give each
-instance different client, replication, and admin ports.
+### Primary of a three-server cluster
 
-The generated layout contains:
+```toml
+[server]
+host = "0.0.0.0"
+port = 50012
+files_path = "files"
+tls_cert_file = "certs/server.crt"
+tls_key_file = "certs/server.key"
+tls_ca_file = "certs/ca.crt"
+registration_enabled = true
+server_id = "server1"
+role = "primary"
+peers = "server2@192.168.1.102:60012,server3@192.168.1.103:60012"
+primary = ""
+replication_host = "0.0.0.0"
+replication_port = 60012
+cluster_token = "shared-secret"
+term = 1
+replication_timeout = 2.0
+heartbeat_interval = 0.5
+failure_timeout = 2.0
+election_timeout = 1.0
+client_addresses = "server1@192.168.1.101:50012,server2@192.168.1.102:50012,server3@192.168.1.103:50012"
+admin_enabled = true
+admin_host = "0.0.0.0"
+admin_port = 50080
+admin_addresses = "server1@192.168.1.101:50080,server2@192.168.1.102:50080,server3@192.168.1.103:50080"
+allow_admin_failover = true
+admin_session_timeout = 3600.0
+```
 
-- `server-<id>/`: `config.toml`, `files/`, certificates, and `run-server.sh`;
-- `client-<name>/`: `config.toml`, `client_files/`, `state/`, CA, and run scripts;
-- `certs/`;
-- `RUNBOOK.md`;
-- `demo-accounts.txt`;
-- `cluster-token.txt`.
+### Secondary
 
-Do not commit `demo/lan/`: it contains private keys and demo passwords.
+Use the same template with these changes:
 
-## Start the servers
+```toml
+server_id = "server2"
+role = "secondary"
+peers = "server1@192.168.1.101:60012,server3@192.168.1.103:60012"
+primary = "server1@192.168.1.101:60012"
+```
 
-On each server PC, extract the server bundle, copy the corresponding generated
-server directory, and run:
+### Client
+
+```toml
+[client]
+server = "192.168.1.101"
+port = 50012
+local_path = "client_files"
+tls_ca_file = "certs/ca.crt"
+tls_server_name = ""
+state_dir = "state"
+peers = "192.168.1.101:50012,192.168.1.102:50012,192.168.1.103:50012"
+```
+
+Leave `tls_server_name` empty when the endpoints use different hostnames or IP
+addresses. The certificate must contain each server address as a SAN.
+
+## Start the server
 
 ```sh
 export CLOUDFS_SERVER_BUNDLE=/path/to/cloud-file-server
-cd server-server1
-./run-server.sh
+cd /path/to/server
+export CONFIG_FILE="$PWD/config.toml"
+export APP_PASSWORD_SAR='set-a-local-password'
+export APP_PASSWORD_SZA='set-another-local-password'
+./cloud-file-server
 ```
-
-Start the primary first, then the secondaries. The startup script sets
-`CONFIG_FILE` and the bootstrap administrator passwords.
 
 Expected output:
 
@@ -129,17 +203,48 @@ Expected output:
 Servidor TLS 0.11.3 escuchando en el puerto 50012 (rol primary).
 ```
 
-Secondary output:
+For a secondary:
 
 ```text
 Servidor TLS 0.11.3 escuchando en el puerto 50012 (rol secondary).
 ```
 
-![Server startup](assets/setup/server-startup.png)
+The server listens on port `50012` by default. It refuses plaintext
+connections.
 
-## Network check
+## Start the client
 
-Run the checker from each PC:
+```sh
+export CLOUDFS_CLIENT_GUI_BUNDLE=/path/to/cloud-file-client-gui
+cd /path/to/client
+./cloudfs
+```
+
+The client opens with the bundled configuration and CA. It starts the daemon if
+it is not already running. Closing the window hides it to the system tray or
+minimizes it if no tray is available.
+
+## Accounts
+
+Open the admin panel on any server:
+
+```text
+https://192.168.1.101:50080/
+https://192.168.1.102:50080/
+https://192.168.1.103:50080/
+```
+
+Log in as `sar` or `sza` using the passwords configured for that server. Create
+`alice` and `bob` from the primary panel. Registration remains enabled by
+default.
+
+The admin panel on a secondary shows the cluster status and redirects mutations
+to the primary admin URL. After a failover, open the new primary or use a
+secondary redirect. Admin sessions are local to each node.
+
+## Verification
+
+Run from each client or server:
 
 ```sh
 python scripts/demo_lan_check.py \
@@ -161,67 +266,24 @@ Expected result:
 All checks passed.
 ```
 
-![Network checker](assets/setup/network-check.png)
-
 Use `--client-cert`, `--client-key`, and `--token` to also test the replication
 handshake.
 
-## Start the clients
+## Failover
 
-On each client PC, extract the client bundle and copy the corresponding
-generated client directory into the bundle directory. Then run:
-
-```sh
-export CLOUDFS_CLIENT_GUI_BUNDLE=/path/to/cloud-file-client-gui
-cd client-alice
-./run-client.sh
-```
-
-The GUI opens with the bundled configuration and CA. The compact kit does not
-include the system tray; closing the window minimizes it.
-
-![Client GUI](assets/setup/client-gui.png)
-
-Use `run-client-cli.sh` for a CLI-only client.
-
-## Accounts
-
-Open the admin panel on any server:
-
-```text
-https://192.168.1.101:50080/
-https://192.168.1.102:50080/
-https://192.168.1.103:50080/
-```
-
-Log in as `sar` or `sza` using the passwords from `RUNBOOK.md`. Create `alice`
-and `bob` from the primary panel. Registration remains enabled for the demo.
-
-![Admin login](assets/setup/admin-login.png)
-
-The admin panel on a secondary shows the cluster status and redirects mutations
-to the primary admin URL. After a failover, open the new primary or use a
-secondary redirect. Admin sessions are local to each node.
-
-## Demo script
-
-1. Start the three servers.
-2. Run the network checker.
-3. Open the admin panel on the primary.
-4. Create `alice` and `bob`.
-5. Start the two clients.
-6. Upload a file from `alice`.
-7. Share the file or directory with `bob` as `rw`.
-8. Verify that `bob` receives the shared file.
-9. Modify the shared file from `bob`.
-10. Verify that `alice` receives the notification.
-11. Compare the three state hashes.
-12. Stop the primary server.
-13. Wait for election.
-14. Upload after failover.
-15. Restart the old primary.
-16. Verify snapshot rejoin.
-17. Repeat twice.
+1. Start all servers.
+2. Start the clients.
+3. Upload a file from `alice`.
+4. Share the file or directory with `bob` as `rw`.
+5. Verify that `bob` receives the shared file.
+6. Modify the shared file from `bob`.
+7. Verify that `alice` receives the notification.
+8. Compare the three state hashes.
+9. Stop the primary server.
+10. Wait for election.
+11. Upload after failover.
+12. Restart the old primary.
+13. Verify snapshot rejoin.
 
 ## Quorum and server counts
 
@@ -234,9 +296,9 @@ The quorum for `N` servers is `floor(N / 2) + 1`:
 
 ## Troubleshooting
 
-- **TLS error:** verify that every server IP is in the certificate SAN and that
-  the client uses the generated `ca.crt`.
-- **Connection refused:** check the server process, firewall, and generated
+- **TLS error:** verify that every server address is in the certificate SAN and
+  that the client uses the generated `ca.crt`.
+- **Connection refused:** check the server process, firewall, and configured
   ports.
 - **Secondary admin redirect:** set `admin_addresses` to browser-reachable URLs.
 - **No primary:** check `PRIM`, server logs, and the cluster token.
@@ -247,7 +309,7 @@ The quorum for `N` servers is `floor(N / 2) + 1`:
 
 ## Notes
 
-- Python 3.10 is end-of-life. This guide targets the laboratory environment and
-  the Ubuntu 22.04 demo only.
-- The offline kit is a separate single-ZIP variant for one machine.
+- Python 3.10 is end-of-life. This guide targets the Ubuntu 22.04 laboratory
+  environment only.
 - The admin panel is HTTPS-only and uses the same server certificate.
+- The offline kit is a separate single-ZIP variant for one machine.

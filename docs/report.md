@@ -278,10 +278,6 @@ comparison.
 
 The expected final line reports the same state hash on all three servers.
 
-A multi-PC LAN variant is available for the laboratory. It uses the same
-replication and failover mechanism, with fixed IPs, generated certificates,
-and a network/firewall checker. See the [LAN demo guide](demo-lan.md).
-
 A self-contained Ubuntu 22.04 offline kit is available as a single ZIP for
 machines without Internet access or a Python installation. It contains the
 server, desktop client, CA, configuration, logs, and a no-terminal launcher.

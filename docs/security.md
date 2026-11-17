@@ -52,7 +52,7 @@ There is no login rate limiting yet.
 
 ## Current limitations
 
-- The laboratory kit targets Python 3.10.12, which is end-of-life. It is a
+- The demo kit targets Python 3.10.12, which is end-of-life. It is a
   deliberate LAN-demo constraint and must not be exposed to the Internet.
 - Files and SQLite metadata are stored in plaintext. The project provides TLS
   in transit, but no at-rest encryption.

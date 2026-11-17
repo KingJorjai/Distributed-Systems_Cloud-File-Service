@@ -36,6 +36,5 @@ The client watches a local folder with [`watchdog`](https://python-watchdog.read
 | [Final Report](report.md) | Problem, architecture, decisions, tests, and pending work. |
 | [Demo](demo.md) | Local, Docker, and LAN failover demonstrations. |
 | [Offline Kit](offline-kit.md) | Single-file Ubuntu 22.04 client/server kit. |
-| [LAN Demo](demo-lan.md) | Multi-PC LAN demo with generated bundles. |
 | [Presentation](presentation/outline.md) | 15-minute talk outline and timing. |
 | [API Reference](api/sync-client.md) | Python classes and functions generated from docstrings. |

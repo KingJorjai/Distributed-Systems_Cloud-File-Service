@@ -17,7 +17,6 @@ MERMAID_RENDERER = Path(__file__).with_name("render_mermaid.mjs")
 PAGES = (
     ("Home", "index.html"),
     ("Quick Start", "quick-start/index.html"),
-    ("Installation (LAN)", "installation-lan/index.html"),
     ("Offline Kit", "offline-kit/index.html"),
     ("Configuration", "configuration/index.html"),
     ("Security", "security/index.html"),
@@ -28,7 +27,6 @@ PAGES = (
     ("Protocol", "protocol/index.html"),
     ("Final Report", "report/index.html"),
     ("Demo", "demo/index.html"),
-    ("LAN Demo", "demo-lan/index.html"),
     ("Limitations", "limitations/index.html"),
     ("Protocol Helpers API", "api/protocol/index.html"),
 )
