@@ -512,12 +512,12 @@ button.secondary {{ background: transparent; color: var(--ehu-blue); border: 1px
                 )
             )
         body = """
-        <div class="card"><h2>Crear usuario</h2>
+        <div class="card"><h2>Create user</h2>
           <form method="post" action="/users">
             <input type="hidden" name="csrf" value="{csrf}">
             <input name="username" placeholder="Username">
             <input type="password" name="password" placeholder="Password">
-            <button type="submit">Crear</button>
+            <button type="submit">Create</button>
           </form>
         </div>
         <div class="card"><h2>Users</h2>
@@ -595,7 +595,7 @@ button.secondary {{ background: transparent; color: var(--ehu-blue); border: 1px
                 )
                 self._redirect("/users")
             else:
-                self._error_page("Acción de usuario no válida.", session=session)
+                self._error_page("Invalid user action.", session=session)
         elif path == "/shares/revoke":
             self.service.revoke_share(
                 self._form_value(form, "owner"),
