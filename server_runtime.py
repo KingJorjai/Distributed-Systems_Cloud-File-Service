@@ -32,6 +32,7 @@ from replication import (
     ReplicationLog,
     ReplicationServer,
     Replicator,
+    parse_peers,
 )
 from server_admin import AdminServer
 from tls import server_context
@@ -219,11 +220,17 @@ def session(sock, runtime):
 
         elif message.startswith(szasar.Command.Prim):
             cluster = getattr(runtime, "cluster", None)
-            endpoint = (
-                cluster.client_endpoint()
-                if cluster is not None
-                else (config.host or "localhost", config.port)
-            )
+            if cluster is not None:
+                endpoint = cluster.client_endpoint()
+            elif config.client_addresses:
+                peers = parse_peers(config.client_addresses)
+                chosen = [p for p in peers if p.server_id == config.server_id] or list(peers)
+                endpoint = (chosen[0].host, chosen[0].port) if chosen else None
+            else:
+                host = config.host
+                if not host or host in ("0.0.0.0", "::"):
+                    host = "localhost"
+                endpoint = (host, config.port)
             if endpoint is None:
                 sendER(sock, 13)
             else:

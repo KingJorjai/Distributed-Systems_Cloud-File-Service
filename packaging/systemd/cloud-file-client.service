@@ -1,0 +1,17 @@
+[Unit]
+Description=Cloud File Service client daemon
+Documentation=https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/installation/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/.local/state/cloudfs
+Environment=CONFIG_FILE=%h/.config/cloudfs/config.toml
+Environment=CLOUDFS_LOG_FILE=%h/.local/state/cloudfs/logs/client.log
+ExecStart=/opt/cloudfs/client/cloudfs --daemon --config %h/.config/cloudfs/config.toml
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -132,6 +132,12 @@ Terminal=false
 DESKTOP
 chmod 755 "$KIT/CloudFS-Client.desktop"
 
+mkdir -p "$KIT/docs" "$KIT/packaging"
+cp -a "$ROOT/packaging/." "$KIT/packaging/"
+if [[ -f "$ROOT/site/cloud-file-service.pdf" ]]; then
+    cp "$ROOT/site/cloud-file-service.pdf" "$KIT/docs/installation.pdf"
+fi
+
 cat > "$KIT/CloudFS-Server.desktop" <<'DESKTOP'
 [Desktop Entry]
 Type=Application

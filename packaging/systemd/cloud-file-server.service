@@ -1,0 +1,25 @@
+[Unit]
+Description=Cloud File Service server
+Documentation=https://kingjorjai.github.io/Distributed-Systems_Cloud-File-Service/installation/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cloudfs
+Group=cloudfs
+WorkingDirectory=/var/lib/cloudfs
+Environment=CONFIG_FILE=/etc/cloudfs/server.toml
+Environment=CLOUDFS_LOG_FILE=/var/log/cloudfs/server.log
+EnvironmentFile=-/etc/cloudfs/server.env
+ExecStart=/opt/cloudfs/server/cloud-file-server
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+LogsDirectory=cloudfs
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
