@@ -186,25 +186,31 @@ def build_document(
       .pdf-cover {
         min-height: 250mm; display: flex; flex-direction: column;
         justify-content: center; page-break-after: always;
+        background: #F5F5F0; padding: 40mm 24mm;
+        border-top: 12mm solid #1565C0;
       }
-      .pdf-cover h1 { font-size: 2.4rem; margin-bottom: 0.3rem; }
-      .pdf-cover h2 { font-weight: 400; }
+      .pdf-cover .brand { display: flex; align-items: center; gap: 14px; margin-bottom: 2.5rem; }
+      .pdf-cover .brand img { height: 42px; width: auto; }
+      .pdf-cover .brand span { font-size: 1rem; color: #6B6C7E; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+      .pdf-cover h1 { font-size: 2.6rem; margin-bottom: 0.3rem; color: #1565C0; }
+      .pdf-cover h2 { font-weight: 400; color: #212121; }
       .pdf-cover .metadata { margin-top: 2.5rem; }
       .pdf-cover ul { padding-left: 1.2rem; }
       .pdf-toc { page-break-after: always; }
-      .pdf-toc h1 { margin-top: 0; }
+      .pdf-toc h1 { margin-top: 0; color: #1565C0; }
       .pdf-toc ol { margin: 0; padding-left: 2.5em; }
       .pdf-toc li { padding-left: 0.35em; }
       .pdf-section { page-break-before: always; }
-      .pdf-section > h1 { border-bottom: 2px solid #526cfe; }
+      .pdf-section > h1 { border-bottom: 2px solid #1565C0; color: #1565C0; }
       .pdf-section:first-of-type { page-break-before: auto; }
       .pdf-section h2 { break-after: avoid; page-break-after: avoid; }
       pre, table, figure, .admonition, .mermaid { break-inside: avoid; }
       .admonition {
-        border: 1px solid #9aa4b2; border-left: 4px solid #526cfe;
-        border-radius: 3px; margin: 1em 0; padding: 0.7em 1em;
-        background: #f7f8fa;
+        border: 1px solid #CDCED9; border-left: 4px solid #1565C0;
+        border-radius: 4px; margin: 1em 0; padding: 0.7em 1em;
+        background: #F5F5F0;
       }
+      a { color: #1565C0; }
       .admonition-title {
         position: relative; background: transparent; font-weight: 700;
         margin: 0 0 0.4em; padding: 0;
@@ -255,6 +261,10 @@ def build_document(
   <body class="md-typeset">
     <main class="md-content__inner">
       <section class="pdf-cover">
+        <div class="brand">
+          <img src="assets/brand/ehu-mark.svg" alt="EHU">
+          <span>University of the Basque Country · UPV/EHU</span>
+        </div>
         <h1>{html.escape(metadata["title"])}</h1>
         <h2>{html.escape(metadata["degree"])}</h2>
         <h2>{html.escape(metadata["course"])}</h2>

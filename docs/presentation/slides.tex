@@ -6,17 +6,35 @@
 \usepackage{booktabs}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit}
+\usepackage{graphicx}
+\usepackage{xcolor}
 \usepackage{hyperref}
 
+\definecolor{ehuBlue}{HTML}{1565C0}
+\definecolor{ehuGreen}{HTML}{3B8719}
+\definecolor{ehuDark}{HTML}{212121}
+\definecolor{ehuCream}{HTML}{F5F5F0}
+
+\setbeamercolor{structure}{fg=ehuBlue}
+\setbeamercolor{frametitle}{bg=ehuBlue,fg=white}
+\setbeamercolor{title}{fg=ehuBlue}
+\setbeamercolor{palette primary}{bg=ehuBlue,fg=white}
+\setbeamercolor{palette secondary}{bg=ehuBlue!80!black,fg=white}
+\setbeamercolor{palette tertiary}{bg=ehuBlue!60!black,fg=white}
+\setbeamercolor{palette quaternary}{bg=ehuBlue,fg=white}
+\setbeamercolor{section in toc}{fg=ehuBlue}
+\setbeamercolor{subsection in toc}{fg=ehuDark}
 \setbeamertemplate{navigation symbols}{}
 \setbeamertemplate{footline}[frame number]
 \setbeamerfont{title}{size=\Large,series=\bfseries}
 \setbeamerfont{frametitle}{size=\large,series=\bfseries}
 
+\logo{\includegraphics[height=0.5cm]{../../docs/assets/brand/ehu-mark.png}}
+
 \title{Cloud File Service}
 \subtitle{Transparent synchronization, passive replication, and sharing}
 \author{J. Arévalo \and J. Gonzalez \and A. Baquedano \and L. Rodríguez}
-\institute{Distributed Systems \\ Bachelor's Degree in Informatics Engineering}
+\institute{Distributed Systems \\ Bachelor's Degree in Informatics Engineering \\ University of the Basque Country (UPV/EHU)}
 \date{2026}
 
 \begin{document}

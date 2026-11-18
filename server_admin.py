@@ -197,40 +197,97 @@ class AdminHandler(BaseHTTPRequestHandler):
         if session is not None:
             nav = """
             <nav>
-              <a href="/">Estado</a>
-              <a href="/users">Usuarios</a>
+              <a href="/">Status</a>
+              <a href="/users">Users</a>
               <a href="/shares">Shares</a>
-              <a href="/settings">Ajustes</a>
+              <a href="/settings">Settings</a>
               <form method="post" action="/logout" class="inline">
                 <input type="hidden" name="csrf" value="{csrf}">
-                <button type="submit">Salir</button>
+                <button type="submit">Sign out</button>
               </form>
             </nav>
             """.format(csrf=html.escape(session["csrf"]))
         return """<!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title}</title>
 <style>
-body {{ font-family: system-ui, sans-serif; margin: 0; background: #f5f7fb; color: #1d2433; }}
-header {{ background: #1f4fd1; color: white; padding: 14px 22px; }}
-header h1 {{ margin: 0; font-size: 20px; }}
-nav {{ background: white; padding: 10px 22px; border-bottom: 1px solid #dde3ee; }}
-nav a, nav button {{ margin-right: 14px; color: #1f4fd1; text-decoration: none; }}
+:root {{
+  --ehu-blue: #1565C0;
+  --ehu-blue-dark: #2E5AAC;
+  --ehu-green: #5FD790;
+  --ehu-green-dark: #3B8719;
+  --ehu-dark: #212121;
+  --ehu-cream: #F5F5F0;
+  --ehu-danger: #E42719;
+  --ehu-warning: #C75200;
+  --ehu-gray: #6B6C7E;
+  --ehu-gray-light: #CDCED9;
+  --bg: var(--ehu-cream);
+  --fg: var(--ehu-dark);
+  --card: #ffffff;
+  --border: var(--ehu-gray-light);
+  --radius: 10px;
+}}
+@media (prefers-color-scheme: dark) {{
+  :root {{
+    --bg: #1a1b22;
+    --fg: #e7e7ed;
+    --card: #272833;
+    --border: #393a4a;
+  }}
+}}
+* {{ box-sizing: border-box; }}
+body {{ font-family: "EHUSans", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; background: var(--bg); color: var(--fg); line-height: 1.5; }}
+header {{ background: var(--ehu-blue); color: #fff; padding: 16px 24px; display: flex; align-items: center; gap: 14px; }}
+header svg {{ height: 34px; width: auto; }}
+header h1 {{ margin: 0; font-size: 20px; font-weight: 600; }}
+header .subtitle {{ opacity: 0.85; font-size: 13px; margin-left: 4px; }}
+nav {{ background: var(--card); padding: 10px 24px; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }}
+nav a, nav button {{ margin-right: 6px; color: var(--ehu-blue); text-decoration: none; padding: 6px 10px; border-radius: 6px; font-size: 14px; }}
+nav a:hover, nav button:hover {{ background: rgba(21,101,192,0.08); }}
 form.inline {{ display: inline; }}
-main {{ max-width: 1100px; margin: 22px auto; padding: 0 16px; }}
-.card {{ background: white; border: 1px solid #dde3ee; border-radius: 8px; padding: 16px; margin-bottom: 16px; }}
+main {{ max-width: 1180px; margin: 24px auto; padding: 0 20px; }}
+.card {{ background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }}
+.card h2 {{ margin: 0 0 12px; font-size: 18px; }}
 table {{ border-collapse: collapse; width: 100%; }}
-th, td {{ text-align: left; padding: 8px; border-bottom: 1px solid #edf0f6; }}
-input, button, select {{ padding: 7px 9px; margin: 3px 0; }}
-button {{ cursor: pointer; }}
-.error {{ color: #a40000; }}
-.notice {{ background: #fff5d6; border: 1px solid #e6c65c; padding: 10px; border-radius: 6px; }}
+th, td {{ text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 14px; }}
+th {{ font-weight: 600; color: var(--ehu-gray); text-transform: uppercase; font-size: 12px; letter-spacing: 0.04em; }}
+tbody tr:hover {{ background: rgba(21,101,192,0.04); }}
+input, button, select, textarea {{ padding: 8px 10px; margin: 4px 0; font: inherit; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--fg); }}
+input:focus, select:focus, textarea:focus {{ outline: 2px solid var(--ehu-blue); outline-offset: 1px; border-color: var(--ehu-blue); }}
+button {{ cursor: pointer; background: var(--ehu-blue); color: #fff; border: none; font-weight: 600; }}
+button.secondary {{ background: transparent; color: var(--ehu-blue); border: 1px solid var(--border); }}
+.error {{ color: var(--ehu-danger); font-weight: 600; }}
+.notice {{ background: #fff5d6; border: 1px solid #e6c65c; padding: 12px; border-radius: 6px; }}
+.badge {{ display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }}
+.badge-leader {{ background: var(--ehu-green); color: #1a1b22; }}
+.badge-follower {{ background: var(--ehu-gray-light); color: var(--ehu-dark); }}
+.badge-ro {{ background: #e7e7ed; color: var(--ehu-dark); }}
+.badge-rw {{ background: var(--ehu-green); color: #1a1b22; }}
+.empty {{ color: var(--ehu-gray); font-style: italic; padding: 12px 0; }}
+@media (max-width: 720px) {{
+  nav {{ padding: 8px 12px; }}
+  main {{ margin: 12px auto; padding: 0 12px; }}
+  .card {{ padding: 14px; }}
+  header h1 {{ font-size: 17px; }}
+}}
 </style>
 </head>
 <body>
-<header><h1>Cloud File Service · Administración</h1></header>
+<header>
+  <svg viewBox="0 0 362.83 362.83" xmlns="http://www.w3.org/2000/svg" aria-label="EHU">
+    <g fill="#ffffff">
+      <path d="M100.56,244.04h42.89v9.01h-32.46v15.6h30.04v8.51h-30.04v17.44h33.04v9.01h-43.47v-59.58h0Z"/>
+      <path d="M152.88,244.04h10.43v23.7h27.12v-23.7h10.43v59.58h-10.43v-26.87h-27.12v26.87h-10.43v-59.58Z"/>
+      <path d="M210.84,244.04h10.43v50.57h29.46v9.01h-39.89v-59.58Z"/>
+      <path d="M260.36,244.04h43.47v9.01h-33.04v16.1h30.54v8.51h-30.54v25.96h-10.43v-59.58Z"/>
+    </g>
+  </svg>
+  <h1>Cloud File Service <span class="subtitle">· Administration</span></h1>
+</header>
 {nav}
 <main>{body}</main>
 </body>
@@ -239,18 +296,18 @@ button {{ cursor: pointer; }}
     def _login_page(self, error=""):
         body = """
         <div class="card">
-          <h2>Iniciar sesión</h2>
+          <h2>Sign in</h2>
           {error}
           <form method="post" action="/login">
-            <label>Usuario<br><input name="username" autocomplete="username"></label><br>
-            <label>Contraseña<br><input type="password" name="password" autocomplete="current-password"></label><br>
-            <button type="submit">Entrar</button>
+            <label>Username<br><input name="username" autocomplete="username"></label><br>
+            <label>Password<br><input type="password" name="password" autocomplete="current-password"></label><br>
+            <button type="submit">Sign in</button>
           </form>
         </div>
         """.format(
             error='<p class="error">{}</p>'.format(html.escape(error)) if error else ""
         )
-        self._send(self._page("Administración", body))
+        self._send(self._page("Administration", body))
 
     def _require_session(self):
         session = self._session()
@@ -289,7 +346,7 @@ button {{ cursor: pointer; }}
         elif path == "/api/shares":
             self._json(self.service.shares())
         else:
-            self._error_page("Ruta no encontrada.", HTTPStatus.NOT_FOUND, session)
+            self._error_page("Route not found.", HTTPStatus.NOT_FOUND, session)
 
     def do_POST(self):
         path = urlsplit(self.path).path
@@ -305,7 +362,7 @@ button {{ cursor: pointer; }}
         if session is None:
             return
         if not self._valid_csrf(form, session):
-            self._error_page("Token CSRF inválido.", HTTPStatus.FORBIDDEN, session)
+            self._error_page("Invalid CSRF token.", HTTPStatus.FORBIDDEN, session)
             return
         if path == "/logout":
             self.server.sessions.remove(self._cookie_token())
@@ -317,7 +374,7 @@ button {{ cursor: pointer; }}
                 self._redirect(target)
             else:
                 self._error_page(
-                    "La operación requiere el primario, pero no se conoce su URL.",
+                    "This operation requires the primary, but its URL is unknown.",
                     HTTPStatus.CONFLICT,
                     session,
                 )
@@ -394,13 +451,13 @@ button {{ cursor: pointer; }}
             """.format(csrf=html.escape(session["csrf"]))
         body = """
         {notice}
-        <div class="card"><h2>Estado de replicación</h2><table>{rows}</table></div>
+        <div class="card"><h2>Replication status</h2><table>{rows}</table></div>
         <div class="card"><h2>Acciones recientes</h2>
           <table><tr><th>Fecha</th><th>Admin</th><th>Acción</th><th>Objetivo</th></tr>{audit}</table>
           {step_down}
         </div>
         """.format(notice=notice, rows=rows, audit=audit or "<tr><td colspan='4'>Sin acciones</td></tr>", step_down=step_down)
-        self._send(self._page("Estado", body, session))
+        self._send(self._page("Status", body, session))
 
     def _users_page(self, session):
         rows = []
@@ -408,7 +465,7 @@ button {{ cursor: pointer; }}
             name = html.escape(user["username"])
             quoted = quote(user["username"], safe="")
             toggle = "enable" if user["disabled"] else "disable"
-            label = "Habilitar" if user["disabled"] else "Deshabilitar"
+            label = "Enable" if user["disabled"] else "Disable"
             rows.append(
                 """<tr><td>{name}</td><td>{role}</td><td>{disabled}</td>
                 <td>
@@ -418,7 +475,7 @@ button {{ cursor: pointer; }}
                 </form>
                 <form method="post" action="/users/{quoted}/password" class="inline">
                   <input type="hidden" name="csrf" value="{csrf}">
-                  <input type="password" name="password" placeholder="Nueva contraseña">
+                  <input type="password" name="password" placeholder="New password">
                   <button type="submit">Resetear</button>
                 </form>
                 </td></tr>""".format(
@@ -435,16 +492,16 @@ button {{ cursor: pointer; }}
         <div class="card"><h2>Crear usuario</h2>
           <form method="post" action="/users">
             <input type="hidden" name="csrf" value="{csrf}">
-            <input name="username" placeholder="Usuario">
-            <input type="password" name="password" placeholder="Contraseña">
+            <input name="username" placeholder="Username">
+            <input type="password" name="password" placeholder="Password">
             <button type="submit">Crear</button>
           </form>
         </div>
-        <div class="card"><h2>Usuarios</h2>
-          <table><tr><th>Usuario</th><th>Rol</th><th>Deshabilitado</th><th>Acciones</th></tr>{rows}</table>
+        <div class="card"><h2>Users</h2>
+          <table><tr><th>Username</th><th>Role</th><th>Disabled</th><th>Actions</th></tr>{rows}</table>
         </div>
         """.format(csrf=html.escape(session["csrf"]), rows="".join(rows))
-        self._send(self._page("Usuarios", body, session))
+        self._send(self._page("Users", body, session))
 
     def _shares_page(self, session):
         rows = "".join(
@@ -464,8 +521,8 @@ button {{ cursor: pointer; }}
             )
             for share in self.service.shares()
         )
-        body = '<div class="card"><h2>Shares</h2><table><tr><th>Propietario</th><th>Ruta</th><th>Usuario</th><th>Acceso</th><th></th></tr>{}</table></div>'.format(
-            rows or "<tr><td colspan='5'>Sin shares</td></tr>"
+        body = '<div class="card"><h2>Shares</h2><table><tr><th>Owner</th><th>Path</th><th>User</th><th>Access</th><th></th></tr>{}</table></div>'.format(
+            rows or "<tr><td colspan='5'>No shares</td></tr>"
         )
         self._send(self._page("Shares", body, session))
 
@@ -483,7 +540,7 @@ button {{ cursor: pointer; }}
             csrf=html.escape(session["csrf"]),
             checked="checked" if enabled else "",
         )
-        self._send(self._page("Ajustes", body, session))
+        self._send(self._page("Settings", body, session))
 
     def _json(self, data):
         self._send(
@@ -531,4 +588,4 @@ button {{ cursor: pointer; }}
             self.service.step_down(actor)
             self._redirect("/")
         else:
-            self._error_page("Ruta no encontrada.", HTTPStatus.NOT_FOUND, session)
+            self._error_page("Route not found.", HTTPStatus.NOT_FOUND, session)

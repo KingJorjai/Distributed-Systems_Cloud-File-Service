@@ -83,7 +83,7 @@ cd ~/CloudFS/server
 Expected output:
 
 ```text
-Servidor TLS 0.11.3 escuchando en el puerto 50012 (rol primary).
+TLS server 0.11.3 listening on port 50012 (role primary).
 ```
 
 The script sets `CONFIG_FILE`, creates `server/files` and prints the bootstrap
@@ -327,7 +327,7 @@ sudo journalctl -u cloud-file-server -n 20 --no-pager
 Expected in the journal:
 
 ```text
-Servidor TLS 0.11.3 escuchando en el puerto 50012 (rol primary).
+TLS server 0.11.3 listening on port 50012 (role primary).
 ```
 
 ![Server startup](assets/setup/server-startup.png)

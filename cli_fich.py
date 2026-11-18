@@ -98,15 +98,15 @@ def _parse_options(argv):
 
 
 def _prompt_login(client):
-    username = input("Usuario: ").strip()
-    password = input("Contraseña: ")
+    username = input("Username: ").strip()
+    password = input("Password: ")
     return client.request(
         {"action": "login", "username": username, "password": password}
     )
 
 
 def _interactive(client):
-    print("Conectado al daemon. Comandos: status, shares, share, unshare, pause, resume, logout, shutdown, quit.")
+    print("Connected to daemon. Commands: status, shares, share, unshare, pause, resume, logout, shutdown, quit.")
     response = _prompt_login(client)
     _print_response(response)
     if not response.get("ok"):
@@ -130,9 +130,9 @@ def _run_command(client, command):
     if action == "status":
         return _print_response(client.request({"action": "status"}))
     if action == "login":
-        username = command[1] if len(command) > 1 else input("Usuario: ").strip()
+        username = command[1] if len(command) > 1 else input("Username: ").strip()
         password = (
-            command[2] if len(command) > 2 else input("Contraseña: ")
+            command[2] if len(command) > 2 else input("Password: ")
         )
         return _print_response(
             client.request(
@@ -171,8 +171,8 @@ def _run_command(client, command):
             )
         )
     if action == "password":
-        old = command[1] if len(command) > 1 else input("Contraseña actual: ")
-        new = command[2] if len(command) > 2 else input("Contraseña nueva: ")
+        old = command[1] if len(command) > 1 else input("Current password: ")
+        new = command[2] if len(command) > 2 else input("New password: ")
         return _print_response(
             client.request(
                 {
@@ -186,7 +186,7 @@ def _run_command(client, command):
         if action == "shutdown":
             _print_response(client.request({"action": "shutdown"}))
         return 0
-    print("Comando desconocido.")
+    print("Unknown command.")
     return 2
 
 
@@ -194,15 +194,15 @@ def _foreground(config_path):
     config = load_config(config_path).client
     session = ClientSession(config)
     while True:
-        username = input("Introduce el nombre de usuario: ")
-        password = input("Introduce la contraseña: ")
+        username = input("Username: ")
+        password = input("Password: ")
         try:
             session.connect_and_login(username, password)
         except (OSError, EOFError, SyncError, NoServerError) as error:
             if isinstance(error, SyncError):
                 print(error_message(error.code))
             else:
-                print("No se ha podido iniciar sesión: {}".format(error))
+                print("Could not sign in: {}".format(error))
             session.close()
             continue
         break

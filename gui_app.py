@@ -90,11 +90,20 @@ class GuiApp:
         self._clear()
         self.login_frame = ttk.Frame(self.root, padding=20)
         self.login_frame.pack(fill="both", expand=True)
+        header = ttk.Frame(self.login_frame)
+        header.grid(row=0, column=0, columnspan=3, pady=(0, 15), sticky="w")
+        try:
+            import branding
+
+            self._logo_image = branding.photo_image(root=self.root, size=(36, 36))
+            ttk.Label(header, image=self._logo_image).pack(side="left", padx=(0, 10))
+        except Exception:
+            pass
         ttk.Label(
-            self.login_frame,
+            header,
             text="Cloud File Service",
             font=("TkDefaultFont", 18, "bold"),
-        ).grid(row=0, column=0, columnspan=2, pady=(0, 15), sticky="w")
+        ).pack(side="left")
 
         self.server_var = tk.StringVar(value=self.config.server)
         self.port_var = tk.StringVar(value=str(self.config.port))
@@ -104,12 +113,12 @@ class GuiApp:
         self.password_var = tk.StringVar()
 
         fields = [
-            ("Servidor", self.server_var, None),
-            ("Puerto", self.port_var, None),
-            ("Carpeta local", self.folder_var, "folder"),
-            ("CA TLS (opcional)", self.ca_var, "file"),
-            ("Usuario", self.user_var, None),
-            ("Contraseña", self.password_var, "password"),
+            ("Server", self.server_var, None),
+            ("Port", self.port_var, None),
+            ("Local folder", self.folder_var, "folder"),
+            ("TLS CA (optional)", self.ca_var, "file"),
+            ("Username", self.user_var, None),
+            ("Password", self.password_var, "password"),
         ]
         for row, (label, variable, kind) in enumerate(fields, start=1):
             ttk.Label(self.login_frame, text=label).grid(
@@ -124,7 +133,7 @@ class GuiApp:
             if kind in {"folder", "file"}:
                 ttk.Button(
                     self.login_frame,
-                    text="Elegir",
+                    text="Browse",
                     command=lambda v=variable, k=kind: self._choose(v, k),
                 ).grid(row=row, column=2, padx=(6, 0))
         self.login_frame.columnconfigure(1, weight=1)
@@ -133,10 +142,10 @@ class GuiApp:
         self.login_status.grid(row=8, column=0, columnspan=3, pady=10, sticky="w")
         buttons = ttk.Frame(self.login_frame)
         buttons.grid(row=9, column=0, columnspan=3, pady=8, sticky="w")
-        ttk.Button(buttons, text="Iniciar sesión", command=self.login).pack(
+        ttk.Button(buttons, text="Sign in", command=self.login).pack(
             side="left", padx=(0, 8)
         )
-        ttk.Button(buttons, text="Registrarse", command=self.register).pack(
+        ttk.Button(buttons, text="Create account", command=self.register).pack(
             side="left"
         )
 
@@ -145,7 +154,7 @@ class GuiApp:
             value = filedialog.askdirectory()
         else:
             value = filedialog.askopenfilename(
-                filetypes=[("Certificados", "*.crt *.pem"), ("Todos", "*.*")]
+                filetypes=[("Certificates", "*.crt *.pem"), ("All", "*.*")]
             )
         if value:
             variable.set(value)
@@ -163,9 +172,9 @@ class GuiApp:
         username = self.user_var.get().strip()
         password = self.password_var.get()
         if not username or not password:
-            self.login_status.configure(text="Introduce usuario y contraseña.")
+            self.login_status.configure(text="Enter username and password.")
             return
-        self.login_status.configure(text="Conectando…")
+        self.login_status.configure(text="Connecting…")
         self._run(
             lambda: self._login_with(values, username, password),
             self._logged_in,
@@ -193,13 +202,13 @@ class GuiApp:
         username = self.user_var.get().strip()
         password = self.password_var.get()
         if not username or not password:
-            self.login_status.configure(text="Introduce usuario y contraseña.")
+            self.login_status.configure(text="Enter username and password.")
             return
-        self.login_status.configure(text="Registrando…")
+        self.login_status.configure(text="Registering…")
         self._run(
             lambda: self._register_with(values, username, password),
             lambda result: self.login_status.configure(
-                text="Cuenta creada. Ya puedes iniciar sesión."
+                text="Account created. You can sign in now."
             ),
             self._login_failed,
         )
@@ -214,29 +223,37 @@ class GuiApp:
         self.main_frame.pack(fill="both", expand=True)
         top = ttk.Frame(self.main_frame)
         top.pack(fill="x")
-        self.status_var = tk.StringVar(value="Conectado")
+        try:
+            import branding
+
+            self._logo_image_main = branding.photo_image(root=self.root, size=(28, 28))
+            ttk.Label(top, image=self._logo_image_main).pack(side="left", padx=(0, 8))
+        except Exception:
+            pass
+        ttk.Label(top, text="Cloud File Service", font=("TkDefaultFont", 13, "bold")).pack(side="left")
+        self.status_var = tk.StringVar(value="Connected")
         self.endpoint_var = tk.StringVar(value="")
-        self.pending_var = tk.StringVar(value="0 cambios pendientes")
-        ttk.Label(top, textvariable=self.status_var, font=("TkDefaultFont", 13, "bold")).pack(side="left")
+        self.pending_var = tk.StringVar(value="0 pending changes")
+        ttk.Label(top, textvariable=self.status_var, font=("TkDefaultFont", 11, "bold")).pack(side="left", padx=12)
         ttk.Label(top, textvariable=self.endpoint_var).pack(side="left", padx=12)
         ttk.Label(top, textvariable=self.pending_var).pack(side="right")
 
         actions = ttk.Frame(self.main_frame)
         actions.pack(fill="x", pady=6)
         self.pause_button = ttk.Button(
-            actions, text="Pausar sincronización", command=self.toggle_sync
+            actions, text="Pause sync", command=self.toggle_sync
         )
         self.pause_button.pack(side="left")
-        ttk.Button(actions, text="Abrir carpeta", command=self.open_folder).pack(
+        ttk.Button(actions, text="Open folder", command=self.open_folder).pack(
             side="left", padx=6
         )
-        ttk.Button(actions, text="Cambiar contraseña", command=self.change_password).pack(
+        ttk.Button(actions, text="Change password", command=self.change_password).pack(
             side="left", padx=6
         )
-        ttk.Button(actions, text="Abrir logs", command=self.open_logs).pack(
+        ttk.Button(actions, text="Open logs", command=self.open_logs).pack(
             side="left", padx=6
         )
-        ttk.Button(actions, text="Cerrar sesión", command=self.logout).pack(
+        ttk.Button(actions, text="Sign out", command=self.logout).pack(
             side="right"
         )
 
@@ -256,10 +273,10 @@ class GuiApp:
 
     def _build_sync_tab(self, notebook):
         frame = ttk.Frame(notebook, padding=10)
-        notebook.add(frame, text="Sincronización")
+        notebook.add(frame, text="Synchronization")
         ttk.Label(
             frame,
-            text="La sincronización se ejecuta en el daemon y continúa al cerrar la ventana.",
+            text="Synchronization runs in the daemon and continues after closing the window.",
             wraplength=700,
         ).pack(anchor="w")
         self.sync_log = tk.Text(frame, height=18, state="disabled")
@@ -267,7 +284,7 @@ class GuiApp:
 
     def _build_shares_tab(self, notebook):
         frame = ttk.Frame(notebook, padding=10)
-        notebook.add(frame, text="Compartidos")
+        notebook.add(frame, text="Shares")
         self.share_tree = ttk.Treeview(
             frame,
             columns=("owner", "path", "grantee", "access"),
@@ -275,51 +292,51 @@ class GuiApp:
             height=8,
         )
         for column, title in (
-            ("owner", "Propietario"),
-            ("path", "Ruta"),
-            ("grantee", "Usuario"),
-            ("access", "Acceso"),
+            ("owner", "Owner"),
+            ("path", "Path"),
+            ("grantee", "User"),
+            ("access", "Access"),
         ):
             self.share_tree.heading(column, text=title)
             self.share_tree.column(column, width=150)
         self.share_tree.pack(fill="both", expand=True)
-        ttk.Button(frame, text="Actualizar", command=self.refresh_shares).pack(
+        ttk.Button(frame, text="Refresh", command=self.refresh_shares).pack(
             anchor="w", pady=4
         )
         form = ttk.Frame(frame)
         form.pack(fill="x", pady=4)
-        ttk.Label(form, text="Ruta").pack(side="left")
+        ttk.Label(form, text="Path").pack(side="left")
         self.share_path = ttk.Entry(form, width=24)
         self.share_path.pack(side="left", padx=4)
-        ttk.Label(form, text="Usuario").pack(side="left")
+        ttk.Label(form, text="User").pack(side="left")
         self.share_user = ttk.Combobox(form, width=18, state="readonly")
         self.share_user.pack(side="left", padx=4)
-        ttk.Label(form, text="Acceso").pack(side="left")
+        ttk.Label(form, text="Access").pack(side="left")
         self.share_access = ttk.Combobox(
             form, values=("ro", "rw"), width=5, state="readonly"
         )
         self.share_access.current(0)
         self.share_access.pack(side="left", padx=4)
-        ttk.Button(form, text="Compartir", command=self.share).pack(
+        ttk.Button(form, text="Share", command=self.share).pack(
             side="left", padx=4
         )
-        ttk.Button(form, text="Revocar seleccionado", command=self.unshare).pack(
+        ttk.Button(form, text="Revoke selected", command=self.unshare).pack(
             side="left", padx=4
         )
 
     def _build_settings_tab(self, notebook):
         frame = ttk.Frame(notebook, padding=10)
-        notebook.add(frame, text="Ajustes")
+        notebook.add(frame, text="Settings")
         ttk.Label(
             frame,
-            text="Las variables de entorno siguen teniendo prioridad sobre estos valores.",
+            text="Environment variables still take priority over these values.",
             wraplength=700,
         ).grid(row=0, column=0, columnspan=3, sticky="w", pady=(0, 8))
         entries = [
-            ("Servidor", "server"),
-            ("Puerto", "port"),
-            ("Carpeta local", "local_path"),
-            ("CA TLS", "tls_ca_file"),
+            ("Server", "server"),
+            ("Port", "port"),
+            ("Local folder", "local_path"),
+            ("TLS CA", "tls_ca_file"),
             ("Peers", "peers"),
         ]
         self.setting_vars = {}
@@ -334,17 +351,17 @@ class GuiApp:
         self.autostart_var = tk.BooleanVar(value=is_enabled())
         ttk.Checkbutton(
             frame,
-            text="Arrancar al iniciar el sistema",
+            text="Start at system startup",
             variable=self.autostart_var,
             command=self.toggle_autostart,
         ).grid(row=7, column=1, sticky="w", pady=8)
-        ttk.Button(frame, text="Guardar ajustes", command=self.save_settings).grid(
+        ttk.Button(frame, text="Save settings", command=self.save_settings).grid(
             row=8, column=1, sticky="w"
         )
 
     def _build_log_tab(self, notebook):
         frame = ttk.Frame(notebook, padding=10)
-        notebook.add(frame, text="Registro")
+        notebook.add(frame, text="Log")
         self.log_text = tk.Text(frame, height=18, state="disabled")
         self.log_text.pack(fill="both", expand=True)
 
@@ -363,12 +380,12 @@ class GuiApp:
             return
         if isinstance(data, dict):
             self.running = bool(data.get("running", self.running))
-            self.status_var.set("Sincronizando" if self.running else "Pausado")
+            self.status_var.set("Syncing" if self.running else "Paused")
             self.endpoint_var.set(data.get("endpoint") or "")
-            self.pending_var.set("{} cambios pendientes".format(data.get("pending", 0)))
+            self.pending_var.set("{} pending changes".format(data.get("pending", 0)))
             if hasattr(self, "pause_button"):
                 self.pause_button.configure(
-                    text="Pausar sincronización" if self.running else "Reanudar sincronización"
+                    text="Pause sync" if self.running else "Resume sync"
                 )
             if self.tray is not None:
                 self.tray.set_paused(not self.running)
@@ -409,7 +426,7 @@ class GuiApp:
         grantee = self.share_user.get().strip()
         access = self.share_access.get().strip() or "ro"
         if not path or not grantee:
-            messagebox.showwarning("Compartir", "Indica ruta y usuario.")
+            messagebox.showwarning("Share", "Enter path and user.")
             return
         self._run(
             lambda: self.controller.share(path, grantee, access),
@@ -419,12 +436,12 @@ class GuiApp:
     def unshare(self):
         selected = self.share_tree.selection()
         if not selected:
-            messagebox.showwarning("Revocar", "Selecciona un share.")
+            messagebox.showwarning("Revoke", "Select a share.")
             return
         values = self.share_tree.item(selected[0], "values")
         owner, path, grantee, access = values
         if owner != (self.controller.status().get("username") or ""):
-            messagebox.showwarning("Revocar", "Solo el propietario puede revocar.")
+            messagebox.showwarning("Revoke", "Only the owner can revoke.")
             return
         self._run(
             lambda: self.controller.unshare(path, grantee),
@@ -432,15 +449,15 @@ class GuiApp:
         )
 
     def change_password(self):
-        old = simpledialog.askstring("Contraseña", "Contraseña actual:", show="*")
+        old = simpledialog.askstring("Password", "Current password:", show="*")
         if old is None:
             return
-        new = simpledialog.askstring("Contraseña", "Contraseña nueva:", show="*")
+        new = simpledialog.askstring("Password", "New password:", show="*")
         if not new:
             return
         self._run(
             lambda: self.controller.change_password(old, new),
-            lambda _: messagebox.showinfo("Contraseña", "Contraseña actualizada."),
+            lambda _: messagebox.showinfo("Password", "Password updated."),
         )
 
     def logout(self):
@@ -472,7 +489,7 @@ class GuiApp:
         }
         self._run(
             lambda: self.controller.save_settings(**values),
-            lambda updated: self._log("Ajustes guardados en {}".format(self.config_path)),
+            lambda updated: self._log("Settings saved to {}".format(self.config_path)),
         )
 
     def toggle_autostart(self):
@@ -532,5 +549,5 @@ class GuiApp:
             elif event == "worker":
                 self._log(str(data))
             elif event == "disconnected":
-                self._log("Daemon desconectado; reintentando…")
+                self._log("Daemon disconnected; retrying…")
         self.root.after(250, self._poll)

@@ -14,7 +14,7 @@ except Exception:
 def make_icon_image():
     image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
-    draw.ellipse((4, 4, 60, 60), fill=(49, 108, 254, 255))
+    draw.ellipse((4, 4, 60, 60), fill=(21, 101, 192, 255))
     draw.rectangle((18, 28, 46, 46), fill=(255, 255, 255, 255))
     draw.ellipse((14, 20, 34, 38), fill=(255, 255, 255, 255))
     draw.ellipse((28, 16, 50, 38), fill=(255, 255, 255, 255))
@@ -31,7 +31,7 @@ class TrayIcon:
         self.on_toggle = on_toggle
         self.on_quit = on_quit
         self.icon = None
-        self._pause_label = "Pausar sincronización"
+        self._pause_label = "Pause sync"
 
     @property
     def available(self):
@@ -51,14 +51,14 @@ class TrayIcon:
         if pystray is None:
             return False
         menu = pystray.Menu(
-            pystray.MenuItem("Mostrar", self._dispatch(self.on_show), default=True),
-            pystray.MenuItem("Abrir carpeta", self._dispatch(self.on_open_folder)),
+            pystray.MenuItem("Show", self._dispatch(self.on_show), default=True),
+            pystray.MenuItem("Open folder", self._dispatch(self.on_open_folder)),
             pystray.MenuItem(
                 lambda item: self._pause_label,
                 self._dispatch(self.on_toggle),
             ),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("Salir", self._dispatch(self.on_quit)),
+            pystray.MenuItem("Quit", self._dispatch(self.on_quit)),
         )
         self.icon = pystray.Icon(
             "cloud-file-service", make_icon_image(), "Cloud File Service", menu
@@ -74,7 +74,7 @@ class TrayIcon:
 
     def set_paused(self, paused):
         self._pause_label = (
-            "Reanudar sincronización" if paused else "Pausar sincronización"
+            "Resume sync" if paused else "Pause sync"
         )
         if self.icon is not None:
             self.icon.update_menu()

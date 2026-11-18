@@ -55,10 +55,14 @@ def main(argv=None):
     try:
         root = tk.Tk()
     except tk.TclError as error:
-        print("No hay entorno gráfico disponible: {}".format(error), file=sys.stderr)
+        print("No graphical environment available: {}".format(error), file=sys.stderr)
         controller.close()
         lock.release()
         return 1
+
+    import theme
+
+    theme.apply(root)
 
     from gui_app import GuiApp
 

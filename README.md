@@ -1,5 +1,7 @@
 # Cloud File Service
 
+> Distributed Systems course project - University of the Basque Country (UPV/EHU)
+
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Ruff](https://img.shields.io/badge/code%20style-Ruff-D7FF64?logo=ruff&logoColor=111111)](https://docs.astral.sh/ruff/)
 [![watchdog](https://img.shields.io/pypi/v/watchdog?logo=pypi&logoColor=white)](https://pypi.org/project/watchdog/)

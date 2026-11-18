@@ -97,7 +97,8 @@ SH
 chmod 700 "$KIT/client/start-client.sh"
 
 cat > "$KIT/README.txt" <<README_EOF
-Cloud File Service - kit offline para Linux x64
+Cloud File Service - offline kit for Linux x64
+University of the Basque Country (UPV/EHU) - Distributed Systems
 ================================================
 
 No hace falta Internet, Python ni terminal.
@@ -109,12 +110,12 @@ No hace falta Internet, Python ni terminal.
 3. Para arrancar el cliente, ejecuta cloudfs (sin argumentos) o
    CloudFS-Client.desktop. También puedes usar client/start-client.sh.
 4. El cliente ya trae la CA y la configuración del servidor local.
-   Si el servidor está en otro PC, cambia "Servidor" en la pantalla
-   de acceso del cliente.
+   If the server runs on another PC, change "Server" on the client
+   sign-in screen.
 5. Registra una cuenta desde el cliente o usa el panel admin:
    https://localhost:50080/
-   Usuario: sar
-   Contraseña: $ADMIN_PASSWORD
+   Username: sar
+   Password: $ADMIN_PASSWORD
 
 Los logs están en logs/.
 Los datos del servidor están en server/files.

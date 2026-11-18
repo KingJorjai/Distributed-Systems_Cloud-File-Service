@@ -21,7 +21,7 @@ def main():
     config = load_config()
     runtime = create_server(config)
     runtime.start()
-    message = "Servidor TLS {} escuchando en el puerto {} (rol {}).".format(
+    message = "TLS server {} listening on port {} (role {}).".format(
         __version__, runtime.port, config.server.role
     )
     print(message)

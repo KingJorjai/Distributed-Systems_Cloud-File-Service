@@ -56,6 +56,7 @@ COMPONENTS = {
         "readme": "README-client-gui.txt",
         "data_directory": "client_files",
         "windowed": True,
+        "extra_data": ["docs/assets/brand/ehu-mark.png"],
         "hidden_imports": [
             "client_daemon",
             "daemon_service",
@@ -113,6 +114,11 @@ def build_bundle(component: str, output_directory: Path, archive_format: str) ->
             ],
             *(["--windowed"] if settings.get("windowed") else []),
             *extra_binaries,
+            *[
+                item
+                for data in settings.get("extra_data", [])
+                for item in ("--add-data", "{}:{}".format(data, Path(data).parent.as_posix()))
+            ],
             str(ROOT / settings["entrypoint"]),
         ],
         check=True,
@@ -123,6 +129,12 @@ def build_bundle(component: str, output_directory: Path, archive_format: str) ->
     if staging_directory.exists():
         shutil.rmtree(staging_directory)
     shutil.copytree(built_directory, staging_directory)
+    if settings.get("extra_data"):
+        for data in settings["extra_data"]:
+            source = ROOT / data
+            destination = staging_directory / Path(data).relative_to(".")
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
     shutil.copy2(ROOT / "config.toml.example", staging_directory / "config.toml.example")
     shutil.copy2(
         ROOT / "distribution" / settings["readme"],
