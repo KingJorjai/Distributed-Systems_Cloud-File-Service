@@ -170,8 +170,6 @@ certs/server.crt: OK
 IP Address:192.168.1.101, IP Address:192.168.1.102, ...
 ```
 
-![Certificate generation](assets/setup/cert-generation.png)
-
 Copy the certificates to every server:
 
 ```sh
@@ -343,6 +341,18 @@ private CA. Two options:
 
 ![Admin login](assets/setup/admin-login.png)
 
+After logging in as `sar` or `sza`, the dashboard shows the cluster status:
+
+![Admin dashboard](assets/setup/admin-dashboard.png)
+
+The users page lets you create `alice` and `bob`:
+
+![Admin users](assets/setup/admin-users.png)
+
+The shares page lists the shares created from the clients:
+
+![Admin shares](assets/setup/admin-shares.png)
+
 - Import `ca.crt` into the browser (Firefox: Settings, Privacy and Security,
   Certificates, View Certificates, Authorities, Import; Chrome/Chromium: Settings,
   Privacy and security, Security, Manage certificates, Authorities, Import).
@@ -430,7 +440,19 @@ journalctl --user -u cloud-file-client -n 20 --no-pager
 The GUI starts the daemon if it is not already running. Enter your username
 and password and click Connect. The daemon then synchronizes `~/CloudFS`.
 
-![Client GUI](assets/setup/client-gui.png)
+![Client login](assets/setup/client-login.png)
+
+Once connected, the main window shows the synchronization status:
+
+![Client main window](assets/setup/client-main.png)
+
+The shares tab lists the resources shared with you and lets you share your own:
+
+![Client shares tab](assets/setup/client-shares.png)
+
+The settings tab exposes the server, folder and CA paths:
+
+![Client settings tab](assets/setup/client-settings.png)
 
 To start the GUI automatically on login, add a desktop entry:
 

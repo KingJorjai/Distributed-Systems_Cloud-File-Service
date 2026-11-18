@@ -384,11 +384,18 @@ class GuiApp:
         for item in self.share_tree.get_children():
             self.share_tree.delete(item)
         for share in shares:
-            self.share_tree.insert(
-                "",
-                "end",
-                values=(share["owner"], share["path"], share["grantee"], share["access"]),
-            )
+            if isinstance(share, dict):
+                values = (
+                    share.get("owner", ""),
+                    share.get("path", ""),
+                    share.get("grantee", ""),
+                    share.get("access", ""),
+                )
+            elif hasattr(share, "owner"):
+                values = (share.owner, share.path, share.grantee, share.access)
+            else:
+                values = (str(share), "", "", "")
+            self.share_tree.insert("", "end", values=values)
 
     def refresh_users(self):
         self._run(self.controller.users, self._render_users)
