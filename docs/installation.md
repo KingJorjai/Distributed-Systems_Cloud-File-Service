@@ -454,6 +454,13 @@ The settings tab exposes the server, folder and CA paths:
 
 ![Client settings tab](assets/setup/client-settings.png)
 
+### First synchronized file
+
+Create a file in `~/CloudFS` on `client1`. It appears on the server under
+`files/alice/` and, if shared, on `client2`:
+
+![Synchronized folder](assets/setup/files-synced.png)
+
 To start the GUI automatically on login, add a desktop entry:
 
 ```sh
