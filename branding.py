@@ -12,11 +12,15 @@ ASSET_NAME = "ehu-mark.png"
 def _asset_paths():
     paths = []
     if getattr(sys, "frozen", False):
-        paths.append(Path(sys._MEIPASS) / "assets" / "brand" / ASSET_NAME)
+        base = Path(sys._MEIPASS)
+        paths.append(base / "assets" / "brand" / ASSET_NAME)
+        paths.append(base / "docs" / "assets" / "brand" / ASSET_NAME)
         paths.append(Path(sys.executable).resolve().parent / "assets" / "brand" / ASSET_NAME)
+        paths.append(Path(sys.executable).resolve().parent / "docs" / "assets" / "brand" / ASSET_NAME)
     here = Path(__file__).resolve().parent
     paths.append(here / "docs" / "assets" / "brand" / ASSET_NAME)
     paths.append(here / "assets" / "brand" / ASSET_NAME)
+    paths.append(here / "docs" / "assets" / "brand" / ASSET_NAME)
     for extra in os.environ.get("CLOUDFS_BRAND_DIR", "").split(os.pathsep):
         if extra:
             paths.append(Path(extra) / ASSET_NAME)

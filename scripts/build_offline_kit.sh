@@ -101,26 +101,26 @@ Cloud File Service - offline kit for Linux x64
 University of the Basque Country (UPV/EHU) - Distributed Systems
 ================================================
 
-No hace falta Internet, Python ni terminal.
+No Internet, Python or terminal is required.
 
-1. Descomprime este ZIP en una carpeta.
-2. Para arrancar el servidor, abre la carpeta server y ejecuta
+1. Extract this ZIP into a folder.
+2. To start the server, open the server folder and run
    start-server.sh (o CloudFS-Server.desktop).
-   El servidor escucha en el puerto 50012.
-3. Para arrancar el cliente, ejecuta cloudfs (sin argumentos) o
-   CloudFS-Client.desktop. También puedes usar client/start-client.sh.
-4. El cliente ya trae la CA y la configuración del servidor local.
+   The server listens on port 50012.
+3. To start the client, run cloudfs (with no arguments) or
+   CloudFS-Client.desktop. You can also use client/start-client.sh.
+4. The client already includes the CA and the local server configuration.
    If the server runs on another PC, change "Server" on the client
    sign-in screen.
-5. Registra una cuenta desde el cliente o usa el panel admin:
+5. Register an account from the client or use the admin panel:
    https://localhost:50080/
    Username: sar
    Password: $ADMIN_PASSWORD
 
-Los logs están en logs/.
-Los datos del servidor están en server/files.
-La clave TLS del servidor está en server/certs/server.key.
-No publiques esta carpeta: contiene la clave y la contraseña de demo.
+Logs are in logs/.
+Server data is in server/files.
+The server TLS key is in server/certs/server.key.
+Do not publish this folder: it contains the key and the demo password.
 README_EOF
 
 cat > "$KIT/CloudFS-Client.desktop" <<'DESKTOP'

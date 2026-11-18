@@ -46,7 +46,7 @@ def main(argv=None):
     try:
         controller.start_daemon()
     except Exception as error:
-        print("No se pudo iniciar el daemon: {}".format(error), file=sys.stderr)
+        print("Could not start the daemon: {}".format(error), file=sys.stderr)
         lock.release()
         return 1
 

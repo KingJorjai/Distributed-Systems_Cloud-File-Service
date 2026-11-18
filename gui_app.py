@@ -112,15 +112,19 @@ class GuiApp:
         self.user_var = tk.StringVar()
         self.password_var = tk.StringVar()
 
-        fields = [
+        primary_fields = [
             ("Server", self.server_var, None),
-            ("Port", self.port_var, None),
-            ("Local folder", self.folder_var, "folder"),
-            ("TLS CA (optional)", self.ca_var, "file"),
             ("Username", self.user_var, None),
             ("Password", self.password_var, "password"),
         ]
-        for row, (label, variable, kind) in enumerate(fields, start=1):
+        advanced_fields = [
+            ("Port", self.port_var, None),
+            ("Local folder", self.folder_var, "folder"),
+            ("TLS CA (optional)", self.ca_var, "file"),
+        ]
+
+        row = 1
+        for label, variable, kind in primary_fields:
             ttk.Label(self.login_frame, text=label).grid(
                 row=row, column=0, sticky="w", pady=4
             )
@@ -136,18 +140,61 @@ class GuiApp:
                     text="Browse",
                     command=lambda v=variable, k=kind: self._choose(v, k),
                 ).grid(row=row, column=2, padx=(6, 0))
+            row += 1
+
+        self._advanced_toggle = ttk.Button(
+            self.login_frame,
+            text="Advanced settings",
+            command=self._toggle_advanced,
+        )
+        self._advanced_toggle.grid(row=row, column=0, columnspan=3, sticky="w", pady=(8, 4))
+        row += 1
+
+        self._advanced_frame = ttk.Frame(self.login_frame)
+        self._advanced_frame.grid(row=row, column=0, columnspan=3, sticky="ew")
+        self._advanced_frame.grid_remove()
+        adv_row = 0
+        for label, variable, kind in advanced_fields:
+            ttk.Label(self._advanced_frame, text=label).grid(
+                row=adv_row, column=0, sticky="w", pady=4
+            )
+            entry = ttk.Entry(
+                self._advanced_frame,
+                textvariable=variable,
+                show="*" if kind == "password" else "",
+            )
+            entry.grid(row=adv_row, column=1, sticky="ew", pady=4)
+            if kind in {"folder", "file"}:
+                ttk.Button(
+                    self._advanced_frame,
+                    text="Browse",
+                    command=lambda v=variable, k=kind: self._choose(v, k),
+                ).grid(row=adv_row, column=2, padx=(6, 0))
+            adv_row += 1
+        self._advanced_frame.columnconfigure(1, weight=1)
+        row += 1
+
         self.login_frame.columnconfigure(1, weight=1)
 
         self.login_status = ttk.Label(self.login_frame, text="")
-        self.login_status.grid(row=8, column=0, columnspan=3, pady=10, sticky="w")
+        self.login_status.grid(row=row, column=0, columnspan=3, pady=10, sticky="w")
+        row += 1
         buttons = ttk.Frame(self.login_frame)
-        buttons.grid(row=9, column=0, columnspan=3, pady=8, sticky="w")
-        ttk.Button(buttons, text="Sign in", command=self.login).pack(
+        buttons.grid(row=row, column=0, columnspan=3, pady=8, sticky="w")
+        ttk.Button(buttons, text="Sign in", command=self.login, style="Primary.TButton").pack(
             side="left", padx=(0, 8)
         )
         ttk.Button(buttons, text="Create account", command=self.register).pack(
             side="left"
         )
+
+    def _toggle_advanced(self):
+        if self._advanced_frame.winfo_ismapped():
+            self._advanced_frame.grid_remove()
+            self._advanced_toggle.configure(text="Advanced settings")
+        else:
+            self._advanced_frame.grid()
+            self._advanced_toggle.configure(text="Hide advanced settings")
 
     def _choose(self, variable, kind):
         if kind == "folder":
@@ -234,7 +281,8 @@ class GuiApp:
         self.status_var = tk.StringVar(value="Connected")
         self.endpoint_var = tk.StringVar(value="")
         self.pending_var = tk.StringVar(value="0 pending changes")
-        ttk.Label(top, textvariable=self.status_var, font=("TkDefaultFont", 11, "bold")).pack(side="left", padx=12)
+        self.status_pill = ttk.Label(top, textvariable=self.status_var, style="Status.TLabel", foreground="#3B8719")
+        self.status_pill.pack(side="left", padx=12)
         ttk.Label(top, textvariable=self.endpoint_var).pack(side="left", padx=12)
         ttk.Label(top, textvariable=self.pending_var).pack(side="right")
 
@@ -383,6 +431,9 @@ class GuiApp:
             self.status_var.set("Syncing" if self.running else "Paused")
             self.endpoint_var.set(data.get("endpoint") or "")
             self.pending_var.set("{} pending changes".format(data.get("pending", 0)))
+            if hasattr(self, "status_pill"):
+                color = "#3B8719" if self.running else "#C75200"
+                self.status_pill.configure(foreground=color)
             if hasattr(self, "pause_button"):
                 self.pause_button.configure(
                     text="Pause sync" if self.running else "Resume sync"

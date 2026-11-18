@@ -34,6 +34,7 @@ COMPONENTS = {
             "gui_app",
             "client_daemon",
             "daemon_service",
+            "theme",
         ],
         "exclude_modules": ["PIL", "pystray", "tray"],
     },
@@ -47,8 +48,9 @@ COMPONENTS = {
             "client_daemon",
             "daemon_service",
             "gui_app",
+            "theme",
         ],
-        "exclude_modules": ["PIL", "pystray", "tray"],
+        "exclude_modules": ["PIL", "pystray", "tray", "branding"],
     },
     "client-gui": {
         "entrypoint": "gui_fich.py",
@@ -64,6 +66,8 @@ COMPONENTS = {
             "tray",
             "PIL",
             "pystray",
+            "theme",
+            "branding",
         ],
     },
 }
@@ -117,7 +121,7 @@ def build_bundle(component: str, output_directory: Path, archive_format: str) ->
             *[
                 item
                 for data in settings.get("extra_data", [])
-                for item in ("--add-data", "{}:{}".format(data, Path(data).parent.as_posix()))
+                for item in ("--add-data", "{}:{}".format(ROOT / data, Path(data).parent.as_posix()))
             ],
             str(ROOT / settings["entrypoint"]),
         ],

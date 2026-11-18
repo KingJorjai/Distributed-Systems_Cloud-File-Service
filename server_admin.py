@@ -196,16 +196,16 @@ class AdminHandler(BaseHTTPRequestHandler):
         nav = ""
         if session is not None:
             nav = """
-            <nav>
+            <aside class="sidebar">
               <a href="/">Status</a>
               <a href="/users">Users</a>
               <a href="/shares">Shares</a>
               <a href="/settings">Settings</a>
-              <form method="post" action="/logout" class="inline">
+              <form method="post" action="/logout">
                 <input type="hidden" name="csrf" value="{csrf}">
-                <button type="submit">Sign out</button>
+                <button type="submit" class="secondary">Sign out</button>
               </form>
-            </nav>
+            </aside>
             """.format(csrf=html.escape(session["csrf"]))
         return """<!doctype html>
 <html lang="en">
@@ -249,7 +249,17 @@ nav {{ background: var(--card); padding: 10px 24px; border-bottom: 1px solid var
 nav a, nav button {{ margin-right: 6px; color: var(--ehu-blue); text-decoration: none; padding: 6px 10px; border-radius: 6px; font-size: 14px; }}
 nav a:hover, nav button:hover {{ background: rgba(21,101,192,0.08); }}
 form.inline {{ display: inline; }}
-main {{ max-width: 1180px; margin: 24px auto; padding: 0 20px; }}
+.layout {{ display: flex; gap: 24px; max-width: 1180px; margin: 24px auto; padding: 0 20px; }}
+.sidebar {{ width: 200px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; padding: 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); height: fit-content; position: sticky; top: 16px; }}
+.sidebar a, .sidebar button {{ display: block; padding: 8px 12px; border-radius: 6px; color: var(--fg); text-decoration: none; font-size: 14px; background: transparent; border: none; text-align: left; cursor: pointer; width: 100%; }}
+.sidebar a:hover, .sidebar button:hover {{ background: rgba(21,101,192,0.08); color: var(--ehu-blue); }}
+.sidebar form {{ margin: 0; }}
+main {{ flex: 1; min-width: 0; }}
+@media (max-width: 720px) {{
+  .layout {{ flex-direction: column; }}
+  .sidebar {{ width: 100%; position: static; flex-direction: row; flex-wrap: wrap; }}
+  .sidebar a, .sidebar button {{ width: auto; }}
+}}
 .card {{ background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }}
 .card h2 {{ margin: 0 0 12px; font-size: 18px; }}
 table {{ border-collapse: collapse; width: 100%; }}
@@ -288,8 +298,10 @@ button.secondary {{ background: transparent; color: var(--ehu-blue); border: 1px
   </svg>
   <h1>Cloud File Service <span class="subtitle">· Administration</span></h1>
 </header>
-{nav}
-<main>{body}</main>
+<div class="layout">
+  {nav}
+  <main>{body}</main>
+</div>
 </body>
 </html>""".format(title=html.escape(title), nav=nav, body=body)
 
@@ -421,14 +433,22 @@ button.secondary {{ background: transparent; color: var(--ehu-blue); border: 1px
         notice = ""
         if not status.get("is_primary"):
             target = self.portal.primary_url()
-            notice = '<div class="notice">Este nodo es seguidor. Las acciones de escritura se redirigen al primario{}. </div>'.format(
+            notice = '<div class="notice">This node is a follower. Write actions are redirected to the primary{}. </div>'.format(
                 ' <a href="{}">{}</a>'.format(html.escape(target), html.escape(target))
                 if target
                 else ""
             )
         rows = "".join(
             "<tr><th>{}</th><td>{}</td></tr>".format(
-                html.escape(str(key)), html.escape(str(value))
+                html.escape(str(key)),
+                (
+                    '<span class="badge badge-{}">{}</span>'.format(
+                        "leader" if str(value) == "leader" else "follower",
+                        html.escape(str(value)),
+                    )
+                    if key == "role"
+                    else html.escape(str(value))
+                ),
             )
             for key, value in status.items()
         )
@@ -446,17 +466,17 @@ button.secondary {{ background: transparent; color: var(--ehu-blue); border: 1px
             step_down = """
             <form method="post" action="/admin/step-down" class="inline">
               <input type="hidden" name="csrf" value="{csrf}">
-              <button type="submit">Simular caída del primario (demo)</button>
+              <button type="submit">Simulate primary failure (demo)</button>
             </form>
             """.format(csrf=html.escape(session["csrf"]))
         body = """
         {notice}
         <div class="card"><h2>Replication status</h2><table>{rows}</table></div>
-        <div class="card"><h2>Acciones recientes</h2>
-          <table><tr><th>Fecha</th><th>Admin</th><th>Acción</th><th>Objetivo</th></tr>{audit}</table>
+        <div class="card"><h2>Recent actions</h2>
+          <table><tr><th>Date</th><th>Admin</th><th>Action</th><th>Target</th></tr>{audit}</table>
           {step_down}
         </div>
-        """.format(notice=notice, rows=rows, audit=audit or "<tr><td colspan='4'>Sin acciones</td></tr>", step_down=step_down)
+        """.format(notice=notice, rows=rows, audit=audit or "<tr><td colspan='4'>No actions</td></tr>", step_down=step_down)
         self._send(self._page("Status", body, session))
 
     def _users_page(self, session):
@@ -476,12 +496,15 @@ button.secondary {{ background: transparent; color: var(--ehu-blue); border: 1px
                 <form method="post" action="/users/{quoted}/password" class="inline">
                   <input type="hidden" name="csrf" value="{csrf}">
                   <input type="password" name="password" placeholder="New password">
-                  <button type="submit">Resetear</button>
+                  <button type="submit">Reset</button>
                 </form>
                 </td></tr>""".format(
                     name=name,
                     role=html.escape(user["role"]),
-                    disabled="sí" if user["disabled"] else "no",
+                    disabled='<span class="badge badge-{}">{}</span>'.format(
+                        "follower" if user["disabled"] else "leader",
+                        "yes" if user["disabled"] else "no",
+                    ),
                     quoted=html.escape(quoted),
                     toggle=toggle,
                     label=label,
@@ -511,12 +534,14 @@ button.secondary {{ background: transparent; color: var(--ehu-blue); border: 1px
               <input type="hidden" name="owner" value="{owner}">
               <input type="hidden" name="path" value="{path}">
               <input type="hidden" name="grantee" value="{grantee}">
-              <button type="submit">Revocar</button>
+              <button type="submit">Revoke</button>
             </form></td></tr>""".format(
                 owner=html.escape(share["owner"]),
                 path=html.escape(share["path"]),
                 grantee=html.escape(share["grantee"]),
-                access=html.escape(share["access"]),
+                access='<span class="badge badge-{}">{}</span>'.format(
+                    html.escape(share["access"]), html.escape(share["access"])
+                ),
                 csrf=html.escape(session["csrf"]),
             )
             for share in self.service.shares()
@@ -529,11 +554,11 @@ button.secondary {{ background: transparent; color: var(--ehu-blue); border: 1px
     def _settings_page(self, session):
         enabled = self.service.status().get("registration_enabled", False)
         body = """
-        <div class="card"><h2>Ajustes</h2>
+        <div class="card"><h2>Settings</h2>
           <form method="post" action="/settings/registration">
             <input type="hidden" name="csrf" value="{csrf}">
-            <label><input type="checkbox" name="registration" {checked}> Permitir registro abierto</label>
-            <button type="submit">Guardar</button>
+            <label><input type="checkbox" name="registration" {checked}> Allow open registration</label>
+            <button type="submit">Save</button>
           </form>
         </div>
         """.format(
