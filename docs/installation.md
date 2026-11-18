@@ -170,6 +170,8 @@ certs/server.crt: OK
 IP Address:192.168.1.101, IP Address:192.168.1.102, ...
 ```
 
+![Certificate generation](assets/setup/cert-generation.png)
+
 Copy the certificates to every server:
 
 ```sh
@@ -330,12 +332,16 @@ Expected in the journal:
 Servidor TLS 0.11.3 escuchando en el puerto 50012 (rol primary).
 ```
 
+![Server startup](assets/setup/server-startup.png)
+
 Start the primary first, then the secondaries.
 
 ## B.4 Admin panel from another machine
 
 Open `https://192.168.1.101:50080/` in a browser. The browser warns about the
 private CA. Two options:
+
+![Admin login](assets/setup/admin-login.png)
 
 - Import `ca.crt` into the browser (Firefox: Settings, Privacy and Security,
   Certificates, View Certificates, Authorities, Import; Chrome/Chromium: Settings,
@@ -423,6 +429,8 @@ journalctl --user -u cloud-file-client -n 20 --no-pager
 
 The GUI starts the daemon if it is not already running. Enter your username
 and password and click Connect. The daemon then synchronizes `~/CloudFS`.
+
+![Client GUI](assets/setup/client-gui.png)
 
 To start the GUI automatically on login, add a desktop entry:
 
