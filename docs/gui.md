@@ -70,7 +70,7 @@ The CLI controls the same daemon:
 
 ```sh
 cloud-file-client status
-cloud-file-client login <usuario>
+cloud-file-client login <username>
 cloud-file-client shares
 cloud-file-client share docs bob ro
 cloud-file-client unshare docs bob
