@@ -197,13 +197,13 @@ class AdminHandler(BaseHTTPRequestHandler):
         if session is not None:
             nav = """
             <aside class="sidebar">
-              <a href="/">Status</a>
-              <a href="/users">Users</a>
-              <a href="/shares">Shares</a>
-              <a href="/settings">Settings</a>
+              <a href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="icon"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>Status</a>
+              <a href="/users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="icon"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>Users</a>
+              <a href="/shares"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="icon"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>Shares</a>
+              <a href="/settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="icon"><path d="M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Settings</a>
               <form method="post" action="/logout">
                 <input type="hidden" name="csrf" value="{csrf}">
-                <button type="submit" class="secondary">Sign out</button>
+                <button type="submit" class="secondary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="icon"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>Sign out</button>
               </form>
             </aside>
             """.format(csrf=html.escape(session["csrf"]))
@@ -254,6 +254,7 @@ form.inline {{ display: inline; }}
 .sidebar a, .sidebar button {{ display: block; padding: 8px 12px; border-radius: 6px; color: var(--fg); text-decoration: none; font-size: 14px; background: transparent; border: none; text-align: left; cursor: pointer; width: 100%; }}
 .sidebar a:hover, .sidebar button:hover {{ background: rgba(21,101,192,0.08); color: var(--ehu-blue); }}
 .sidebar form {{ margin: 0; }}
+.sidebar svg.icon {{ width: 16px; height: 16px; margin-right: 8px; vertical-align: -3px; }}
 main {{ flex: 1; min-width: 0; }}
 @media (max-width: 720px) {{
   .layout {{ flex-direction: column; }}

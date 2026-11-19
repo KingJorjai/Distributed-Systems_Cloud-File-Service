@@ -31,6 +31,12 @@ def _open_path(path):
         subprocess.Popen(["xdg-open", target])
 
 
+try:
+    from theme import EHU_BLUE
+except Exception:
+    EHU_BLUE = "#1565C0"
+
+
 class GuiApp:
     """Main Tk application, all widget access stays on the main thread."""
 
@@ -88,22 +94,29 @@ class GuiApp:
 
     def _build_login(self):
         self._clear()
-        self.login_frame = ttk.Frame(self.root, padding=20)
-        self.login_frame.pack(fill="both", expand=True)
-        header = ttk.Frame(self.login_frame)
-        header.grid(row=0, column=0, columnspan=3, pady=(0, 15), sticky="w")
+        # Brand header bar
+        brand_bar = tk.Frame(self.root, bg=EHU_BLUE, height=52)
+        brand_bar.pack(fill="x")
+        brand_bar.pack_propagate(False)
         try:
             import branding
 
-            self._logo_image = branding.photo_image(root=self.root, size=(36, 36))
-            ttk.Label(header, image=self._logo_image).pack(side="left", padx=(0, 10))
+            self._logo_image = branding.photo_image(root=self.root, size=(32, 32))
+            tk.Label(brand_bar, image=self._logo_image, bg=EHU_BLUE).pack(side="left", padx=14, pady=10)
         except Exception:
             pass
+        tk.Label(brand_bar, text="Cloud File Service", bg=EHU_BLUE, fg="white",
+                 font=("TkDefaultFont", 14, "bold")).pack(side="left", pady=10)
+        tk.Label(brand_bar, text="· UPV/EHU", bg=EHU_BLUE, fg="#B0FBC1",
+                 font=("TkDefaultFont", 11)).pack(side="left", padx=(6, 0), pady=10)
+
+        self.login_frame = ttk.Frame(self.root, padding=24)
+        self.login_frame.pack(fill="both", expand=True)
         ttk.Label(
-            header,
-            text="Cloud File Service",
-            font=("TkDefaultFont", 18, "bold"),
-        ).pack(side="left")
+            self.login_frame,
+            text="Sign in",
+            font=("TkDefaultFont", 16, "bold"),
+        ).grid(row=0, column=0, columnspan=3, pady=(0, 12), sticky="w")
 
         self.server_var = tk.StringVar(value=self.config.server)
         self.port_var = tk.StringVar(value=str(self.config.port))
@@ -266,18 +279,29 @@ class GuiApp:
 
     def _build_main(self):
         self._clear()
-        self.main_frame = ttk.Frame(self.root, padding=10)
-        self.main_frame.pack(fill="both", expand=True)
-        top = ttk.Frame(self.main_frame)
-        top.pack(fill="x")
+        brand_bar = tk.Frame(self.root, bg=EHU_BLUE, height=44)
+        brand_bar.pack(fill="x")
+        brand_bar.pack_propagate(False)
         try:
             import branding
 
-            self._logo_image_main = branding.photo_image(root=self.root, size=(28, 28))
-            ttk.Label(top, image=self._logo_image_main).pack(side="left", padx=(0, 8))
+            self._logo_image_main = branding.photo_image(root=self.root, size=(24, 24))
+            tk.Label(brand_bar, image=self._logo_image_main, bg=EHU_BLUE).pack(side="left", padx=12, pady=10)
         except Exception:
             pass
-        ttk.Label(top, text="Cloud File Service", font=("TkDefaultFont", 13, "bold")).pack(side="left")
+        tk.Label(brand_bar, text="Cloud File Service", bg=EHU_BLUE, fg="white",
+                 font=("TkDefaultFont", 12, "bold")).pack(side="left", pady=10)
+        self.main_frame = ttk.Frame(self.root, padding=12)
+        self.main_frame.pack(fill="both", expand=True)
+        top = ttk.Frame(self.main_frame)
+        top.pack(fill="x")
+        self.status_var = tk.StringVar(value="Connected")
+        self.endpoint_var = tk.StringVar(value="")
+        self.pending_var = tk.StringVar(value="0 pending changes")
+        self.status_pill = ttk.Label(top, textvariable=self.status_var, font=("TkDefaultFont", 11, "bold"), foreground="#3B8719")
+        self.status_pill.pack(side="left")
+        ttk.Label(top, textvariable=self.endpoint_var).pack(side="left", padx=12)
+        ttk.Label(top, textvariable=self.pending_var).pack(side="right")
         self.status_var = tk.StringVar(value="Connected")
         self.endpoint_var = tk.StringVar(value="")
         self.pending_var = tk.StringVar(value="0 pending changes")

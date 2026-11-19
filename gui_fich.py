@@ -60,6 +60,10 @@ def main(argv=None):
         lock.release()
         return 1
 
+    root.geometry("1000x700")
+    root.minsize(800, 600)
+    root.configure(highlightthickness=0, borderwidth=0)
+
     import theme
 
     theme.apply(root)
