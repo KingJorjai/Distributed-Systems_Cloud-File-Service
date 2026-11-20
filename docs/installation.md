@@ -113,6 +113,190 @@ inspect the cluster.
 Press `Ctrl+C` in the server terminal. The client can be closed from its
 window; it hides to the taskbar or minimizes if no tray is available.
 
+# Path C - laboratory (no sudo, replicated cluster)
+
+Use this path when you have no root access and want a replicated cluster
+for the demonstration. Everything runs from your home directory; there is no
+systemd and no permanent installation.
+
+## C.1 Choose ports
+
+If all three servers run on one machine, give each a different port set:
+
+| Node | Client port | Replication port | Admin port |
+| --- | --- | --- | --- |
+| `server1` | `50012` | `60012` | `50080` |
+| `server2` | `50013` | `60013` | `50081` |
+| `server3` | `50014` | `60014` | `50082` |
+
+If each server runs on its own machine, use the default ports (`50012`,
+`60012`, `50080`) on every node and replace `127.0.0.1` with the real IP.
+
+## C.0 Offline kit (single machine, no sudo)
+
+If you only need one machine for evaluation, use the offline kit instead of
+Path C:
+
+```sh
+scripts/build_offline_kit.sh --host 127.0.0.1
+```
+
+For a lab with fixed IPs, generate the kit with all of them:
+
+```sh
+scripts/build_offline_kit.sh --host 192.168.1.101 --host 192.168.1.102 --host 192.168.1.103
+```
+
+Then extract and run `server/start-server.sh` and `cloudfs`. No root required.
+
+## C.2 Certificates
+
+Generate one CA and one server certificate with every server address as a SAN:
+
+```sh
+cd ~/CloudFS
+bash packaging/tools/make-certs.sh --out certs \\
+    --host 127.0.0.1 \\
+    --host 192.168.1.101 \\
+    --host 192.168.1.102 \\
+    --host 192.168.1.103 \\
+    --host localhost
+```
+
+Copy `certs/` to every server folder. Copy only `certs/ca.crt` to every
+client folder.
+
+## C.3 Server folders
+
+Create one folder per node:
+
+```sh
+mkdir -p ~/CloudFS/server1 ~/CloudFS/server2 ~/CloudFS/server3
+for n in 1 2 3; do
+    cp -a ~/CloudFS/server/cloud-file-server/. ~/CloudFS/server$n/
+done
+```
+
+## C.4 Server configuration
+
+Create `~/CloudFS/server1/config.toml`:
+
+```toml
+[server]
+host = "0.0.0.0"
+port = 50012
+files_path = "files"
+tls_cert_file = "certs/server.crt"
+tls_key_file = "certs/server.key"
+tls_ca_file = "certs/ca.crt"
+registration_enabled = true
+server_id = "server1"
+role = "primary"
+peers = "server2@127.0.0.1:60013,server3@127.0.0.1:60014"
+primary = ""
+replication_host = "0.0.0.0"
+replication_port = 60012
+cluster_token = "change-this-secret"
+term = 1
+replication_timeout = 2.0
+heartbeat_interval = 0.5
+failure_timeout = 2.0
+election_timeout = 1.0
+client_addresses = "server1@127.0.0.1:50012,server2@127.0.0.1:50013,server3@127.0.0.1:50014"
+admin_enabled = true
+admin_host = "0.0.0.0"
+admin_port = 50080
+admin_addresses = "server1@127.0.0.1:50080,server2@127.0.0.1:50081,server3@127.0.0.1:50082"
+allow_admin_failover = true
+admin_session_timeout = 3600.0
+```
+
+For `server2`, change `server_id`, `role`, `port`, `peers`, `primary`,
+`replication_port`, `admin_port` accordingly. For `server3`, do the same.
+
+## C.5 Start the servers
+
+Start the primary first, wait three seconds, then the secondaries:
+
+```sh
+cd ~/CloudFS/server1
+export CONFIG_FILE="$PWD/config.toml"
+export APP_PASSWORD_SAR='demo-password' APP_PASSWORD_SZA='demo-password'
+./cloudfs server &
+
+sleep 3
+cd ~/CloudFS/server2
+export CONFIG_FILE="$PWD/config.toml"
+export APP_PASSWORD_SAR='demo-password' APP_PASSWORD_SZA='demo-password'
+./cloudfs server &
+
+cd ~/CloudFS/server3
+export CONFIG_FILE="$PWD/config.toml"
+export APP_PASSWORD_SAR='demo-password' APP_PASSWORD_SZA='demo-password'
+./cloudfs server &
+```
+
+Expected output on each terminal:
+
+```text
+TLS server 0.11.3 listening on port 50012 (role primary).
+TLS server 0.11.3 listening on port 50013 (role secondary).
+TLS server 0.11.3 listening on port 50014 (role secondary).
+```
+
+## C.6 Client configuration
+
+Create `~/CloudFS/client1/config.toml`:
+
+```toml
+[client]
+server = "127.0.0.1"
+port = 50012
+local_path = "client_files"
+tls_ca_file = "certs/ca.crt"
+tls_server_name = ""
+state_dir = "state"
+peers = "127.0.0.1:50012,127.0.0.1:50013,127.0.0.1:50014"
+```
+
+Repeat for `client2` with a different `local_path`.
+
+## C.7 Start the clients
+
+```sh
+cd ~/CloudFS/client1
+./cloudfs
+```
+
+Register `alice` and `bob` from the admin panel, then sign in.
+
+## C.8 Verification
+
+```sh
+# Who is the primary?
+printf 'PRIM\\r\\n' | openssl s_client -quiet -connect 127.0.0.1:50012 -CAfile certs/ca.crt 2>/dev/null
+
+# Admin panel
+curl --cacert certs/ca.crt -sI https://127.0.0.1:50080/ | head -1
+```
+
+Expected: `OK127.0.0.1:50012` and `HTTP/1.0 200 OK`.
+
+## C.9 Failover test
+
+1. Stop the primary (`Ctrl+C` in its terminal or `kill %1`).
+2. Wait 3-5 seconds.
+3. Run `PRIM` again; it should return a different node.
+4. Upload a file from a client.
+5. Restart the old primary; it rejoins as a follower.
+
+## C.10 Stop everything
+
+```sh
+pkill -f "cloudfs server"
+pkill -f "cloudfs --daemon"
+```
+
 # Path B - permanent install
 
 ## B.1 Plan addresses and ports

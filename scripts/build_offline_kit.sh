@@ -9,6 +9,24 @@ else
 fi
 VERSION="$("$PYTHON" -c 'import version; print(version.__version__)')"
 ROOT="$PWD"
+HOSTS=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --host) HOSTS+=("$2"); shift 2 ;;
+        *) OUT="$1"; shift ;;
+    esac
+done
+if [[ ${#HOSTS[@]} -eq 0 ]]; then
+    HOSTS=(localhost 127.0.0.1)
+fi
+# Use the first non-localhost host as the primary address, or 127.0.0.1
+PRIMARY_HOST="127.0.0.1"
+for h in "${HOSTS[@]}"; do
+    if [[ "$h" != "localhost" && "$h" != "127.0.0.1" ]]; then
+        PRIMARY_HOST="$h"
+        break
+    fi
+done
 OUT="${1:-demo/CloudFS-Offline-${VERSION}-linux-x64.zip}"
 STAGE="$(mktemp -d -t cloudfs-kit-XXXXXX)"
 trap 'rm -rf "$STAGE"' EXIT
@@ -25,9 +43,13 @@ mkdir -p "$KIT/server/files" "$KIT/server/certs" \
 cp -a "$STAGE/cloudfs/." "$KIT/"
 rm -rf "$KIT/files" "$KIT/client_files" 2>/dev/null || true
 
+HOST_ARGS=()
+for h in "${HOSTS[@]}"; do
+    HOST_ARGS+=(--host "$h")
+done
 "$PYTHON" scripts/generate_dev_cert.py \
   --output "$KIT/server/certs" \
-  --host localhost --host 127.0.0.1 >/dev/null
+  "${HOST_ARGS[@]}" >/dev/null
 cp "$KIT/server/certs/ca.crt" "$KIT/client/certs/ca.crt"
 chmod 600 "$KIT/server/certs/server.key"
 
@@ -55,7 +77,7 @@ replication_timeout = 2.0
 heartbeat_interval = 0.5
 failure_timeout = 2.0
 election_timeout = 1.0
-client_addresses = "server1@127.0.0.1:50012"
+client_addresses = "server1@${PRIMARY_HOST}:50012"
 admin_enabled = true
 admin_host = "0.0.0.0"
 admin_port = 50080
@@ -64,9 +86,9 @@ allow_admin_failover = false
 admin_session_timeout = 3600.0
 TOML
 
-cat > "$KIT/client/config.toml" <<'TOML'
+cat > "$KIT/client/config.toml" <<TOML
 [client]
-server = "127.0.0.1"
+server = "${PRIMARY_HOST}"
 port = 50012
 local_path = "client/client_files"
 tls_ca_file = "client/certs/ca.crt"
