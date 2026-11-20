@@ -1,26 +1,25 @@
-# Trabajo pendiente
+# Pending work
 
-Estado actual: M0–M8 implementados y publicados como `v0.11.3`. El tooling
-LAN y el kit offline están listos. Queda la validación manual final y el tag
-`v1.0.0`.
+Current status: M0-M8 implemented and published as `v0.11.3`. LAN tooling and the
+offline kit are ready. Final manual validation and the `v1.0.0` tag remain.
 
-## Validación final
+## Final validation
 
-- [ ] Abrir la GUI en un escritorio Linux real y comprobar login, subida,
-      descarga, cierre a bandeja, mostrar, pausar/reanudar, salir y autostart.
-- [ ] Repetir la comprobación visual con el bundle de Windows x64.
-- [ ] Revisar el informe, la presentación y los PDFs finales.
-- [ ] Crear `v1.0.0` solo cuando la validación anterior esté completa.
+- [ ] Open the GUI on a real Linux desktop and check login, upload, download,
+      tray hide/show, pause/resume, quit, and autostart.
+- [ ] Repeat the visual check with the Windows x64 bundle.
+- [ ] Review the final report, presentation, and PDFs.
+- [ ] Create `v1.0.0` only when the validation above is complete.
 
-## Endurecimiento para producción
+## Production hardening
 
-- [ ] Rate limiting y recuperación de cuentas.
-- [ ] Auditoría administrativa persistente.
-- [ ] Snapshots por chunks y límites de tamaño configurables.
-- [ ] Historial de versiones y recolección de basura de lápidas/conflictos.
-- [ ] Grupos y ACLs heredadas.
-- [ ] Instaladores firmados, auto-update y gestión de secretos con keyring.
-- [ ] Rotación de certificados y automatización del despliegue TLS.
+- [ ] Rate limiting and account recovery.
+- [ ] Persistent administrative audit log.
+- [ ] Chunked snapshots and configurable size limits.
+- [ ] Version history and garbage collection of tombstones/conflicts.
+- [ ] Groups and inherited ACLs.
+- [ ] Signed installers, auto-update, and secret management with a keyring.
+- [ ] Certificate rotation and TLS deployment automation.
 
-Estas mejoras están fuera del alcance de la entrega actual y se detallan en
-`docs/limitations.md`.
+These improvements are outside the scope of the current delivery and are
+detailed in `docs/limitations.md`.

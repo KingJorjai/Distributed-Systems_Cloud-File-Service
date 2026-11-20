@@ -86,7 +86,7 @@ class GuiApp:
         self.tray = None
         if self.root.state() == "withdrawn":
             self.show()
-        self._log("Bandeja del sistema no disponible; la ventana se minimizará.")
+        self._log("System tray unavailable; the window will be minimized.")
 
     def _clear(self):
         for widget in self.root.winfo_children():

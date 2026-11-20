@@ -56,7 +56,7 @@ def parse_client_args(argv, config):
         try:
             port = validate_port(argv[2])
         except ConfigurationError as error:
-            print(f"Puerto inválido: {error}")
+            print(f"Invalid port: {error}")
             raise SystemExit(2)
     if len(argv) == 4:
         local_path = argv[3]
