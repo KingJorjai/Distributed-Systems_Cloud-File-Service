@@ -98,57 +98,86 @@ class Chrono:
 # ---------------------------------------------------------------- 3.1b figure
 def replication_models():
     from matplotlib.patches import Rectangle
-    fig, axes = plt.subplots(1, 2, figsize=(6.5, 3.0))
+    from matplotlib.lines import Line2D
 
-    def box(ax, x, y, text, tint="#e8f0f8"):
-        ax.add_patch(Rectangle((x - 0.8, y - 0.36), 1.6, 0.72,
-                               fc=tint, ec=BLUE, lw=1.0))
-        ax.text(x, y, text, ha="center", va="center", fontsize=8.5)
+    fig, axes = plt.subplots(1, 2, figsize=(6.7, 3.5))
+    fig.subplots_adjust(bottom=0.14, wspace=0.30)
 
-    def arrow(ax, p1, p2, color=BLUE, ls="-", rad=0.0):
-        ax.add_patch(FancyArrowPatch(p1, p2, arrowstyle="-|>", color=color, lw=1.4,
-                                     linestyle=ls, shrinkA=1, shrinkB=1,
-                                     connectionstyle=f"arc3,rad={rad}"))
+    def panel(ax, names, title):
+        xs = [2.35 * i for i in range(len(names))]
+        ax.set_xlim(-0.9, xs[-1] + 0.9)
+        ax.set_ylim(5.5, -1.15)
+        ax.axis("off")
+        ax.set_title(title, fontsize=10)
+        for x, name in zip(xs, names):
+            ax.add_patch(Rectangle((x - 0.92, -0.72), 1.84, 0.46,
+                                   fc="#e8f0f8", ec=BLUE, lw=1.0, zorder=4))
+            ax.text(x, -0.49, name, ha="center", va="center", fontsize=8.4, zorder=5)
+            ax.plot([x, x], [0.0, 5.1], color="#b8b8b8", lw=0.9,
+                    ls=(0, (4, 3)), zorder=1)
+        return xs
 
-    # Passive
+    def msg(ax, xs, i, j, y, label="", color=BLUE, ls="-", lw=1.5,
+            badge=None, bx=None, lx=None):
+        ax.annotate("", xy=(xs[j], y), xytext=(xs[i], y),
+                    arrowprops=dict(arrowstyle="-|>", color=color, lw=lw,
+                                    linestyle=ls, shrinkA=3, shrinkB=3,
+                                    mutation_scale=13), zorder=3)
+        if label:
+            x = lx if lx is not None else (xs[i] + xs[j]) / 2
+            ax.text(x, y - 0.20, label, ha="center", va="bottom", fontsize=8.0,
+                    color=color, bbox=LBL, zorder=5)
+        if badge is not None:
+            ax.text(bx, y, str(badge), ha="center", va="center", fontsize=7.0,
+                    color=color, fontweight="bold", zorder=6,
+                    bbox=dict(boxstyle="circle,pad=0.30", fc="white", ec=color, lw=1.1))
+
+    # ---------------- Passive ----------------
     ax = axes[0]
-    ax.set_xlim(0, 10); ax.set_ylim(0, 8); ax.axis("off")
-    ax.set_title("Passive replication", fontsize=10)
-    box(ax, 1.2, 4.0, "Client"); box(ax, 5.0, 4.0, "Primary", "#d6e6f5")
-    box(ax, 8.8, 6.6, "S1"); box(ax, 8.8, 1.4, "S2")
-    arrow(ax, (2.0, 4.18), (4.2, 4.18))
-    ax.text(3.1, 4.40, "request", ha="center", fontsize=7.4, color=BLUE, bbox=LBL)
-    arrow(ax, (4.2, 3.60), (2.0, 3.60), ls=":")
-    ax.text(3.1, 3.22, "response", ha="center", fontsize=7.4, color=BLUE, bbox=LBL)
-    arrow(ax, (5.8, 4.18), (8.0, 6.35), rad=-0.05)
-    arrow(ax, (8.0, 6.10), (5.8, 4.42), color=GREEN, ls="--")
-    arrow(ax, (5.8, 3.82), (8.0, 1.65), rad=0.05)
-    arrow(ax, (8.0, 1.90), (5.8, 3.58), color=GREEN, ls="--")
+    xs = panel(ax, ["Client", "Primary", "S1", "S2"], "Passive replication")
+    msg(ax, xs, 0, 1, 0.85, "request", badge=1, bx=0.55, lx=1.60)
+    msg(ax, xs, 1, 2, 2.00, "update", badge=2, bx=2.85, lx=3.95)
+    msg(ax, xs, 1, 3, 2.28)
+    msg(ax, xs, 2, 1, 3.45, "ACK", color=GREEN, ls="--", badge=3, bx=3.55, lx=4.20)
+    msg(ax, xs, 3, 1, 3.73, color=GREEN, ls="--")
+    msg(ax, xs, 1, 0, 4.90, "response", ls=":", badge=4, bx=0.55, lx=1.60)
 
-    # Active
+    # ---------------- Active ----------------
     ax = axes[1]
-    ax.set_xlim(0, 10); ax.set_ylim(0, 8); ax.axis("off")
-    ax.set_title("Active replication", fontsize=10)
-    box(ax, 1.2, 4.0, "Client")
-    for k, yy in enumerate([6.6, 4.0, 1.4]):
-        box(ax, 8.8, yy, f"S{k + 1}")
-        arrow(ax, (2.0, 4.0), (8.0, yy), rad=0.04)
-    arrow(ax, (8.0, 6.32), (2.0, 4.20), color=GREEN, ls="--")
+    xs = panel(ax, ["Client", "S1", "S2", "S3"], "Active replication")
+    msg(ax, xs, 0, 1, 0.85, "request", badge=1, bx=0.55, lx=1.60)
+    msg(ax, xs, 0, 2, 1.10)
+    msg(ax, xs, 0, 3, 1.35)
+    msg(ax, xs, 1, 0, 2.30, "response", color=GREEN, lw=1.6, badge=2, bx=0.55, lx=1.60)
+    msg(ax, xs, 2, 0, 2.58, color=GREEN, ls=":", lw=1.0)
+    msg(ax, xs, 3, 0, 2.86, color=GREEN, ls=":", lw=1.0)
+    ax.text(2.35, 3.35, "client keeps the first response",
+            ha="center", va="top", fontsize=7.0, color=GREEN, style="italic")
 
-    fig.tight_layout()
-    fig.savefig(OUT / "fig-3.1b-models.png", dpi=220, bbox_inches="tight", facecolor="white")
+    handles = [
+        Line2D([0], [0], color=BLUE, lw=1.5, label="request / update"),
+        Line2D([0], [0], color=GREEN, lw=1.4, ls="--", label="ACK"),
+        Line2D([0], [0], color=GREEN, lw=1.5, label="first response kept"),
+        Line2D([0], [0], color=GREEN, lw=1.0, ls=":", label="discarded response"),
+    ]
+    fig.legend(handles=handles, loc="lower center", ncol=4, frameon=False,
+               fontsize=6.8, bbox_to_anchor=(0.5, 0.0), handlelength=2.0,
+               columnspacing=0.9)
+
+    fig.savefig(OUT / "fig-3.1b-models.png", dpi=220, bbox_inches="tight",
+                facecolor="white")
     plt.close(fig)
 
 
 # ---------------------------------------------------------------- 3.1c figures
 def fig_1a():
     c = Chrono(["C1", "C2", "P", "S1", "S2"], ends=[12, 12, 8.2, 12, 12],
-               figsize=(6.5, 4.8), height=12,
-               title="Proposition 1a — every read goes to an arbitrary secondary")
+               figsize=(6.5, 4.4), height=10.0,
+)
     c.msg(0, 2, 1.2, "W(x=1)")
     c.msg(2, 3, 2.2, "update")
     c.msg(2, 4, 3.0, "update", frac=0.28)
-    c.action(3, 2.8, "x=1")
+    c.action(3, 2.55, "x=1", dx=0.5, ha="left")
     c.msg(3, 2, 3.6, "ACK", color=GREEN)
     c.msg(1, 3, 4.6, "R(x)")
     c.msg(3, 1, 5.0, "1", color=GREEN)
@@ -164,12 +193,12 @@ def fig_1a():
 
 def fig_1b():
     c = Chrono(["C1", "C2", "P", "S1", "S2"], ends=[12, 12, 7.6, 12, 12],
-               figsize=(6.5, 4.8), height=12,
-               title="Proposition 1b — each client reads from its own fixed secondary")
+               figsize=(6.5, 4.4), height=10.0,
+)
     c.msg(0, 2, 1.2, "W(x=1)")
     c.msg(2, 3, 2.2, "update")
     c.msg(2, 4, 3.0, "update")
-    c.action(3, 2.7, "x=1")
+    c.action(3, 2.45, "x=1", dx=0.5, ha="left")
     c.msg(3, 2, 3.6, "ACK", color=GREEN)
     c.msg(0, 3, 4.6, "R(x)")
     c.msg(3, 0, 5.0, "1", color=GREEN)
@@ -183,8 +212,8 @@ def fig_1b():
 
 def fig_2a():
     c = Chrono(["C", "P", "S1", "S2"], ends=[12, 4.0, 12, 12],
-               figsize=(6.4, 4.4), height=11,
-               title="Proposition 2a — reply before disseminating the update")
+               figsize=(6.4, 4.0), height=9.6,
+)
     c.msg(0, 1, 1.2, "W(x=1)")
     c.action(1, 2.0, "x=1", fc="#e6f4ea")
     c.msg(1, 0, 2.7, "OK")
@@ -199,8 +228,8 @@ def fig_2a():
 
 def fig_2b():
     c = Chrono(["C", "P", "S1", "S2"], ends=[12, 4.6, 4.9, 12],
-               figsize=(6.4, 4.3), height=11,
-               title="Proposition 2b — reply after sending, without waiting for ACKs")
+               figsize=(6.4, 4.2), height=10.2,
+)
     c.msg(0, 1, 1.2, "W(x=1)")
     c.msg(1, 2, 2.2, "update")
     c.action(2, 2.0, "x=1")
@@ -219,11 +248,11 @@ def fig_2b():
 
 def fig_combined():
     c = Chrono(["C", "P", "S1"], ends=[12, 4.2, 12],
-               figsize=(6.4, 4.1), height=11,
-               title="Combination of 1 and 2 — reads at secondaries + early reply")
+               figsize=(6.4, 3.6), height=8.0,
+)
     c.msg(0, 1, 1.2, "W(x=1)")
     c.msg(1, 0, 1.9, "OK")
-    c.action(1, 2.2, "x=1 local", fc="#e6f4ea")
+    c.action(1, 2.0, "x=1 local", fc="#e6f4ea")
     c.msg(0, 2, 3.0, "R(x)", frac=0.3)
     c.msg(2, 0, 3.3, "0", color=RED)
     c.msg(1, 2, 3.9, "update")
@@ -238,8 +267,8 @@ def fig_combined():
 # ---------------------------------------------------------------- 3.2a figures
 def fig_simple_broadcast():
     c = Chrono(["P", "S1", "S2"], ends=[2.6, 10, 10],
-               figsize=(6.4, 3.3), height=9,
-               title="Simple broadcast(): agreement can fail")
+               figsize=(6.4, 2.6), height=5.2,
+)
     c.msg(0, 1, 1.4, "m")
     c.action(1, 2.2, "deliver(m)", dx=0.95, ha="left")
     c.crash(0, 2.6)
@@ -250,8 +279,8 @@ def fig_simple_broadcast():
 
 def fig_rb():
     c = Chrono(["P", "S1", "S2"], ends=[12, 12, 12],
-               figsize=(6.4, 4.2), height=11,
-               title="R-broadcast(): every receiver re-broadcasts once")
+               figsize=(6.4, 3.4), height=8.0,
+)
     c.msg(0, 1, 1.2, "m", frac=0.4)
     c.msg(0, 2, 1.7, "m", frac=0.4)
     c.action(1, 2.6, "deliver\n+ re-broadcast", fs=6.6)

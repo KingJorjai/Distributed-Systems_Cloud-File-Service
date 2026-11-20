@@ -135,19 +135,32 @@ If each server runs on its own machine, use the default ports (`50012`,
 ## C.0 Offline kit (single machine, no sudo)
 
 If you only need one machine for evaluation, use the offline kit instead of
-Path C:
+Path C. It is a single ZIP that contains the server, the desktop client, the
+CA, configuration, logs, and a no-terminal launcher:
 
 ```sh
-scripts/build_offline_kit.sh --host 127.0.0.1
+# Already included in the kit; no build step needed.
+unzip CloudFS-Offline-0.11.3-linux-x64.zip -d ~/CloudFS
+cd ~/CloudFS
+./server/start-server.sh        # terminal 1
+./cloudfs                      # terminal 2 (or double-click)
 ```
 
-For a lab with fixed IPs, generate the kit with all of them:
+The kit's certificates are generated for `localhost` and `127.0.0.1`. If the
+server must be reachable from other machines, regenerate the certificates
+inside the extracted kit:
 
 ```sh
-scripts/build_offline_kit.sh --host 192.168.1.101 --host 192.168.1.102 --host 192.168.1.103
+cd ~/CloudFS
+bash packaging/tools/make-certs.sh --out server/certs \\
+    --host 192.168.1.101 --host 192.168.1.102 --host 192.168.1.103 \\
+    --host localhost --host 127.0.0.1
+cp server/certs/ca.crt client/certs/ca.crt
 ```
 
-Then extract and run `server/start-server.sh` and `cloudfs`. No root required.
+No root access and no Internet are required. The `packaging/` folder inside
+the kit contains the same `make-certs.sh` and systemd units referenced in
+Path B.
 
 ## C.2 Certificates
 
@@ -770,8 +783,9 @@ rm -rf /opt/cloudfs/client ~/.config/cloudfs ~/.local/state/cloudfs
   credentials in memory. Check `journalctl --user -u cloud-file-client`.
 - **Tray missing.** The compact kit minimizes to the taskbar; the full GUI
   bundle still contains the tray.
-- **Bundle fails on Ubuntu 22.04.** Rebuild it on Ubuntu 22.04 with
-  `scripts/build_release_bundle.py`; do not use a bundle built on a newer
+- **Bundle fails on Ubuntu 22.04.** The bundle was built on a newer glibc.
+  Use a bundle built on Ubuntu 22.04 (the project provides one) or rebuild
+  with PyInstaller on Ubuntu 22.04. Do not use a bundle built on a newer
   glibc.
 - **Two-node cluster has no failover.** Quorum is 2, so a single failure
   stops writes. Use three nodes.

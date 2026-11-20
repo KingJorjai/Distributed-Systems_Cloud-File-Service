@@ -1,0 +1,27 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 12
+skinparam sequence {
+  ArrowColor #1F4E79
+  ActorBorderColor #1F4E79
+  ParticipantBorderColor #1F4E79
+  ParticipantBackgroundColor #E8F0F8
+  LifeLineBorderColor #B0B0B0
+  LifeLineBackgroundColor white
+}
+skinparam dpi 240
+hide footbox
+title Passive replication
+participant "Client" as C
+participant "Primary" as P
+participant "S1" as S1
+participant "S2" as S2
+C -[#1F4E79]> P : request
+P -[#1F4E79]> S1 : update
+P -[#1F4E79]> S2 : update
+S1 -[#2E7D32]--> P : ACK
+S2 -[#2E7D32]--> P : ACK
+P -[#1F4E79]--> C : response
+@enduml

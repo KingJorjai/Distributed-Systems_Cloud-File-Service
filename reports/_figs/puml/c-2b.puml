@@ -1,0 +1,32 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 12
+skinparam sequence {
+  ArrowColor #1F4E79
+  ActorBorderColor #1F4E79
+  ParticipantBorderColor #1F4E79
+  ParticipantBackgroundColor #E8F0F8
+  LifeLineBorderColor #B0B0B0
+  LifeLineBackgroundColor white
+}
+skinparam dpi 240
+hide footbox
+participant "C" as C
+participant "P" as P
+participant "S1" as S1
+participant "S2" as S2
+C -[#1F4E79]> P : W(x=1)
+P -[#1F4E79]> S1 : update
+note right of S1 #E8F0F8 : x=1
+P -[#C62828]x S2 : update lost
+P -[#1F4E79]--> C : OK
+destroy P
+destroy S1
+note over P, S1 #F5F5F5 : S2 never received the update; P and S1 crash
+C -[#1F4E79]> S2 : R(x)
+S2 -[#C62828]--> C : 0
+note right of S2 #E8F0F8 : new primary: x=0
+note over C, S2 #FFEBEE : atomicity violated: one replica handled the\nrequest, the correct ones never will
+@enduml

@@ -1,0 +1,32 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 12
+skinparam sequence {
+  ArrowColor #1F4E79
+  ActorBorderColor #1F4E79
+  ParticipantBorderColor #1F4E79
+  ParticipantBackgroundColor #E8F0F8
+  LifeLineBorderColor #B0B0B0
+  LifeLineBackgroundColor white
+}
+skinparam dpi 240
+hide footbox
+participant "C1" as C1
+participant "C2" as C2
+participant "P" as P
+participant "S1" as S1
+participant "S2" as S2
+C1 -[#1F4E79]> P : W(x=1)
+P -[#1F4E79]> S1 : update
+P -[#1F4E79]> S2 : update
+note right of S1 #E8F0F8 : x=1
+S1 -[#2E7D32]--> P : ACK
+C1 -[#1F4E79]> S1 : R(x)
+S1 -[#2E7D32]--> C1 : 1
+C2 -[#1F4E79]> S2 : R(x)
+S2 -[#C62828]--> C2 : 0
+note right of S2 #E8F0F8 : x=0
+note over C1, S2 #FFEBEE : C1 reads 1, then C2 reads 0. Each client is\nmonotonic, but there is no single global\norder -> still not linearizable
+@enduml

@@ -135,6 +135,32 @@ def insert_paragraph_after(paragraph, style=None):
     return p
 
 
+def add_page_footer(doc):
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    sec = doc.sections[0]
+    sec.different_first_page_header_footer = True
+    para = sec.footer.paragraphs[0]
+    para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = para.add_run()
+    run.font.size = Pt(10)
+    run.font.name = FONT
+    f1 = OxmlElement("w:fldChar"); f1.set(qn("w:fldCharType"), "begin")
+    it = OxmlElement("w:instrText"); it.set(qn("xml:space"), "preserve"); it.text = " PAGE "
+    f2 = OxmlElement("w:fldChar"); f2.set(qn("w:fldCharType"), "separate")
+    t = OxmlElement("w:t"); t.text = "1"
+    f3 = OxmlElement("w:fldChar"); f3.set(qn("w:fldCharType"), "end")
+    for el in (f1, it, f2, t, f3):
+        run._r.append(el)
+    sectPr = sec._sectPr
+    pg = sectPr.find(qn("w:pgNumType"))
+    if pg is None:
+        pg = OxmlElement("w:pgNumType")
+        sectPr.append(pg)
+    pg.set(qn("w:start"), "0")
+
+
 def add_index(docx_path, headings, page_numbers):
     doc = Document(str(docx_path))
     author = None
@@ -170,6 +196,36 @@ def add_index(docx_path, headings, page_numbers):
     for run in brk.runs:
         for br in run._element.findall(qn("w:br")):
             br.set(qn("w:type"), "page")
+
+    # bold run-in labels act as subheadings: keep them with the following text
+    for para in doc.paragraphs:
+        text = para.text.strip()
+        runs = [r for r in para.runs if r.text.strip()]
+        if 0 < len(text) < 90 and runs and all(r.bold for r in runs):
+            para.paragraph_format.keep_with_next = True
+            para.paragraph_format.space_before = Pt(10)
+            para.paragraph_format.space_after = Pt(4)
+
+    # compact table typography so summary tables fit on one page
+    from docx.shared import Pt as _Pt
+    for table in doc.tables:
+        for ridx, row in enumerate(table.rows):
+            for cell in row.cells:
+                for para in cell.paragraphs:
+                    para.paragraph_format.space_before = _Pt(1)
+                    para.paragraph_format.space_after = _Pt(1)
+                    para.paragraph_format.line_spacing = 1.0
+                    for run in para.runs:
+                        run.font.size = _Pt(9.5)
+                        if ridx == 0:
+                            run.font.bold = True
+
+    for para in doc.paragraphs:
+        if para.text.strip() == "Comparison" and para.style.name.lower().startswith("heading"):
+            para.paragraph_format.page_break_before = True
+
+    add_page_footer(doc)
+
     doc.save(str(docx_path))
 
 
@@ -228,6 +284,8 @@ def main():
         add_index(final_docx, heads, numbers)
         run(["soffice", "--headless", "--convert-to", "odt", "--outdir", str(folder),
              str(final_docx)])
+        odt = folder / f"DS report {act}.odt"
+        odt.replace(folder / f"DS_2026_27_ABGR_A{act}.odt")
         pdf = docx_to_pdf(final_docx, TMP)
         shutil.copy(pdf, BUILD / f"DS report {act}.pdf")
         print(f"{act}: {numbers}")

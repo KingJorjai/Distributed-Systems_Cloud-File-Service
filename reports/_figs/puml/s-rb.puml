@@ -1,0 +1,27 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 12
+skinparam sequence {
+  ArrowColor #1F4E79
+  ActorBorderColor #1F4E79
+  ParticipantBorderColor #1F4E79
+  ParticipantBackgroundColor #E8F0F8
+  LifeLineBorderColor #B0B0B0
+  LifeLineBackgroundColor white
+}
+skinparam dpi 240
+hide footbox
+participant "P" as P
+participant "S1" as S1
+participant "S2" as S2
+P -[#1F4E79]> S1 : m
+P -[#1F4E79]> S2 : m
+note right of S1 #E8F0F8 : deliver + re-broadcast
+S1 -[#1F4E79]> S2 : m
+S2 -[#1F4E79]--> S1 : m
+note right of S1 #F2F2F2 : duplicate dropped
+note right of S2 #E8F0F8 : deliver
+note over P, S2 #E8F5E9 : All correct processes deliver; each message\ntravels O(n^2) times
+@enduml

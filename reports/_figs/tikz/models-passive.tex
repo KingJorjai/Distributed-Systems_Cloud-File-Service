@@ -1,0 +1,35 @@
+\documentclass[tikz,border=6pt]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{xcolor}
+\usetikzlibrary{arrows.meta}
+\definecolor{cblue}{HTML}{1F4E79}
+\definecolor{cgreen}{HTML}{2E7D32}
+\definecolor{cred}{HTML}{C62828}
+\definecolor{cgrey}{HTML}{808080}
+\definecolor{paleblue}{HTML}{E8F0F8}
+\definecolor{palegreen}{HTML}{E8F5E9}
+\definecolor{palered}{HTML}{FFEBEE}
+\definecolor{palegrey}{HTML}{F5F5F5}
+\begin{document}
+
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[font=\small\bfseries] at (4.35,0.55) {Passive replication};
+\draw[-{Latex[length=1.8mm]},cblue,solid,line width=0.75pt] (1.16,0.000) -- (1.61,-1.150) node[pos=0.35,above,yshift=3pt,fill=white,inner sep=1pt,font=\scriptsize] {request};
+\draw[-{Latex[length=1.8mm]},cblue,solid,line width=0.75pt] (2.61,-1.150) -- (3.06,-2.300) node[pos=0.35,above,yshift=3pt,fill=white,inner sep=1pt,font=\scriptsize] {update};
+\draw[-{Latex[length=1.8mm]},cblue,solid,line width=0.75pt] (3.62,-1.150) -- (4.08,-3.450) node[pos=0.35,above,yshift=3pt,fill=white,inner sep=1pt,font=\scriptsize] {update};
+\draw[-{Latex[length=1.8mm]},cgreen,dashed,line width=0.75pt] (4.64,-2.300) -- (5.09,-1.150) node[pos=0.35,above,yshift=3pt,fill=white,inner sep=1pt,font=\scriptsize] {ACK};
+\draw[-{Latex[length=1.8mm]},cgreen,dashed,line width=0.75pt] (5.65,-3.450) -- (6.10,-1.150) node[pos=0.35,above,yshift=3pt,fill=white,inner sep=1pt,font=\scriptsize] {ACK};
+\draw[-{Latex[length=1.8mm]},cblue,solid,line width=0.75pt] (6.96,-1.150) -- (7.41,0.000) node[pos=0.35,above,yshift=3pt,fill=white,inner sep=1pt,font=\scriptsize] {response};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,0.000) -- (8.7,0.000);
+\node[anchor=east,font=\small\bfseries] at (-0.15,0.000) {Client};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,-1.150) -- (8.7,-1.150);
+\node[anchor=east,font=\small\bfseries] at (-0.15,-1.150) {Primary};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,-2.300) -- (8.7,-2.300);
+\node[anchor=east,font=\small\bfseries] at (-0.15,-2.300) {S1};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,-3.450) -- (8.7,-3.450);
+\node[anchor=east,font=\small\bfseries] at (-0.15,-3.450) {S2};
+\end{tikzpicture}
+\end{document}

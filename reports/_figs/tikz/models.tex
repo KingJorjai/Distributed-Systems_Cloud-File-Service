@@ -1,0 +1,53 @@
+\documentclass[tikz,border=6pt]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{xcolor}
+\usetikzlibrary{arrows.meta}
+\definecolor{cblue}{HTML}{1F4E79}
+\definecolor{cgreen}{HTML}{2E7D32}
+\definecolor{cred}{HTML}{C62828}
+\definecolor{cgrey}{HTML}{808080}
+\definecolor{paleblue}{HTML}{E8F0F8}
+\definecolor{palegreen}{HTML}{E8F5E9}
+\definecolor{palered}{HTML}{FFEBEE}
+\definecolor{palegrey}{HTML}{F5F5F5}
+\begin{document}
+
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[font=\small\bfseries] at (3.20,0.60) {Passive replication};
+\draw[-{Latex[length=1.8mm]},cblue,solid,line width=0.75pt] (0.80,0.000) -- (1.25,-1.150) node[pos=0.5,above,fill=white,inner sep=1pt,font=\scriptsize] {request};
+\draw[-{Latex[length=1.8mm]},cblue,solid,line width=0.75pt] (1.80,-1.150) -- (2.25,-2.300) node[pos=0.5,above,fill=white,inner sep=1pt,font=\scriptsize] {update};
+\draw[-{Latex[length=1.8mm]},cblue,solid,line width=0.75pt] (2.50,-1.150) -- (2.95,-3.450) node[pos=0.5,above,fill=white,inner sep=1pt,font=\scriptsize] {update};
+\draw[-{Latex[length=1.8mm]},cgreen,dashed,line width=0.75pt] (3.20,-2.300) -- (3.65,-1.150) node[pos=0.5,above,fill=white,inner sep=1pt,font=\scriptsize] {ACK};
+\draw[-{Latex[length=1.8mm]},cgreen,dashed,line width=0.75pt] (3.90,-3.450) -- (4.35,-1.150) node[pos=0.5,above,fill=white,inner sep=1pt,font=\scriptsize] {ACK};
+\draw[-{Latex[length=1.8mm]},cblue,solid,line width=0.75pt] (4.80,-1.150) -- (5.25,0.000) node[pos=0.5,above,fill=white,inner sep=1pt,font=\scriptsize] {response};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,0.000) -- (6.4,0.000);
+\node[anchor=east,font=\small\bfseries] at (-0.15,0.000) {Client};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,-1.150) -- (6.4,-1.150);
+\node[anchor=east,font=\small\bfseries] at (-0.15,-1.150) {Primary};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,-2.300) -- (6.4,-2.300);
+\node[anchor=east,font=\small\bfseries] at (-0.15,-2.300) {S1};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,-3.450) -- (6.4,-3.450);
+\node[anchor=east,font=\small\bfseries] at (-0.15,-3.450) {S2};
+\end{tikzpicture}
+\hspace{0.8cm}
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[font=\small\bfseries] at (3.20,0.60) {Active replication};
+\draw[-{Latex[length=1.8mm]},cblue,solid,line width=0.75pt] (0.80,0.000) -- (1.25,-1.150) node[pos=0.5,above,fill=white,inner sep=1pt,font=\scriptsize] {request};
+\draw[-{Latex[length=1.8mm]},cblue,solid,line width=0.75pt] (1.50,0.000) -- (1.95,-2.300) node[pos=0.5,above,fill=white,inner sep=1pt,font=\scriptsize] {request};
+\draw[-{Latex[length=1.8mm]},cblue,solid,line width=0.75pt] (2.20,0.000) -- (2.65,-3.450) node[pos=0.5,above,fill=white,inner sep=1pt,font=\scriptsize] {request};
+\draw[-{Latex[length=1.8mm]},cgreen,dashed,line width=0.75pt] (3.10,-1.150) -- (3.55,0.000) node[pos=0.5,above,fill=white,inner sep=1pt,font=\scriptsize] {response};
+\draw[-{Latex[length=1.8mm]},cgreen,dashed,line width=0.75pt] (3.80,-2.300) -- (4.25,0.000) node[pos=0.5,above,fill=white,inner sep=1pt,font=\scriptsize] {response (discarded)};
+\draw[-{Latex[length=1.8mm]},cgreen,dashed,line width=0.75pt] (4.50,-3.450) -- (4.95,0.000) node[pos=0.5,above,fill=white,inner sep=1pt,font=\scriptsize] {response (discarded)};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,0.000) -- (6.4,0.000);
+\node[anchor=east,font=\small\bfseries] at (-0.15,0.000) {Client};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,-1.150) -- (6.4,-1.150);
+\node[anchor=east,font=\small\bfseries] at (-0.15,-1.150) {S1};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,-2.300) -- (6.4,-2.300);
+\node[anchor=east,font=\small\bfseries] at (-0.15,-2.300) {S2};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,-3.450) -- (6.4,-3.450);
+\node[anchor=east,font=\small\bfseries] at (-0.15,-3.450) {S3};
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,41 @@
+\documentclass[tikz,border=6pt]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{xcolor}
+\usetikzlibrary{arrows.meta}
+\definecolor{cblue}{HTML}{1F4E79}
+\definecolor{cgreen}{HTML}{2E7D32}
+\definecolor{cred}{HTML}{C62828}
+\definecolor{cgrey}{HTML}{808080}
+\definecolor{paleblue}{HTML}{E8F0F8}
+\definecolor{palegreen}{HTML}{E8F5E9}
+\definecolor{palered}{HTML}{FFEBEE}
+\definecolor{palegrey}{HTML}{F5F5F5}
+\begin{document}
+
+\begin{tikzpicture}[x=1cm,y=1cm]
+\draw[-{Latex[length=1.8mm]},cblue,solid,line width=0.75pt] (1.45,0.000) -- (1.90,-2.300) node[pos=0.35,above,yshift=3pt,fill=white,inner sep=1pt,font=\scriptsize] {W(x=1)};
+\draw[-{Latex[length=1.8mm]},cblue,solid,line width=0.75pt] (2.90,-2.300) -- (3.35,-3.450) node[pos=0.35,above,yshift=3pt,fill=white,inner sep=1pt,font=\scriptsize] {update};
+\draw[-{Latex[length=1.8mm]},cblue,solid,line width=0.75pt] (3.92,-2.300) -- (4.37,-4.600) node[pos=0.35,above,yshift=3pt,fill=white,inner sep=1pt,font=\scriptsize] {update};
+\node[draw=cblue,fill=paleblue,line width=0.5pt,inner sep=2pt,font=\scriptsize,align=center] at (3.41,-3.450) {x=1};
+\draw[-{Latex[length=1.8mm]},cgreen,solid,line width=0.75pt] (4.78,-3.450) -- (5.23,-2.300) node[pos=0.35,above,yshift=3pt,fill=white,inner sep=1pt,font=\scriptsize] {ACK};
+\draw[-{Latex[length=1.8mm]},cblue,solid,line width=0.75pt] (6.23,0.000) -- (6.68,-3.450) node[pos=0.35,above,yshift=3pt,fill=white,inner sep=1pt,font=\scriptsize] {R(x)};
+\draw[-{Latex[length=1.8mm]},cgreen,solid,line width=0.75pt] (6.82,-3.450) -- (7.27,0.000) node[pos=0.35,above,yshift=3pt,fill=white,inner sep=1pt,font=\scriptsize] {1};
+\draw[-{Latex[length=1.8mm]},cblue,solid,line width=0.75pt] (7.97,-1.150) -- (8.42,-4.600) node[pos=0.35,above,yshift=3pt,fill=white,inner sep=1pt,font=\scriptsize] {R(x)};
+\draw[-{Latex[length=1.8mm]},cred,solid,line width=0.75pt] (8.55,-4.600) -- (9.00,-1.150) node[pos=0.35,above,yshift=3pt,fill=white,inner sep=1pt,font=\scriptsize] {0};
+\node[draw=cblue,fill=paleblue,line width=0.5pt,inner sep=2pt,font=\scriptsize,align=center] at (9.57,-4.600) {x=0};
+\node[anchor=north west,draw=cred,fill=palered,line width=0.5pt,inner sep=3pt,text width=12.939999999999998cm,align=left,font=\scriptsize] at (0.14,-5.550) {C1 reads 1, then C2 reads 0. Each client is monotonic, but there is no single global order $\rightarrow$ still not linearizable};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,0.000) -- (13.339999999999998,0.000);
+\node[anchor=east,font=\small\bfseries] at (-0.15,0.000) {C1};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,-1.150) -- (13.339999999999998,-1.150);
+\node[anchor=east,font=\small\bfseries] at (-0.15,-1.150) {C2};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,-2.300) -- (13.339999999999998,-2.300);
+\node[anchor=east,font=\small\bfseries] at (-0.15,-2.300) {P};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,-3.450) -- (13.339999999999998,-3.450);
+\node[anchor=east,font=\small\bfseries] at (-0.15,-3.450) {S1};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,-4.600) -- (13.339999999999998,-4.600);
+\node[anchor=east,font=\small\bfseries] at (-0.15,-4.600) {S2};
+\end{tikzpicture}
+\end{document}

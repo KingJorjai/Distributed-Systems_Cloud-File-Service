@@ -1,0 +1,33 @@
+\documentclass[tikz,border=6pt]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{xcolor}
+\usetikzlibrary{arrows.meta}
+\definecolor{cblue}{HTML}{1F4E79}
+\definecolor{cgreen}{HTML}{2E7D32}
+\definecolor{cred}{HTML}{C62828}
+\definecolor{cgrey}{HTML}{808080}
+\definecolor{paleblue}{HTML}{E8F0F8}
+\definecolor{palegreen}{HTML}{E8F5E9}
+\definecolor{palered}{HTML}{FFEBEE}
+\definecolor{palegrey}{HTML}{F5F5F5}
+\begin{document}
+
+\begin{tikzpicture}[x=1cm,y=1cm]
+\draw[-{Latex[length=1.8mm]},cblue,solid,line width=0.75pt] (1.74,0.000) -- (2.19,-1.150) node[pos=0.35,above,yshift=3pt,fill=white,inner sep=1pt,font=\scriptsize] {m};
+\node[draw=cblue,fill=paleblue,line width=0.5pt,inner sep=2pt,font=\scriptsize,align=center] at (3.19,-1.150) {deliver(m)};
+\draw[white,line width=1.6pt] (4.01,0.000) -- (11.02,0.000);
+\draw[cred,line width=1.1pt] (3.77,-0.140) -- (4.05,0.140);
+\draw[cred,line width=1.1pt] (3.77,0.140) -- (4.05,-0.140);
+\node[draw=cred,fill=palered,line width=0.5pt,inner sep=2pt,font=\scriptsize,align=center] at (7.25,-2.300) {never delivers};
+\node[anchor=north west,draw=cred,fill=palered,line width=0.5pt,inner sep=3pt,text width=10.62cm,align=left,font=\scriptsize] at (0.14,-3.250) {S1 delivered m, S2 never will $\rightarrow$ agreement violated};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,0.000) -- (11.02,0.000);
+\node[anchor=east,font=\small\bfseries] at (-0.15,0.000) {P};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,-1.150) -- (11.02,-1.150);
+\node[anchor=east,font=\small\bfseries] at (-0.15,-1.150) {S1};
+\draw[cgrey!60,line width=0.4pt,dashed] (0,-2.300) -- (11.02,-2.300);
+\node[anchor=east,font=\small\bfseries] at (-0.15,-2.300) {S2};
+\end{tikzpicture}
+\end{document}

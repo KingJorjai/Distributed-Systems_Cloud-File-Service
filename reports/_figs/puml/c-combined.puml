@@ -1,0 +1,29 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 12
+skinparam sequence {
+  ArrowColor #1F4E79
+  ActorBorderColor #1F4E79
+  ParticipantBorderColor #1F4E79
+  ParticipantBackgroundColor #E8F0F8
+  LifeLineBorderColor #B0B0B0
+  LifeLineBackgroundColor white
+}
+skinparam dpi 240
+hide footbox
+participant "C" as C
+participant "P" as P
+participant "S1" as S1
+C -[#1F4E79]> P : W(x=1)
+P -[#1F4E79]--> C : OK
+note right of P #E8F0F8 : x=1 local
+C -[#1F4E79]> S1 : R(x)
+S1 -[#C62828]--> C : 0
+P -[#1F4E79]> S1 : update
+note right of S1 #E8F0F8 : x=1
+C -[#1F4E79]> S1 : R(x)
+S1 -[#2E7D32]--> C : 1
+note over C, S1 #FFEBEE : read-your-writes violated (OK, then 0); the value\nthen jumps to 1. If P had failed before sending,\nthe acknowledged write would be lost
+@enduml
