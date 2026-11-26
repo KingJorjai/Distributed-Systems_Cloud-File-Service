@@ -45,7 +45,7 @@ class GuiControllerTests(unittest.TestCase):
         self.assertEqual(updated.server, "new")
         self.assertEqual(restored.server, "new")
         self.assertEqual(restored.port, 60012)
-        self.assertEqual(restored.local_path, "new-files")
+        self.assertEqual(restored.local_path, str(Path(self.path).parent / "new-files"))
 
     def test_request_uses_actions(self):
         self.controller.client = FakeClient(

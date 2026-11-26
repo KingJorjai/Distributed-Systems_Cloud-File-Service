@@ -140,16 +140,24 @@ def _value(data: dict, section: str, key: str, env_name: str, default):
 
 
 def _configured_value(data, section, key, env_name, default, base_dir, resolve_path=False):
-    """Read a value (env override or TOML). Relative paths are kept as-is so
-    they resolve against the process working directory, matching historical
-    behaviour; ``setup`` writes absolute paths for new installations."""
+    """Read a value (env override or TOML). Relative TOML paths are resolved
+    against ``base_dir`` (the configuration file's directory) so that a
+    config file works regardless of the current working directory."""
     env = os.environ.get(env_name)
     if env is not None:
         return env
     section_data = data.get(section, {})
     if not isinstance(section_data, dict):
         raise ConfigurationError(f"[{section}] must be a TOML table")
-    return section_data.get(key, default)
+    raw = section_data.get(key, default)
+    if (
+        resolve_path
+        and isinstance(raw, str)
+        and raw.strip()
+        and not Path(raw).is_absolute()
+    ):
+        return str((base_dir / raw).resolve())
+    return raw
 
 
 def _integer(value, name: str) -> int:

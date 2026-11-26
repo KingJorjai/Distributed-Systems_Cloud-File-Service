@@ -36,7 +36,7 @@ class LoadConfigTests(unittest.TestCase):
 
         self.assertEqual(config.client.server, "configured-server")
         self.assertEqual(config.client.port, 6100)
-        self.assertEqual(config.server.files_path, "configured-server-files")
+        self.assertEqual(config.server.files_path, str(Path(path).parent / "configured-server-files"))
         self.assertEqual(config.server.space_margin, 200)
 
     def test_environment_overrides_toml(self):
@@ -102,7 +102,7 @@ class LoadConfigTests(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True):
             config = load_config(path)
 
-        self.assertEqual(config.client.tls_ca_file, "ca.crt")
+        self.assertEqual(config.client.tls_ca_file, str(Path(path).parent / "ca.crt"))
         self.assertEqual(config.client.tls_server_name, "cloud.example")
         self.assertEqual(config.client.state_dir, "/tmp/cloudfs-state")
         self.assertEqual(config.server.host, "127.0.0.1")
@@ -238,7 +238,7 @@ class ParseClientArgsTests(unittest.TestCase):
 
         self.assertEqual(
             parse_client_args(["cli_fich.py"], config),
-            ("configured-server", 6100, "configured-client"),
+            ("configured-server", 6100, str(Path(path).parent / "configured-client")),
         )
 
     def test_rejects_invalid_port(self):
