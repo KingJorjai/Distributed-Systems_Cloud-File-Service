@@ -1,8 +1,7 @@
 # Offline Kit
 
-The offline kit is a single ZIP for Ubuntu 22.04 containing a portable server
-and desktop client. It needs no Internet, no Python installation, and no
-terminal for the client.
+The offline kit is a single ZIP for Ubuntu 22.04 containing the portable
+server and desktop client. It needs no Internet and no Python installation.
 
 Build it from the repository after building the demo bundles:
 
@@ -11,76 +10,69 @@ scripts/build_demo_bundles.sh
 scripts/build_offline_kit.sh
 ```
 
-The result is:
-
-```text
-demo/CloudFS-Offline-0.11.3-linux-x64.zip
-```
-
-The generated ZIP is around 13 MB, below the usual Outlook attachment limit.
+The result is `demo/CloudFS-Offline-0.12.0-linux-x64.zip`.
 
 ## What it contains
 
 ```text
-CloudFS-Offline/
+CloudFS/
   cloudfs
   _internal/
-  server/
-    config.toml
-    certs/
-    files/
-    start-server.sh
-  client/
-    config.toml
-    certs/ca.crt
-    client_files/
-    state/
-    start-client.sh
-  CloudFS-Server.desktop
-  CloudFS-Client.desktop
+  config/
+  certs/
+  data/
+  state/
+  logs/
+  packaging/
+  docs/
+    installation.pdf
+    lab-walkthrough.pdf
   README.txt
 ```
 
-The server and client configurations are separate. The client configuration
-already includes the server address, CA certificate, local folder, and state
-directory.
+There are no `.desktop` launchers and no `start-*.sh` scripts. The single
+`cloudfs` binary provides `setup`, `server`, `client` and `status`.
 
-## Run the client
+## First run
 
-Extract the ZIP and double-click `cloudfs` or `CloudFS-Client.desktop`. The
-client opens with the bundled configuration and no terminal. Register or log in
-from the GUI.
-
-The compact kit does not include the optional system tray. Closing the window
-minimizes it to the taskbar. The full GUI bundle still contains the tray.
-
-## Run the server
-
-The server needs a console process. Use:
+Extract the ZIP, open a terminal in the `CloudFS` folder and run:
 
 ```sh
-cd CloudFS-Offline/server
-./start-server.sh
+./cloudfs setup
 ```
 
-The script sets `CONFIG_FILE` and the bootstrap administrator password and
-starts the server on port `50012`. The admin panel is at
-`https://localhost:50080/` with user `sar`; the generated password is printed in
-the kit `README.txt`.
+`setup` creates the configuration, the CA and the server certificate, the
+data and state directories, and the administrator account. It prints the
+administrator credentials; save them.
 
-The first server start creates `server/files` and replication metadata. Server
-logs are written to `logs/server.log`.
+Then start the server and the client:
+
+```sh
+./cloudfs server          # terminal 1
+./cloudfs client          # terminal 2
+```
+
+## Cluster (three machines)
+
+```sh
+./cloudfs setup --cluster 192.168.1.101,192.168.1.102,192.168.1.103
+```
+
+Copy each `cluster/serverN` directory to its machine and run
+`./cloudfs server --config serverN/config.toml`.
+
+## Verify
+
+```sh
+./cloudfs status
+```
 
 ## Certificates
 
-The kit includes a private CA and a server certificate for `localhost` and
-`127.0.0.1`. The client trusts the CA automatically. The admin browser needs the
-CA imported once if it is used, or the browser will show the normal private-CA
-warning.
-
-For a different server address, change the server field in the client Settings
-tab. For a remote server, the certificate must include that address and the
-client must receive that CA.
+`setup` generates a private CA and a server certificate with the addresses
+you provide (or the detected address plus `localhost`). The client trusts the
+CA automatically. The admin browser shows the normal private-CA warning unless
+you import `certs/ca.crt`.
 
 ## Logs
 
@@ -94,13 +86,6 @@ The GUI has an **Abrir logs** button. Logs rotate at 5 MiB with three backups.
 
 ## Size and email
 
-The ZIP is self-contained and has no external download step. Keep it below the
-mail attachment limit; do not add development files, databases, or test data.
-If a future build exceeds the limit, split server and client into separate
-ZIPs rather than a larger archive.
-
-## Rebuild
-
-The kit is generated from the current `cloudfs` bundle and a development CA.
-Use the same Ubuntu 22.04 build environment as the demo bundles. The source
-tree is not required on the target PC.
+The ZIP is self-contained and has no external download step. Keep it below
+the mail attachment limit; do not add development files, databases or test
+data.

@@ -31,15 +31,24 @@ PAGES = (
     ("Protocol Helpers API", "api/protocol/index.html"),
 )
 
+LAB_PAGES = (
+    ("Laboratory Walkthrough", "lab-walkthrough/index.html"),
+)
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--site-dir", type=Path, default=Path("site"))
-    parser.add_argument("--output", type=Path, default=Path("site/cloud-file-service.pdf"))
+    parser.add_argument("--output", type=Path, default=None)
     parser.add_argument(
         "--metadata",
         type=Path,
         default=Path("docs/pdf-metadata.json"),
+    )
+    parser.add_argument(
+        "--profile",
+        choices=("guide", "lab"),
+        default="guide",
     )
     return parser.parse_args()
 
@@ -147,13 +156,18 @@ def build_document(
     metadata_path: Path,
     browser: str,
     mermaid_cli: str,
+    pages=PAGES,
+    title=None,
 ) -> str:
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    if title is not None:
+        metadata = dict(metadata)
+        metadata["title"] = title
     review_date = date.today().isoformat()
     sections = []
     toc = []
 
-    for section_number, (label, relative_page) in enumerate(PAGES, start=1):
+    for section_number, (label, relative_page) in enumerate(pages, start=1):
         page_path = site_dir / relative_page
         page_id = f"section-{section_number}"
         article = render_mermaid_diagrams(
@@ -291,12 +305,21 @@ def main() -> None:
         raise SystemExit(
             f"{args.site_dir} does not exist; run 'mkdocs build --strict' first."
         )
+    if args.profile == "lab":
+        pages = LAB_PAGES
+        title = "Laboratory Walkthrough"
+        default_output = Path("site/lab-walkthrough.pdf")
+    else:
+        pages = PAGES
+        title = None
+        default_output = Path("site/cloud-file-service.pdf")
+    output = args.output if args.output is not None else default_output
     browser = find_browser()
     mermaid_cli = find_mermaid_cli()
-    document = build_document(args.site_dir, args.metadata, browser, mermaid_cli)
+    document = build_document(args.site_dir, args.metadata, browser, mermaid_cli, pages=pages, title=title)
     source = args.site_dir / "pdf.html"
     source.write_text(document, encoding="utf-8")
-    args.output.parent.mkdir(parents=True, exist_ok=True)
+    output.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run(
         [
             browser,
@@ -305,13 +328,13 @@ def main() -> None:
             "--disable-gpu",
             "--no-pdf-header-footer",
             "--virtual-time-budget=10000",
-            f"--print-to-pdf={args.output.resolve()}",
+            f"--print-to-pdf={output.resolve()}",
             source.resolve().as_uri(),
         ],
         check=True,
     )
     source.unlink()
-    print(f"PDF written to {args.output}")
+    print(f"PDF written to {output}")
 
 
 if __name__ == "__main__":

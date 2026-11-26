@@ -45,9 +45,10 @@ Settings are stored in the standard per-user configuration directory:
 - Linux: `$XDG_CONFIG_HOME/cloudfs/config.toml` or `~/.config/cloudfs/config.toml`
 
 `CONFIG_FILE` overrides the path. Environment variables still override TOML
-values. The GUI can enable autostart at login; on Linux it writes
-`~/.config/autostart/cloud-file-service.desktop`, and on Windows it writes the
-current user's `Run` registry key.
+values. The GUI can enable autostart at login; on Linux it installs a
+`systemd --user` unit at `~/.config/systemd/user/cloud-file-client.service`,
+and on Windows it writes the `CloudFileService` value under the current
+user's `Run` registry key.
 
 ## Shares
 

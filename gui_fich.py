@@ -29,11 +29,14 @@ def main(argv=None):
 
     if getattr(sys, "frozen", False):
         os.chdir(Path(sys.executable).resolve().parent)
-        if args.config is None and Path("config.toml").is_file():
-            args.config = str(Path("config.toml").resolve())
+    if args.config is None:
+        for candidate in (Path("config") / "client.toml", Path("config.toml")):
+            if candidate.is_file():
+                args.config = str(candidate.resolve())
+                break
     configure("gui")
     log = logging.getLogger("gui")
-    config = load_config(args.config).client
+    config = load_config(args.config, kind="client").client
     state = default_state_dir() if not config.state_dir else config.state_dir
     lock = InstanceLock(Path(state) / "gui.lock")
     try:

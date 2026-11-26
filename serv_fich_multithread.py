@@ -16,9 +16,12 @@ def main():
         os.chdir(Path(sys.executable).resolve().parent)
     configure("server")
     log = logging.getLogger("server")
-    if not os.environ.get("CONFIG_FILE") and Path("config.toml").is_file():
-        os.environ["CONFIG_FILE"] = str(Path("config.toml").resolve())
-    config = load_config()
+    if not os.environ.get("CONFIG_FILE"):
+        for candidate in (Path("config") / "server.toml", Path("config.toml")):
+            if candidate.is_file():
+                os.environ["CONFIG_FILE"] = str(candidate.resolve())
+                break
+    config = load_config(kind="server")
     runtime = create_server(config)
     runtime.start()
     message = "TLS server {} listening on port {} (role {}).".format(

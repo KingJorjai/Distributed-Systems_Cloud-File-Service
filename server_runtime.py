@@ -810,7 +810,9 @@ def create_server(config, passwords=None):
     store = FileStore(server_config.files_path)
     if configured_passwords:
         for username in ("sar", "sza"):
-            password = configured_passwords.get(username, "")
+            password = configured_passwords.get(username, None)
+            if password is None:
+                continue
             salt = hashlib.sha256(
                 "{}:{}:{}".format(
                     server_config.cluster_token, username, password or "disabled"

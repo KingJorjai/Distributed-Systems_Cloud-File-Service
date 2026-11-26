@@ -27,6 +27,44 @@ def default_config_path():
     return default_config_dir() / DEFAULT_CONFIG_FILE
 
 
+def default_server_config_path():
+    return default_config_dir() / "server.toml"
+
+
+def default_client_config_path():
+    return default_config_dir() / "client.toml"
+
+
+def discover_server_config_path(explicit=None):
+    if explicit:
+        return Path(explicit)
+    env = os.environ.get("CONFIG_FILE")
+    if env:
+        return Path(env)
+    for candidate in (Path("config") / "server.toml", Path("config.toml")):
+        if candidate.is_file():
+            return candidate.resolve()
+    for candidate in (default_server_config_path(), default_config_path()):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def discover_client_config_path(explicit=None):
+    if explicit:
+        return Path(explicit)
+    env = os.environ.get("CONFIG_FILE")
+    if env:
+        return Path(env)
+    for candidate in (Path("config") / "client.toml", Path("config.toml")):
+        if candidate.is_file():
+            return candidate.resolve()
+    for candidate in (default_client_config_path(), default_config_path()):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 class ConfigurationError(ValueError):
     """Raised when application configuration is invalid."""
 
@@ -101,6 +139,19 @@ def _value(data: dict, section: str, key: str, env_name: str, default):
     return section_data.get(key, default)
 
 
+def _configured_value(data, section, key, env_name, default, base_dir, resolve_path=False):
+    """Read a value (env override or TOML). Relative paths are kept as-is so
+    they resolve against the process working directory, matching historical
+    behaviour; ``setup`` writes absolute paths for new installations."""
+    env = os.environ.get(env_name)
+    if env is not None:
+        return env
+    section_data = data.get(section, {})
+    if not isinstance(section_data, dict):
+        raise ConfigurationError(f"[{section}] must be a TOML table")
+    return section_data.get(key, default)
+
+
 def _integer(value, name: str) -> int:
     if isinstance(value, bool):
         raise ConfigurationError(f"{name} must be an integer")
@@ -147,11 +198,19 @@ def _boolean(value, name: str) -> bool:
     raise ConfigurationError(f"{name} must be a boolean")
 
 
-def load_config(path: str | os.PathLike[str] | None = None) -> AppConfig:
+def load_config(path: str | os.PathLike[str] | None = None, kind: str = "server") -> AppConfig:
     """Load configuration using environment variables as the highest override."""
-    configured = path or os.environ.get("CONFIG_FILE")
-    config_path = Path(configured) if configured else default_config_path()
+    if path is None:
+        if kind == "client":
+            config_path = discover_client_config_path()
+        else:
+            config_path = discover_server_config_path()
+    else:
+        config_path = Path(path)
+    if config_path is None:
+        config_path = default_config_path()
     data = _read_toml(config_path)
+    base_dir = config_path.parent if config_path is not None else Path.cwd()
 
     client_port = validate_port(
         _value(data, "client", "port", "CLIENT_PORT", 50012)
@@ -180,12 +239,16 @@ def load_config(path: str | os.PathLike[str] | None = None) -> AppConfig:
             server=str(_value(data, "client", "server", "CLIENT_SERVER", "localhost")),
             port=client_port,
             local_path=str(
-                _value(
-                    data, "client", "local_path", "CLIENT_LOCAL_PATH", "client_files"
+                _configured_value(
+                    data, "client", "local_path", "CLIENT_LOCAL_PATH", "client_files",
+                    base_dir, resolve_path=True,
                 )
             ),
             tls_ca_file=str(
-                _value(data, "client", "tls_ca_file", "CLIENT_TLS_CA_FILE", "")
+                _configured_value(
+                    data, "client", "tls_ca_file", "CLIENT_TLS_CA_FILE", "",
+                    base_dir, resolve_path=True,
+                )
             ),
             tls_server_name=str(
                 _value(
@@ -193,7 +256,10 @@ def load_config(path: str | os.PathLike[str] | None = None) -> AppConfig:
                 )
             ),
             state_dir=str(
-                _value(data, "client", "state_dir", "CLIENT_STATE_DIR", "")
+                _configured_value(
+                    data, "client", "state_dir", "CLIENT_STATE_DIR", "",
+                    base_dir, resolve_path=True,
+                )
             ),
             peers=str(_value(data, "client", "peers", "CLIENT_PEERS", "")),
         ),
@@ -201,16 +267,28 @@ def load_config(path: str | os.PathLike[str] | None = None) -> AppConfig:
             host=str(_value(data, "server", "host", "SERVER_HOST", "")),
             port=server_port,
             files_path=str(
-                _value(data, "server", "files_path", "SERVER_FILES_PATH", "files")
+                _configured_value(
+                    data, "server", "files_path", "SERVER_FILES_PATH", "files",
+                    base_dir, resolve_path=True,
+                )
             ),
             tls_cert_file=str(
-                _value(data, "server", "tls_cert_file", "TLS_CERT_FILE", "certs/server.crt")
+                _configured_value(
+                    data, "server", "tls_cert_file", "TLS_CERT_FILE", "certs/server.crt",
+                    base_dir, resolve_path=True,
+                )
             ),
             tls_key_file=str(
-                _value(data, "server", "tls_key_file", "TLS_KEY_FILE", "certs/server.key")
+                _configured_value(
+                    data, "server", "tls_key_file", "TLS_KEY_FILE", "certs/server.key",
+                    base_dir, resolve_path=True,
+                )
             ),
             tls_ca_file=str(
-                _value(data, "server", "tls_ca_file", "TLS_CA_FILE", "certs/ca.crt")
+                _configured_value(
+                    data, "server", "tls_ca_file", "TLS_CA_FILE", "certs/ca.crt",
+                    base_dir, resolve_path=True,
+                )
             ),
             registration_enabled=_boolean(
                 _value(
@@ -354,8 +432,8 @@ def load_config(path: str | os.PathLike[str] | None = None) -> AppConfig:
             ),
         ),
         passwords={
-            "sar": os.environ.get("APP_PASSWORD_SAR", ""),
-            "sza": os.environ.get("APP_PASSWORD_SZA", ""),
+            "sar": os.environ.get("APP_PASSWORD_SAR"),
+            "sza": os.environ.get("APP_PASSWORD_SZA"),
         },
     )
 
@@ -380,6 +458,54 @@ def save_client_config(path, client):
         "tls_server_name": client.tls_server_name,
         "state_dir": client.state_dir,
         "peers": client.peers,
+    }
+    lines = []
+    for section in sorted(data):
+        section_data = data[section]
+        if not isinstance(section_data, dict):
+            continue
+        lines.append("[{}]".format(section))
+        for key in sorted(section_data):
+            lines.append("{} = {}".format(key, _toml_value(section_data[key])))
+        lines.append("")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    return target
+
+
+def save_server_config(path, server):
+    """Write the server section, preserving any other TOML sections."""
+    target = Path(path)
+    data = _read_toml(target)
+    data["server"] = {
+        "host": server.host,
+        "port": server.port,
+        "files_path": server.files_path,
+        "tls_cert_file": server.tls_cert_file,
+        "tls_key_file": server.tls_key_file,
+        "tls_ca_file": server.tls_ca_file,
+        "registration_enabled": server.registration_enabled,
+        "server_id": server.server_id,
+        "role": server.role,
+        "peers": server.peers,
+        "primary": server.primary,
+        "replication_host": server.replication_host,
+        "replication_port": server.replication_port,
+        "cluster_token": server.cluster_token,
+        "term": server.term,
+        "replication_timeout": server.replication_timeout,
+        "heartbeat_interval": server.heartbeat_interval,
+        "failure_timeout": server.failure_timeout,
+        "election_timeout": server.election_timeout,
+        "client_addresses": server.client_addresses,
+        "admin_enabled": server.admin_enabled,
+        "admin_host": server.admin_host,
+        "admin_port": server.admin_port,
+        "admin_addresses": server.admin_addresses,
+        "allow_admin_failover": server.allow_admin_failover,
+        "admin_session_timeout": server.admin_session_timeout,
+        "max_file_size": server.max_file_size,
+        "space_margin": server.space_margin,
     }
     lines = []
     for section in sorted(data):

@@ -13,10 +13,10 @@ def _asset_paths():
     paths = []
     if getattr(sys, "frozen", False):
         base = Path(sys._MEIPASS)
-        paths.append(base / "assets" / "brand" / ASSET_NAME)
-        paths.append(base / "docs" / "assets" / "brand" / ASSET_NAME)
-        paths.append(Path(sys.executable).resolve().parent / "assets" / "brand" / ASSET_NAME)
-        paths.append(Path(sys.executable).resolve().parent / "docs" / "assets" / "brand" / ASSET_NAME)
+        exe_dir = Path(sys.executable).resolve().parent
+        for root in (base, exe_dir, exe_dir / "_internal"):
+            paths.append(root / "assets" / "brand" / ASSET_NAME)
+            paths.append(root / "docs" / "assets" / "brand" / ASSET_NAME)
     here = Path(__file__).resolve().parent
     paths.append(here / "docs" / "assets" / "brand" / ASSET_NAME)
     paths.append(here / "assets" / "brand" / ASSET_NAME)

@@ -13,9 +13,9 @@ def _command():
     return [sys.executable, str(Path(__file__).resolve().parent / "gui_fich.py")]
 
 
-def _linux_desktop_path():
+def _linux_unit_path():
     base = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
-    return base / "autostart" / "{}.desktop".format(APP_NAME)
+    return base / "systemd" / "user" / "cloud-file-client.service"
 
 
 def is_enabled():
@@ -33,7 +33,7 @@ def is_enabled():
             return False
     if os.uname().sysname == "Darwin":
         return False
-    return _linux_desktop_path().is_file()
+    return _linux_unit_path().is_file()
 
 
 def enable():
@@ -49,19 +49,31 @@ def enable():
         return
     if os.uname().sysname == "Darwin":
         return
-    path = _linux_desktop_path()
+    path = _linux_unit_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     command = " ".join(_command())
     path.write_text(
-        "[Desktop Entry]\n"
-        "Type=Application\n"
-        "Name=Cloud File Service\n"
-        "Comment=Synchronize the local cloud folder\n"
-        "Exec={} --minimized\n"
-        "Terminal=false\n"
-        "X-GNOME-Autostart-enabled=true\n".format(command),
+        "[Unit]\n"
+        "Description=Cloud File Service client\n"
+        "After=graphical-session.target\n\n"
+        "[Service]\n"
+        "Type=simple\n"
+        "ExecStart={} --minimized\n"
+        "Restart=on-failure\n\n"
+        "[Install]\n"
+        "WantedBy=default.target\n".format(command),
         encoding="utf-8",
     )
+    # Best-effort reload; ignore failures (no systemd in containers).
+    try:
+        import subprocess
+
+        subprocess.run(
+            ["systemctl", "--user", "daemon-reload"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+    except OSError:
+        pass
 
 
 def disable():
@@ -82,6 +94,6 @@ def disable():
     if os.uname().sysname == "Darwin":
         return
     try:
-        _linux_desktop_path().unlink()
+        _linux_unit_path().unlink()
     except FileNotFoundError:
         pass

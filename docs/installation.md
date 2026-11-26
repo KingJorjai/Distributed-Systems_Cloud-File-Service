@@ -5,28 +5,31 @@ access after the ZIP archive and this guide are available. All commands are
 copy-paste ready; replace the example IP addresses with the addresses of your
 machines.
 
-The guide offers two routes:
+The guide offers three routes:
 
 - **Path A - one machine.** About ten minutes. No root access, no systemd.
-  Good for evaluating the product.
+  Good for evaluating the product. Uses the offline kit.
 - **Path B - permanent install.** About one hour. systemd services, a
   dedicated user, and support for a replicated cluster of three or more
   machines. Choose this for a classroom or a small team.
+- **Path C - laboratory.** No root access, three machines, replicated
+  cluster with automatic failover. The recommended path for the course
+  demonstration.
 
-Read Path A first even if you intend to use Path B: it explains the
-concepts that Path B relies on.
+Read Path A first even if you intend to use Path B or C: it explains the
+concepts the other paths rely on.
 
 ## What you receive
 
-Two ZIP archives, each below 25 MB so they can be sent by email:
+- `CloudFS-Offline-0.12.0-linux-x64.zip` - the offline kit: the single
+  `cloudfs` executable (server, client, setup and status), the packaging
+  tools, the systemd units and this guide. Used by Path A and Path C.
+- `CloudFS-Server-0.12.0-linux-x64.zip` and
+  `CloudFS-Client-0.12.0-linux-x64.zip` - the same executable split by role,
+  used by Path B.
 
-- `CloudFS-Server-0.11.3-linux-x64.zip` - the server bundle, its
-  configuration template, certificates, the systemd unit and the tools.
-- `CloudFS-Client-0.11.3-linux-x64.zip` - the desktop client bundle, its
-  configuration template, the CA certificate, the systemd unit and the tools.
-
-Both archives contain the same single `cloudfs` executable. The server runs it
-as `cloudfs server`; the desktop runs it as `cloudfs` (which opens the GUI).
+The single `cloudfs` executable runs as `cloudfs server`, `cloudfs client`
+(which opens the GUI), `cloudfs setup` and `cloudfs status`.
 
 Every archive also contains:
 
@@ -65,250 +68,71 @@ The quorum for `N` servers is `floor(N / 2) + 1`:
 
 # Path A - one machine
 
+This path uses the offline kit. No root access, no systemd, no Internet.
+
 ## A.1 Extract
 
 ```sh
-mkdir -p ~/CloudFS && cd ~/CloudFS
-unzip /path/to/CloudFS-Server-0.11.3-linux-x64.zip -d server
-unzip /path/to/CloudFS-Client-0.11.3-linux-x64.zip -d client
+unzip CloudFS-Offline-0.12.0-linux-x64.zip -d ~
+cd ~/CloudFS
 ```
 
-## A.2 Start the server
+The ZIP creates a `CloudFS/` folder. Work from inside it.
+
+## A.2 First run (once)
 
 ```sh
-cd ~/CloudFS/server
-./start-server.sh
+./cloudfs setup
+```
+
+`setup` creates `config/`, `certs/`, `data/`, `state/` and `logs/`, generates
+a private CA and a server certificate for this machine, and prints the
+administrator credentials. Save the password; it is not stored in plain text
+afterwards.
+
+## A.3 Start the server
+
+```sh
+./cloudfs server
 ```
 
 Expected output:
 
 ```text
-TLS server 0.11.3 listening on port 50012 (role primary).
+TLS server 0.12.0 listening on port 50012 (role primary).
 ```
 
-The script sets `CONFIG_FILE`, creates `server/files` and prints the bootstrap
-administrator password. Keep that terminal open; the server runs in the
-foreground.
+Keep that terminal open; the server runs in the foreground.
 
-## A.3 Open the client
+## A.4 Open the client
 
 In a second terminal:
 
 ```sh
-cd ~/CloudFS/client
-./cloudfs
+./cloudfs client
 ```
 
-The GUI opens. Register a new account or log in with an account created from
-the admin panel. The client synchronizes `client_files` with the server.
+The GUI opens. Log in as `sar` with the password printed by `setup`, or
+register a new account if registration is enabled.
 
-## A.4 Open the admin panel
+## A.5 Open the admin panel
 
-Open `https://localhost:50080/` in a browser. Log in as `sar` with the
-password printed by `start-server.sh`. You can create users, share folders and
-inspect the cluster.
+Open `https://localhost:50080/` in a browser. Your browser warns about the
+private CA; accept the warning or import `certs/ca.crt` once. Log in as
+`sar`. You can create users, share folders and inspect the (single-node)
+cluster.
 
-## A.5 Stop
-
-Press `Ctrl+C` in the server terminal. The client can be closed from its
-window; it hides to the taskbar or minimizes if no tray is available.
-
-# Path C - laboratory (no sudo, replicated cluster)
-
-Use this path when you have no root access and want a replicated cluster
-for the demonstration. Everything runs from your home directory; there is no
-systemd and no permanent installation.
-
-## C.1 Choose ports
-
-If all three servers run on one machine, give each a different port set:
-
-| Node | Client port | Replication port | Admin port |
-| --- | --- | --- | --- |
-| `server1` | `50012` | `60012` | `50080` |
-| `server2` | `50013` | `60013` | `50081` |
-| `server3` | `50014` | `60014` | `50082` |
-
-If each server runs on its own machine, use the default ports (`50012`,
-`60012`, `50080`) on every node and replace `127.0.0.1` with the real IP.
-
-## C.0 Offline kit (single machine, no sudo)
-
-If you only need one machine for evaluation, use the offline kit instead of
-Path C. It is a single ZIP that contains the server, the desktop client, the
-CA, configuration, logs, and a no-terminal launcher:
+## A.6 Verify
 
 ```sh
-# Already included in the kit; no build step needed.
-unzip CloudFS-Offline-0.11.3-linux-x64.zip -d ~/CloudFS
-cd ~/CloudFS
-./server/start-server.sh        # terminal 1
-./cloudfs                      # terminal 2 (or double-click)
+./cloudfs status
 ```
 
-The kit's certificates are generated for `localhost` and `127.0.0.1`. If the
-server must be reachable from other machines, regenerate the certificates
-inside the extracted kit:
+Expected: `PRIM: OK127.0.0.1:50012` and `Panel: HTTP 303 See Other`.
 
-```sh
-cd ~/CloudFS
-bash packaging/tools/make-certs.sh --out server/certs \\
-    --host 192.168.1.101 --host 192.168.1.102 --host 192.168.1.103 \\
-    --host localhost --host 127.0.0.1
-cp server/certs/ca.crt client/certs/ca.crt
-```
+## A.7 Stop
 
-No root access and no Internet are required. The `packaging/` folder inside
-the kit contains the same `make-certs.sh` and systemd units referenced in
-Path B.
-
-## C.2 Certificates
-
-Generate one CA and one server certificate with every server address as a SAN:
-
-```sh
-cd ~/CloudFS
-bash packaging/tools/make-certs.sh --out certs \\
-    --host 127.0.0.1 \\
-    --host 192.168.1.101 \\
-    --host 192.168.1.102 \\
-    --host 192.168.1.103 \\
-    --host localhost
-```
-
-Copy `certs/` to every server folder. Copy only `certs/ca.crt` to every
-client folder.
-
-## C.3 Server folders
-
-Create one folder per node:
-
-```sh
-mkdir -p ~/CloudFS/server1 ~/CloudFS/server2 ~/CloudFS/server3
-for n in 1 2 3; do
-    cp -a ~/CloudFS/server/cloud-file-server/. ~/CloudFS/server$n/
-done
-```
-
-## C.4 Server configuration
-
-Create `~/CloudFS/server1/config.toml`:
-
-```toml
-[server]
-host = "0.0.0.0"
-port = 50012
-files_path = "files"
-tls_cert_file = "certs/server.crt"
-tls_key_file = "certs/server.key"
-tls_ca_file = "certs/ca.crt"
-registration_enabled = true
-server_id = "server1"
-role = "primary"
-peers = "server2@127.0.0.1:60013,server3@127.0.0.1:60014"
-primary = ""
-replication_host = "0.0.0.0"
-replication_port = 60012
-cluster_token = "change-this-secret"
-term = 1
-replication_timeout = 2.0
-heartbeat_interval = 0.5
-failure_timeout = 2.0
-election_timeout = 1.0
-client_addresses = "server1@127.0.0.1:50012,server2@127.0.0.1:50013,server3@127.0.0.1:50014"
-admin_enabled = true
-admin_host = "0.0.0.0"
-admin_port = 50080
-admin_addresses = "server1@127.0.0.1:50080,server2@127.0.0.1:50081,server3@127.0.0.1:50082"
-allow_admin_failover = true
-admin_session_timeout = 3600.0
-```
-
-For `server2`, change `server_id`, `role`, `port`, `peers`, `primary`,
-`replication_port`, `admin_port` accordingly. For `server3`, do the same.
-
-## C.5 Start the servers
-
-Start the primary first, wait three seconds, then the secondaries:
-
-```sh
-cd ~/CloudFS/server1
-export CONFIG_FILE="$PWD/config.toml"
-export APP_PASSWORD_SAR='demo-password' APP_PASSWORD_SZA='demo-password'
-./cloudfs server &
-
-sleep 3
-cd ~/CloudFS/server2
-export CONFIG_FILE="$PWD/config.toml"
-export APP_PASSWORD_SAR='demo-password' APP_PASSWORD_SZA='demo-password'
-./cloudfs server &
-
-cd ~/CloudFS/server3
-export CONFIG_FILE="$PWD/config.toml"
-export APP_PASSWORD_SAR='demo-password' APP_PASSWORD_SZA='demo-password'
-./cloudfs server &
-```
-
-Expected output on each terminal:
-
-```text
-TLS server 0.11.3 listening on port 50012 (role primary).
-TLS server 0.11.3 listening on port 50013 (role secondary).
-TLS server 0.11.3 listening on port 50014 (role secondary).
-```
-
-## C.6 Client configuration
-
-Create `~/CloudFS/client1/config.toml`:
-
-```toml
-[client]
-server = "127.0.0.1"
-port = 50012
-local_path = "client_files"
-tls_ca_file = "certs/ca.crt"
-tls_server_name = ""
-state_dir = "state"
-peers = "127.0.0.1:50012,127.0.0.1:50013,127.0.0.1:50014"
-```
-
-Repeat for `client2` with a different `local_path`.
-
-## C.7 Start the clients
-
-```sh
-cd ~/CloudFS/client1
-./cloudfs
-```
-
-Register `alice` and `bob` from the admin panel, then sign in.
-
-## C.8 Verification
-
-```sh
-# Who is the primary?
-printf 'PRIM\\r\\n' | openssl s_client -quiet -connect 127.0.0.1:50012 -CAfile certs/ca.crt 2>/dev/null
-
-# Admin panel
-curl --cacert certs/ca.crt -sI https://127.0.0.1:50080/ | head -1
-```
-
-Expected: `OK127.0.0.1:50012` and `HTTP/1.0 200 OK`.
-
-## C.9 Failover test
-
-1. Stop the primary (`Ctrl+C` in its terminal or `kill %1`).
-2. Wait 3-5 seconds.
-3. Run `PRIM` again; it should return a different node.
-4. Upload a file from a client.
-5. Restart the old primary; it rejoins as a follower.
-
-## C.10 Stop everything
-
-```sh
-pkill -f "cloudfs server"
-pkill -f "cloudfs --daemon"
-```
+Press `Ctrl+C` in the server terminal. Close the client from its window.
 
 # Path B - permanent install
 
@@ -524,7 +348,7 @@ sudo journalctl -u cloud-file-server -n 20 --no-pager
 Expected in the journal:
 
 ```text
-TLS server 0.11.3 listening on port 50012 (role primary).
+TLS server 0.12.0 listening on port 50012 (role primary).
 ```
 
 ![Server startup](assets/setup/server-startup.png)
@@ -658,20 +482,9 @@ Create a file in `~/CloudFS` on `client1`. It appears on the server under
 
 ![Synchronized folder](assets/setup/files-synced.png)
 
-To start the GUI automatically on login, add a desktop entry:
-
-```sh
-mkdir -p ~/.config/autostart
-cat > ~/.config/autostart/cloud-file-service.desktop <<'EOF'
-[Desktop Entry]
-Type=Application
-Name=Cloud File Service
-Comment=Synchronize the local cloud folder
-Exec=/opt/cloudfs/client/cloudfs --config /home/<USER>/.config/cloudfs/config.toml
-Terminal=false
-X-GNOME-Autostart-enabled=true
-EOF
-```
+The systemd user unit installed in B.5.5 already starts the daemon at login.
+For the GUI itself, launch it manually or enable the `cloud-file-client`
+unit's `--minimized` flag by editing the unit.
 
 ### B.5.7 Passwords are not stored
 
@@ -691,6 +504,137 @@ For `server2` and `server3`, repeat B.3 with these changes:
 
 For a second client, repeat B.5 with a different `local_path` and the same
 `peers` list.
+
+# Path C - laboratory (no sudo, replicated cluster)
+
+Use this path when you have no root access and want a replicated cluster
+for the demonstration. Everything runs from your home directory; there is no
+systemd and no permanent installation. The three servers run on three
+different machines with fixed IP addresses.
+
+## C.1 Plan addresses
+
+| Node | Address | Client port | Replication port | Admin port |
+| --- | --- | --- | --- | --- |
+| `server1` | `192.168.1.101` | `50012` | `60012` | `50080` |
+| `server2` | `192.168.1.102` | `50012` | `60012` | `50080` |
+| `server3` | `192.168.1.103` | `50012` | `60012` | `50080` |
+
+Every node uses the same ports because each runs on its own machine. Clients
+use any node as a seed.
+
+## C.2 Generate the cluster bundle (once, on any machine)
+
+```sh
+unzip CloudFS-Offline-0.12.0-linux-x64.zip -d ~
+cd ~/CloudFS
+./cloudfs setup --cluster 192.168.1.101,192.168.1.102,192.168.1.103
+```
+
+`setup` creates `cluster/server1`, `cluster/server2` and `cluster/server3`,
+each with its own `config.toml`, `certs/` and `data/`, plus a shared CA and
+admin password. It prints the administrator credentials; save them.
+
+## C.3 Copy each node to its machine
+
+Copy `cluster/server1` to `server1`, `cluster/server2` to `server2` and
+`cluster/server3` to `server3`. A USB stick or a shared folder is enough;
+`scp` works if SSH is available:
+
+```sh
+scp -r cluster/server2 user@192.168.1.102:~/CloudFS/
+scp -r cluster/server3 user@192.168.1.103:~/CloudFS/
+```
+
+On each machine the folder must sit next to the `cloudfs` binary, or you pass
+`--config` with the full path.
+
+## C.4 Start the servers
+
+Start the primary first, wait three seconds, then the secondaries:
+
+```sh
+# on server1
+cd ~/CloudFS
+./cloudfs server --config server1/config.toml
+
+# on server2, after server1 is up
+cd ~/CloudFS
+./cloudfs server --config server2/config.toml
+
+# on server3
+cd ~/CloudFS
+./cloudfs server --config server3/config.toml
+```
+
+Expected output:
+
+```text
+TLS server 0.12.0 listening on port 50012 (role primary).
+TLS server 0.12.0 listening on port 50012 (role secondary).
+TLS server 0.12.0 listening on port 50012 (role secondary).
+```
+
+## C.5 Client configuration
+
+On each client machine, extract the kit and create `config/client.toml`:
+
+```toml
+[client]
+server = "192.168.1.101"
+port = 50012
+local_path = "client_files"
+tls_ca_file = "certs/ca.crt"
+tls_server_name = ""
+state_dir = "state"
+peers = "192.168.1.101:50012,192.168.1.102:50012,192.168.1.103:50012"
+```
+
+Copy `certs/ca.crt` from any node into the client's `certs/` folder, or use
+the one shipped with the kit after regenerating it for your addresses.
+
+## C.6 Start the clients
+
+```sh
+cd ~/CloudFS
+./cloudfs client
+```
+
+Log in as `alice` or `bob` (create them from the admin panel first) or
+register a new account.
+
+## C.7 Verification
+
+```sh
+./cloudfs status
+```
+
+Expected: `PRIM: OK192.168.1.101:50012` and `Panel: HTTP 303 See Other`.
+
+From any machine:
+
+```sh
+printf 'PRIM\r\n' | openssl s_client -quiet -connect 192.168.1.101:50012 -CAfile certs/ca.crt 2>/dev/null
+```
+
+Expected: `OK192.168.1.101:50012`.
+
+Admin panel: open `https://192.168.1.101:50080/` in a browser.
+
+## C.8 Failover test
+
+1. Stop the primary (`Ctrl+C` in its terminal on `server1`).
+2. Wait 3-5 seconds.
+3. Run `./cloudfs status` (or `PRIM`); it returns a different node.
+4. Upload a file from a client.
+5. Restart `server1`; it rejoins as a follower.
+
+## C.9 Stop everything
+
+```sh
+pkill -f "cloudfs server"
+pkill -f "cloudfs --daemon"
+```
 
 # Verification
 
@@ -797,4 +741,5 @@ rm -rf /opt/cloudfs/client ~/.config/cloudfs ~/.local/state/cloudfs
   demonstration environment; a production deployment must migrate to a
   supported Python release.
 - The admin panel is HTTPS-only and uses the same server certificate.
-- Versioning is `0.11.3`; this is not a 1.0 release.
+- Versioning is `0.12.0`; this is not a 1.0 release.
+

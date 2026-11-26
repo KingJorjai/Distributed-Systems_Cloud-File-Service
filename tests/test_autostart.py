@@ -15,7 +15,7 @@ class AutostartTests(unittest.TestCase):
             with patch.dict(os.environ, {"XDG_CONFIG_HOME": directory}):
                 self.assertFalse(autostart.is_enabled())
                 autostart.enable()
-                path = Path(directory) / "autostart" / "cloud-file-service.desktop"
+                path = Path(directory) / "systemd" / "user" / "cloud-file-client.service"
                 self.assertTrue(path.is_file())
                 self.assertIn("--minimized", path.read_text())
                 self.assertTrue(autostart.is_enabled())
